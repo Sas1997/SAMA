@@ -2,7 +2,25 @@ import numpy as np
 
 # from simplified_rate_structures import calcTouCbuy
 
+# def set_globals():
+#     global Eload,G, T, Vw, ins_parameter
+#     path='Data.csv'
+#     Data = pd.read_csv(path, header=None).values
+#     Eload = Data[:,0]
+#     G = Data[:,1]
+#     T = Data[:,2]
+#     Vw = Data[:,3]
+#     ins_parameter = parameter(Eload, G, T, Vw) # load input data
+
 class parameter():
+    # __slots__ = ["PV", "WT", "DG", "Bat", "Grid", "EM", "Budget", "n", "n_ir", "e_ir", "ir", "LPSP_max", "RE_min", "Ppv_r", "Pwt_r", "Cbt_r", "Cdg_r", 
+    #     "fpv", "Tcof", "Tref", "Tnoct", "Gref", "C_PV", "R_PV", "MO_PV", "L_PV", "n_PV", "D_PV", "CE_PV", "RT_PV", "h_hub", "h0", "nw", 
+    #     "v_cut_out", "v_cut_in", "v_rated", "alfa_wind_turbine", "C_WT", "R_WT", "MO_WT", "L_WT", "n_WT", "D_WT", "RT_WT", "C_DG", "R_DG", 
+    #     "MO_DG", "TL_DG", "n_DG", "D_DG", "LR_DG","C_fuel", "a", "b", "CO2", "CO", "NOx", "SO2", "C_B", "R_B", "MO_B", "L_B"," SOC_min", "SOC_max", 
+    #     "SOC_initial", "D_B", "RT_B", "Q_lifetime", "self_discharge_rate","alfa_battery", "c", "k", "Imax", "Vnom", "ef_bat", "C_I", "R_I", "MO_I", "L_I", 
+    #     "n_I", "RT_I", "C_CH", "R_CH", "MO_CH", "L_CH", "RT_CH", "Cbuy", "Csell", "Pbuy_max", "Psell_max", "E_CO2", "E_SO2", "E_NOx"
+    # ]
+    
     def __init__(self, Eload, G, T, Vw):
         self.PV = 0 # Type of system (1: included, 0=not included)
         self.WT = 0 # Type of system (1: included, 0=not included)
@@ -149,9 +167,7 @@ class parameter():
         self.E_SO2=0.01
         self.E_NOx=0.39
     
-    def set_user_data(self, **kwargs):
-        self.__dict__.update(kwargs)
-        
+
     def calcTouCbuy(self,Day,Month,holidays):
        
 

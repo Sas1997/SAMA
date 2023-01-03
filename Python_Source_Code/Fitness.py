@@ -3,7 +3,6 @@ import numpy as np
 import pandas as pd
 from Input_Data import parameter
 from EMS import energy_management
-import numpy as np
 from Battery_Model import battery_model
 
 
@@ -18,7 +17,7 @@ def my_range(start,end,step):
     
     
     
-    
+# takes about 7 secs to run    
 def fitness(X,Eload, G, T, Vw, inputs):
     NT = Eload.size # time step numbers
 

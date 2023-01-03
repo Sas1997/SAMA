@@ -1,17 +1,12 @@
 import numpy as np
 import pandas as pd
+# from Input_Data import
 from Input_Data import parameter
 from Fitness import fitness
 from Models import Solution, Particle
-# from tictoc import tic, toc
-
-# from EMS import energy_management
-# from Battery_Model import battery_model
-
-# from Models import Solution, Particle
 
 # %% Loading Data 
-global Eload,G, T, Vw
+global Eload,G, T, Vw, ins_parameter
 path='Data.csv'
 Data = pd.read_csv(path, header=None).values
 Eload = Data[:,0]
@@ -70,44 +65,45 @@ FinalBest = {
 for tt in range(Run_Time):
     w = 1 # intertia weight 
 
-    # initialization
-    empty_particle = Particle()
-    particle = [empty_particle for _ in range(nPop)]
-    particle = np.array(particle)
-
     GlobalBest = {
         "Cost": float('inf'),
         "Position": None
     }
+    from datetime import datetime
+    now = datetime.now()
 
-    for i in range(nPop):
-        # initialize position
-        
-        position_array = []
-        for var in range(len(VarMin)):
-            position_array.append(np.random.uniform(VarMin[var], VarMax[var]))
-        particle[i].Position = np.array(position_array)
-        
-        # initialize velocity
-        particle[i].Velocity = np.zeros(VarSize)
-        
-        # evaluation
-        particle[i].Cost = fitness(particle[i].Position, Eload, G, T, Vw, ins_parameter)  
-        # update personal best
-        particle[i].BestPosition = particle[i].Position
-        particle[i].BestCost = particle[i].Cost
+    # initialization
+    # iterable = (Particle(VarSize, VarMax, VarMin, nVar, globals()) for _ in range(nPop))
+    # particle = np.fromiter(iterable, type(Particle), nPop)
 
-        # Update global best
-        if particle[i].BestCost < GlobalBest["Cost"]:
-            GlobalBest["Cost"] = particle[i].BestCost
-            GlobalBest["Position"] = particle[i].BestPosition
+    # for i in range(nPop):
+    #     # Update global best
+    #     if particle[i].BestCost < GlobalBest["Cost"]:
+    #         GlobalBest["Cost"] = particle[i].BestCost
+    #         GlobalBest["Position"] = particle[i].BestPosition
 
+    positions_array = np.random.uniform(VarMin[0], VarMax[0], (nPop,1))
+    for var in range(1, nVar):
+        arr = np.random.uniform(VarMin[var], VarMax[var], (nPop,1))
+        positions_array = np.concatenate((positions_array, arr), axis=1)
+
+    velocities_array = np.zeros((nPop, nVar))
+
+    # this step take 7 seconds
+    iterable = (fitness(positions_array[i], Eload, G, T, Vw, ins_parameter) for i in range(nPop))
+    costs_array = np.fromiter(iterable, float, nPop)
+
+    print(datetime.now()-now)
+
+    best_costs_array = np.copy(costs_array)
+    best_positions_array = np.copy(positions_array)
+
+    GlobalBest["Cost"] = np.min(best_costs_array)
+    GlobalBest["Position"] = best_positions_array[np.argmin(best_costs_array)]
 
     BestCost = np.zeros((MaxIt, 1))
     MeanCost = np.zeros((MaxIt, 1))
     
-   
-
     # PSO main loop
     for it in range(MaxIt):
         for i in range(nPop):
