@@ -1,6 +1,6 @@
 import pandas as pd
 from Input_Data import *
-from Fitness import fitness
+from Fitness import CostFunction
 import numpy as np
 from copy import copy, deepcopy
 
@@ -27,14 +27,13 @@ def shpere(x, Eload, G, T, Vw,ins_parameter):
 # %% Loading Data 
 path='Data.csv'
 Data = pd.read_csv(path, header=None).values
-Eload = Data[:,0]
-G = Data[:,1]
-T = Data[:,2]
-Vw = Data[:,3]
+Eload = np.array(Data[:,0])
+G = np.array(Data[:,1])
+T = np.array(Data[:,2])
+Vw = np.array(Data[:,3])
 
 
 # %% Problem Definition
-CostFunction=fitness;             # Cost Function
 nVar = 5                          # number of decision variables
 VarSize = (1, nVar)               # size of decision variables matrix
 
@@ -42,8 +41,8 @@ VarSize = (1, nVar)               # size of decision variables matrix
 VarMin = np.array([0,0,0,0,0]) # Lower bound of variables
 VarMax = np.array([100,100,60,10,20]) # Upper bound of variables
 
-VarMin = VarMin * [PV,WT,Bat,DG, 1]
-VarMax = VarMax * [PV,WT,Bat,DG, 1]
+VarMin = VarMin * np.array([PV,WT,Bat,DG, 1])
+VarMax = VarMax * np.array([PV,WT,Bat,DG, 1])
 Cbuy = calcTouCbuy(daysInMonth,months, holidays)
 
 # %% PSO Parameters
@@ -57,31 +56,38 @@ c2 = 2           # Global learning coefficient
 VelMax = 0.3 * (VarMax - VarMin)
 VelMin = -VelMax
 Run_Time = 1
-Sol= [Solution() for _ in range(Run_Time)]
+Sol= np.array([Solution() for _ in range(Run_Time)])
 
 for tt in range(Run_Time):
-    w = 1 # intertia weight 
-    particle = [Particle() for _ in range(nPop)]
+    Position = np.random.uniform(VarMin, VarMax, (1, nPop, nVar))[0]
+    Cost = CostFunctionMatrix(Position, Eload, G, T, Vw)
+    # Cost = np.full((nPop,), CostFunction(particle[i].Position,Eload, G, T, Vw))
+    Velocity = np.zeros(VarSize)
+    Best=None
+
+    particle = np.full((nPop,), Particle())
+    # particle = np.array([Particle() for _ in range(nPop)])
     GlobalBest=Particle()
-    GlobalBest.Cost=np.inf;
-    for i in range(nPop):
-        #Initialize Position
-        particle[i].Position=np.random.uniform(VarMin, VarMax,VarSize)[0]
-        
-        #Initialize Velocity
-        particle[i].Velocity=np.zeros(VarSize)
+    GlobalBest.Cost=np.inf
     
-        #Evaluation
-        particle[i].Cost= CostFunction(particle[i].Position,Eload, G, T, Vw);
-        #Update Personal Best
-        particle[i].Best=deepcopy(particle[i])
+    # for i in range(nPop):
+    #     #Initialize Position
+    #     particle[i].Position=np.random.uniform(VarMin, VarMax,VarSize)[0]
+        
+    #     #Initialize Velocity
+    #     particle[i].Velocity=np.zeros(VarSize)
+    
+    #     #Evaluation
+    #     particle[i].Cost= CostFunction(particle[i].Position,Eload, G, T, Vw)
+    #     #Update Personal Best
+    #     particle[i].Best=deepcopy(particle[i])
 
-        #Update Global Best
-        if particle[i].Best.Cost<GlobalBest.Cost:
-            GlobalBest=particle[i].Best;   
+    #     #Update Global Best
+    #     if particle[i].Best.Cost<GlobalBest.Cost:
+    #         GlobalBest=particle[i].Best;   
 
-    BestCost = np.zeros((MaxIt, 1))
-    MeanCost = np.zeros((MaxIt, 1))
+    # BestCost = np.zeros((MaxIt, 1))
+    # MeanCost = np.zeros((MaxIt, 1))
     
     
     
@@ -298,7 +304,6 @@ Fuel=np.zeros(n)
 Fuel[0:n+1]=sum(C_fuel*q);
 
 #%%
-import matplotlib.pyplot as plt
 RC_PV[np.arange(L_PV+1,n,L_PV)]= R_PV*Pn_PV
 RC_WT[np.arange(L_WT+1,n,L_WT)]=R_WT*Pn_WT 
 RC_DG[np.arange(L_DG+1,n,L_DG).astype(np.int32)]= R_DG*Pn_DG

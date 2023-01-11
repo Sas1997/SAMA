@@ -190,3 +190,19 @@ Psell_max=Pbuy_max
 E_CO2=1.43;
 E_SO2=0.01;
 E_NOx=0.39;
+
+"""constants for cost function"""
+#%% PV Power Calculation
+Tc = T+(((Tnoct-20)/800)*G); # Module Temprature
+
+# %% Wind turbine Power Calculation
+v1=Vw;     #hourly wind speed
+v2=((h_hub/h0)**(alfa_wind_turbine))*v1; # v1 is the speed at a reference height;v2 is the speed at a hub height h2
+
+Pwt=np.zeros(8760);
+Pwt[v2<v_cut_in]=0
+Pwt[v2>v_cut_out]=0
+true_value=np.logical_and(v_cut_in<=v2,v2<v_rated)
+Pwt[np.logical_and(v_cut_in<=v2,v2<v_rated)]=v2[true_value]**3 *(Pwt_r/(v_rated**3-v_cut_in**3))-(v_cut_in**3/(v_rated**3-v_cut_in**3))*(Pwt_r);
+Pwt[np.logical_and(v_rated<=v2,v2<v_cut_out)]=Pwt_r
+Pwt=Pwt*Nwt;
