@@ -6,5 +6,3 @@ def calcFlatRate(price):
         Cbuy[h] = price
 
     return Cbuy
-
-np.savetxt("Cbuy.csv", calcFlatRate(0.12))
