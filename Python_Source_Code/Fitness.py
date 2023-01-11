@@ -30,11 +30,12 @@ def CostFunctionMatrix(arr):
     #  DG Fix cost
     cc_gen=b*Pn_DG*C_fuel+R_DG*Pn_DG/TL_DG+MO_DG;
     
-    (Eb, Pdg, Edump, Ens, Pch, Pdch, Pbuy, Psell, Pinv) =\
-        energy_management(Ppv,Pwt,Eload,Cn_B,Nbat,Pn_DG,NT,
-                          SOC_max,SOC_min,SOC_initial,
-                          n_I,Grid,Cbuy,a,Cn_I,LR_DG,C_fuel,Pbuy_max,Psell_max,cc_gen,Cbw,
-                          self_discharge_rate,alfa_battery,c,k,Imax,Vnom,ef_bat)
+    for i in arr:
+        (Eb, Pdg, Edump, Ens, Pch, Pdch, Pbuy, Psell, Pinv) =\
+            energy_management(Ppv,Pwt,Eload,Cn_B,Nbat,Pn_DG,NT,
+                            SOC_max,SOC_min,SOC_initial,
+                            n_I,Grid,Cbuy,a,Cn_I,LR_DG,C_fuel,Pbuy_max,Psell_max,cc_gen,Cbw,
+                            self_discharge_rate,alfa_battery,c,k,Imax,Vnom,ef_bat)
     
     q=(a*Pdg+b*Pn_DG)*(Pdg>0);   # Fuel consumption of a diesel generator 
     
