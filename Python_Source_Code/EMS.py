@@ -58,152 +58,242 @@ def energy_management(Ppv,Pwt,Eload,Cn_B,Nbat,
             np.where(case2, (Eb-Ebmin)*ef_bat,
                 np.where(case3, (Eb-Ebmin)*ef_bat,
                     np.where(case4, (Eb-Ebmin)*ef_bat,
-                        np.where(case5, (Eb[t]-Ebmin)*ef_bat,
-                            np.where(case6, (Eb[t]-Ebmin)*ef_bat)))))))
+                        np.where(case5, (Eb-Ebmin)*ef_bat, (Eb-Ebmin)*ef_bat))))))
     
-    Pch = np.where(load_greater, np.amin(np.amin(Eb_e, P_RE-Eload/n_i, axis=0), Pch_max, axis=0), Pch) # Battery maximum charge power limit
-
-    Edef_AC = np.where(np.logical_not(load_greater), Eload-np.amin(Pinv_max, n_I*P_RE, axis=0), 0) 
-    
-    # need to do pbuy before this case2
-    Edef_AC = np.where(case2, Eload-Pbuy-np.amin(Pinv_max, n_I*(P_RE+Pdch), axis=0), 
-        np.where(case5, Eload-np.amin(Pinv_max, n_I*(P_RE+Pdch), axis=0), 
-            np.where(case6, Eload-np.amin(Pinv_max, n_I*(P_RE+Pdch), axis=0), Edef_AC)))
-
-    Pdg_intermediate = np.where(case1, np.amin(Edef_AC-np.amin(Edef_AC, Pbuy_max, axis=0), Pn_DG, axis=0),
-        np.where(case2, np.amin(Edef_AC, Pbuy_max, axis=0),
-            np.where(np.logical_or(np.logical_or(case3, case4), case5), np.amin(Edef_AC,Pn_DG, axis=0),
-                np.where(case6, np.amin(Edef_AC-Pbuy,Pn_DG, axis=0), Pdg))))
-    Pdg = np.where(case1, Pdg_intermediate*(Pdg_intermediate>=LR_DG*Pn_DG)+LR_DG*Pn_DG*(Pdg_intermediate<LR_DG*Pn_DG)*(Pdg_intermediate>Pdg_min),
-        np.where(case2, Pdg_intermediate*(Pdg_intermediate>=LR_DG*Pn_DG)+LR_DG*Pn_DG*(Pdg_intermediate<LR_DG*Pn_DG)*(Pdg_intermediate>Pdg_min),
-            np.where(case3, Pdg_intermediate*(Pdg_intermediate>=LR_DG*Pn_DG)+LR_DG*Pn_DG*(Pdg_intermediate<LR_DG*Pn_DG)*(Pdg_intermediate>Pdg_min)),
-                np.where(case4, Pdg_intermediate*(Pdg_intermediate>=LR_DG*Pn_DG)+LR_DG*Pn_DG*(Pdg_intermediate<LR_DG*Pn_DG)*(Pdg_intermediate>Pdg_min),
-                    np.where(case5, Pdg_intermediate*(Pdg_intermediate>=LR_DG*Pn_DG)+LR_DG*Pn_DG*(Pdg_intermediate<LR_DG*Pn_DG)*(Pdg_intermediate>Pdg_min),
-                        np.where(case6, Pdg_intermediate*(Pdg_intermediate>=LR_DG*Pn_DG)+LR_DG*Pn_DG*(Pdg_intermediate<LR_DG*Pn_DG)*(Pdg_intermediate>Pdg_min), Pdg)))))
-
-    Edef_AC = np.where(case1, Eload-Pdg-np.amin(Edef_AC,Pbuy_max, axis=0)-np.amin(Pinv_max, n_I*P_RE, axis=0),
-        np.where(case3, Eload-Pdg-np.amin(Pinv_max, n_I*(P_RE+Pdch),  axis=0), 
-            np.where(case4, Eload-Pdg-np.amin(Pinv_max, n_I*(P_RE+Pdch), axis=0), Edef_AC)))
-
-    # do edef_dc here
-    Edef_DC = np.where(case1, Edef_AC/n_I*(Edef_AC>0),
-        np.where(case2, (Eload[t]-Pbuy[t])/n_I-P_RE(t),
-            np.where(case3, np.where(Eload[t]-Pbuy(t)-Pdg[t])/n_I-P_RE[t]) > 0,  )))
-
-    Psur_AC = np.where(load_greater, n_I*(P_RE-Pch-Eload), inf) #surplus Energy
-    Psell = np.where(load_greater, np.amin(np.amin(Psur_AC, Psell_max, axis=0), np.amax(0, Pinv_max-Eload, axis=0), axis=0),
-        np.where(case3, np.amax(0, np.amin(Pdg-Edef_AC,Psell_max, axis=0), axis=0),
-            np.where(case4, np.amax(0, np.amin(-Edef_AC,Psell_max, axis=0), axis=0), 
-                np.where(case5, np.amax(0, np.amin(Pd-Edef_AC,Psell_max, axis=0), axis=0), Psell))))
-
+    #if PV+Pwt greater than load  (battery should charge)
+    #Battery charge power calculated based on surEloadus energy and battery empty  capacity 
+    Pch = np.where(load_greater, np.amin((np.amin((Eb_e, P_RE-Eload/n_I), axis=0), Pch_max), axis=0), Pch) # Battery maximum charge power limit
+    Psur_AC = np.where(load_greater, n_I*(P_RE-Pch-Eload), float('inf')) #surplus Energy
+    Psell = np.where(load_greater, np.amin((np.fmin(Psur_AC, Psell_max), np.fmax(0, Pinv_max-Eload)), axis=0), Psell)
     Edump = np.where(load_greater, P_RE-Pch-(Eload+Psell)/n_I, Edump)
+
+    #%% if load greater than PV+Pwt 
+    Edef_AC = np.where(np.logical_not(load_greater), Eload-np.fmin(Pinv_max, n_I*P_RE), 0) 
+    
+    # Grid, DG , Bat : 1
+    Pbuy = np.where(case1, np.fmin(Edef_AC, Pbuy_max), Pbuy)
+    Pdg = np.where(case1, np.fmin(Edef_AC-Pbuy, Pn_DG), Pdg)
+    Pdg = np.where(case1, Pdg*(Pdg>=LR_DG*Pn_DG)+LR_DG*Pn_DG*(Pdg<LR_DG*Pn_DG)*(Pdg>Pdg_min), Pdg)
+    Edef_AC = np.where(case1, Eload-Pdg-Pbuy-np.fmin(Pinv_max, n_I*P_RE), Edef_AC)
+    Edef_DC = np.where(case1, Edef_AC/n_I*(Edef_AC>0), 0)
+    Pdch = np.where(case1, np.amin((np.amin((Eb_e, Edef_DC), axis=0), Pdch_max), axis=0), Pdch)
+    Esur_AC = np.where(case1, -Edef_AC*(Edef_AC<0), Edef_AC)
+    Pbuy = np.where(case1, Pbuy-Esur_AC*(Grid==1), Pbuy)
+
+    #Grid, Bat , DG : 2
+    Pbuy = np.where(case2, np.fmin(Edef_AC,Pbuy_max), Pbuy)
+    Edef_DC = np.where(case2, (Eload-Pbuy)/n_I-P_RE, Edef_DC)
+    Pdch = np.where(case2, np.amin((np.amin((Eb_e, Edef_DC), axis=0), Pdch_max), axis=0), Pdch)
+    Edef_AC = np.where(case2, Eload-Pbuy-np.fmin(Pinv_max, n_I*(P_RE+Pdch)), Edef_AC)
+    Pdg = np.where(case2, np.fmin(Edef_AC, Pn_DG), Pdg)
+    Pdg = np.where(case2, Pdg*(Pdg>=LR_DG*Pn_DG)+LR_DG*Pn_DG*(Pdg<LR_DG*Pn_DG)*(Pdg>Pdg_min), Pdg)
+
+    #DG, Grid , Bat :3
+    Pdg = np.where(case3, np.fmin(Edef_AC, Pn_DG), Pdg)
+    Pdg = np.where(case3, Pdg*(Pdg>=LR_DG*Pn_DG)+LR_DG*Pn_DG*(Pdg<LR_DG*Pn_DG)*(Pdg>Pdg_min), Pdg)
+    Pbuy = np.where(case3, np.fmax(0, np.fmin(Edef_AC-Pdg, Pbuy_max)), Pbuy)
+    Psell = np.where(case3, np.fmax(0, np.fmin(Pdg-Edef_AC, Psell_max)), Psell)
+    Edef_DC = np.where(case3, (Eload-Pbuy-Pdg)/n_I-P_RE, Edef_DC)
+    Edef_DC = np.where(case3, Edef_DC*(Edef_DC>0), Edef_DC)
+    Pdch = np.where(case3, np.amin((np.amin((Eb_e, Edef_AC), axis=0), Pdch_max), axis=0), Pdch)
+
+    #DG, Bat , Grid :4
+    Pdg = np.where(case4, np.fmin(Edef_AC, Pn_DG), Pdg)
+    Pdg = np.where(case4, Pdg*(Pdg>=LR_DG*Pn_DG)+LR_DG*Pn_DG*(Pdg<LR_DG*Pn_DG)*(Pdg>Pdg_min), Pdg)
+    Edef_DC = np.where(case4, (Eload-Pdg)/n_I-P_RE, Edef_DC)
+    Edef_DC = np.where(case4, Edef_DC*(Edef_DC>0), Edef_DC)
+    Pdch = np.where(case4, np.amin((np.amin((Eb_e, Edef_DC), axis=0), Pdch_max), axis=0), Pdch)
+    Edef_AC = np.where(case4, Eload-Pdg-np.fmin(Pinv_max, n_I*(P_RE+Pdch)), Edef_AC)
+    Pbuy = np.where(case4, np.fmax(0, np.fmin(Edef_AC, Pbuy_max)), Pbuy)
+    Psell = np.where(case5, np.fmax(0, np.fmin(-Edef_AC, Psell_max)), Psell)
+
+    #Bat ,DG, Grid :5
+    Edef_DC = np.where(case5, Eload/n_I-P_RE, Edef_DC)
+    Pdch = np.where(case5, np.amin((Eb_e,Edef_DC), axis=0), Pdch)  
+    Pdch = np.where(case5, np.amin((Pdch,Pdch_max), axis=0), Pdch)  
+    Edef_AC = np.where(case5, Eload-np.fmin(Pinv_max, n_I*(P_RE+Pdch)), Edef_AC)
+    Pdg = np.where(case5, np.fmin(Edef_AC,Pn_DG), Pdg)
+    Pdg = np.where(case5, Pdg *(Pdg>=LR_DG*Pn_DG)+LR_DG*Pn_DG*(Pdg<LR_DG*Pn_DG)*(Pdg>Pdg_min), Pdg) 
+    Pbuy = np.where(case5, np.fmax(0, np.fmin(Edef_AC-Pdg,Pbuy_max)), Pbuy)
+    Psell = np.where(case5, np.fmax(0, np.fmin(Pdg-Edef_AC,Psell_max)), Psell)
+
+    #Bat , Grid , DG: 6
+    Edef_DC = np.where(case6, np.fmin(Pinv_max, Eload/n_I)-P_RE, Edef_DC)
+    Pdch = np.where(case6, np.amin((Eb_e,Edef_DC), axis=0)*(Edef_DC>0), Pdch)  
+    Pdch = np.where(case6, np.amin((Pdch,Pdch_max),axis=0), Pdch) 
+    Edef_AC = np.where(case6, Eload-np.fmin(Pinv_max, n_I*(P_RE+Pdch)), Edef_AC)
+    Pbuy = np.where(case6, np.fmin(Edef_AC, Pbuy_max), Pbuy)
+    Pdg = np.where(case6, np.fmin(Edef_AC-Pbuy,Pn_DG), Pdg)
+    Pdg = np.where(case6, Pdg*(Pdg>=LR_DG*Pn_DG)+LR_DG*Pn_DG*(Pdg<LR_DG*Pn_DG)*(Pdg>Pdg_min), Pdg) 
+
+    Edef_DC = np.where(np.logical_not(load_greater), (Eload+Psell-Pdg-Pbuy)/n_I-(P_RE+Pdch-Pch), Edef_DC)
+    Eb_e = np.where(np.logical_and(np.logical_not(load_greater), Edef_DC < 0), (Ebmax-Eb)/ef_bat, Eb_e)
+    Pch = np.where(np.logical_and(np.logical_not(load_greater), Edef_DC < 0), np.amin((np.amin((Eb_e, Pch-Edef_DC), axis=0), Pch_max), axis=0), Pch)
+    Esur = np.where(np.logical_not(load_greater), Eload+Psell-Pbuy-Pdg-np.fmin(Pinv_max, (P_RE+Pdch-Pch)*n_I), 0)
+    Ens = np.where(np.logical_not(load_greater), Esur*(Esur>0), Ens)
+    Edump = np.where(np.logical_not(load_greater), -Esur*(Esur<0), Edump)
+
+    Ech = Pch * dt
+    Edch = Pdch * dt
+    
+    return Eb, Pdg, Edump, Ens, Pch, Pdch, Pbuy, Psell, Pinv
+
+    # Pbuy = np.where(case1, Pbuy-Esur_AC*(Grid==1),
+    #     np.where(case2, np.amin(Edef_AC,Pbuy_max, axis=0),
+    #         np.where(case3, np.amax(0, np.amin(Edef_AC-Pdg,Pbuy_max, axis=0), axis=0), 
+    #             np.where(case4))))
+
+    # Edef_AC = np.where(case2, Eload-Pbuy-np.amin(Pinv_max, n_I*(P_RE+Pdch), axis=0), 
+    #     np.where(case5, Eload-np.amin(Pinv_max, n_I*(P_RE+Pdch), axis=0), 
+    #         np.where(case6, Eload-np.amin(Pinv_max, n_I*(P_RE+Pdch), axis=0), Edef_AC)))
+
+    # Pdg_intermediate = np.where(case1, np.amin(Edef_AC-np.amin(Edef_AC, Pbuy_max, axis=0), Pn_DG, axis=0),
+    #     np.where(case2, np.amin(Edef_AC, Pbuy_max, axis=0),
+    #         np.where(np.logical_or(np.logical_or(case3, case4), case5), np.amin(Edef_AC,Pn_DG, axis=0),
+    #             np.where(case6, np.amin(Edef_AC-Pbuy,Pn_DG, axis=0), Pdg))))
+    # Pdg = np.where(case1, Pdg_intermediate*(Pdg_intermediate>=LR_DG*Pn_DG)+LR_DG*Pn_DG*(Pdg_intermediate<LR_DG*Pn_DG)*(Pdg_intermediate>Pdg_min),
+    #     np.where(case2, Pdg_intermediate*(Pdg_intermediate>=LR_DG*Pn_DG)+LR_DG*Pn_DG*(Pdg_intermediate<LR_DG*Pn_DG)*(Pdg_intermediate>Pdg_min),
+    #         np.where(case3, Pdg_intermediate*(Pdg_intermediate>=LR_DG*Pn_DG)+LR_DG*Pn_DG*(Pdg_intermediate<LR_DG*Pn_DG)*(Pdg_intermediate>Pdg_min)),
+    #             np.where(case4, Pdg_intermediate*(Pdg_intermediate>=LR_DG*Pn_DG)+LR_DG*Pn_DG*(Pdg_intermediate<LR_DG*Pn_DG)*(Pdg_intermediate>Pdg_min),
+    #                 np.where(case5, Pdg_intermediate*(Pdg_intermediate>=LR_DG*Pn_DG)+LR_DG*Pn_DG*(Pdg_intermediate<LR_DG*Pn_DG)*(Pdg_intermediate>Pdg_min),
+    #                     np.where(case6, Pdg_intermediate*(Pdg_intermediate>=LR_DG*Pn_DG)+LR_DG*Pn_DG*(Pdg_intermediate<LR_DG*Pn_DG)*(Pdg_intermediate>Pdg_min), Pdg)))))
+
+    # Edef_AC = np.where(case1, Eload-Pdg-np.amin(Edef_AC,Pbuy_max, axis=0)-np.amin(Pinv_max, n_I*P_RE, axis=0),
+    #     np.where(case3, Eload-Pdg-np.amin(Pinv_max, n_I*(P_RE+Pdch),  axis=0), 
+    #         np.where(case4, Eload-Pdg-np.amin(Pinv_max, n_I*(P_RE+Pdch), axis=0), Edef_AC)))
+
+    # Esur_AC = np.where(case1, -Edef_AC*(Edef_AC<0), 0)
+
+    # Edef_DC = np.where(case1, Edef_AC/n_I*(Edef_AC>0),
+    #     np.where(case2, (Eload-Pbuy)/n_I-P_RE,
+    #         np.where(case3, np.where(((Eload-Pbuy-Pdg)/n_I-P_RE)>0, ((Eload-Pbuy-Pdg)/n_I-P_RE)**2, ((Eload-Pbuy-Pdg)/n_I-P_RE)),
+    #             np.where(case4, np.where(((Eload-Pdg)/n_I-P_RE)>0, ((Eload-Pbuy-Pdg)/n_I-P_RE)**2, ((Eload-Pbuy-Pdg)/n_I-P_RE)),
+    #                 np.where(case5, Eload/n_I-P_RE, 
+    #                     np.where(case6, np.amin(Pinv_max, Eload/n_I, axis=0)-P_RE, 0))))))
+
+    # Pdch = np.where(case6, np.amin(np.amin(Eb_e,Edef_DC,axis=0)*(Edef_DC>0), Pdch_max, axis=0)),
+    #         np.where(np.logical_or(np.logical_or(np.logical_or(np.logical_or(case1, case2), case3), case4), case5),   
+    #             np.amin(np.amin(Eb_e, Edef_DC, axis=0), Pdch_max, axis=0), Pdch)
+
+    # Psur_AC = np.where(load_greater, n_I*(P_RE-Pch-Eload), inf) #surplus Energy
+    # Psell = np.where(load_greater, np.amin(np.amin(Psur_AC, Psell_max, axis=0), np.amax(0, Pinv_max-Eload, axis=0), axis=0),
+    #     np.where(case3, np.amax(0, np.amin(Pdg-Edef_AC,Psell_max, axis=0), axis=0),
+    #         np.where(case4, np.amax(0, np.amin(-Edef_AC,Psell_max, axis=0), axis=0), 
+    #             np.where(case5, np.amax(0, np.amin(Pd-Edef_AC,Psell_max, axis=0), axis=0), Psell))))
+
+    # Edump = np.where(load_greater, P_RE-Pch-(Eload+Psell)/n_I, Edump)
 
     # return Eb, Pdg, Edump, Ens, Pch, Pdch, Pbuy, Psell, Pinv
 
-    else:
+    # else:
 
-        if (Cbuy[t]<= price_dg) and (price_dg<=Cbw): # Grid, DG , Bat : 1
-            Pdg[t]=min(Edef_AC-min(Edef_AC,Pbuy_max),Pn_DG);
-            Pdg[t]=Pdg[t]*(Pdg[t]>=LR_DG*Pn_DG)+LR_DG*Pn_DG*(Pdg[t]<LR_DG*Pn_DG)*(Pdg[t]>Pdg_min);
+    #     if (Cbuy[t]<= price_dg) and (price_dg<=Cbw): # Grid, DG , Bat : 1
+    #         Pdg[t]=min(Edef_AC-min(Edef_AC,Pbuy_max),Pn_DG);
+    #         Pdg[t]=Pdg[t]*(Pdg[t]>=LR_DG*Pn_DG)+LR_DG*Pn_DG*(Pdg[t]<LR_DG*Pn_DG)*(Pdg[t]>Pdg_min);
             
-            Edef_AC=Eload[t]-Pdg(t)-min(Edef_AC,Pbuy_max)-min(Pinv_max, n_I*P_RE[t]);
-            Edef_DC=Edef_AC/n_I*(Edef_AC>0);
-            Eb_e=(Eb[t]-Ebmin)*ef_bat;
-            Pdch[t]= min( Eb_e,Edef_DC);
-            Pdch[t]= min(Pdch[t],Pdch_max);
+    #         Edef_AC=Eload[t]-Pdg(t)-min(Edef_AC,Pbuy_max)-min(Pinv_max, n_I*P_RE[t]);
+    #         Edef_DC=Edef_AC/n_I*(Edef_AC>0);
+    #         Eb_e=(Eb[t]-Ebmin)*ef_bat;
+    #         Pdch[t]= min( Eb_e,Edef_DC);
+    #         Pdch[t]= min(Pdch[t],Pdch_max);
             
-            Esur_AC=-Edef_AC*(Edef_AC<0);
-            Pbuy[t]=Pbuy[t]-Esur_AC*(Grid==1);
-
-
-        elif (Cbuy[t]<= Cbw) and (Cbw<price_dg):  #Grid, Bat , DG : 2
-            print(22)
-            Pbuy[t]=min(Edef_AC,Pbuy_max);
-            
-            Edef_DC=(Eload[t]-Pbuy[t])/n_I-P_RE(t);
-            Eb_e=(Eb[t]-Ebmin)*ef_bat;
-            Pdch[t]= min( Eb_e,Edef_DC);
-            Pdch[t]=min(Pdch[t],Pdch_max);
-            
-            Edef_AC=Eload[t]-Pbuy[t]-min(Pinv_max, n_I*(P_RE[t]+Pdch[t]));
-            Pdg[t]=min(Edef_AC,Pn_DG);
-            Pdg[t]=Pdg[t]*(Pdg[t]>=LR_DG*Pn_DG)+LR_DG*Pn_DG*(Pdg[t]<LR_DG*Pn_DG)*(Pdg[t]>Pdg_min);
+    #         Esur_AC=-Edef_AC*(Edef_AC<0);
+    #         Pbuy[t]=Pbuy[t]-Esur_AC*(Grid==1);
 
 
-        elif (price_dg<Cbuy[t]) and (Cbuy[t]<=Cbw): #DG, Grid , Bat :3
-            print(23)
-            Pdg[t]=min(Edef_AC,Pn_DG);
-            Pdg[t]=Pdg(t)*(Pdg[t]>=LR_DG*Pn_DG)+LR_DG*Pn_DG*(Pdg[t]<LR_DG*Pn_DG)*(Pdg[t]>Pdg_min);
+    #     elif (Cbuy[t]<= Cbw) and (Cbw<price_dg):  #Grid, Bat , DG : 2
+    #         print(22)
+    #         Pbuy[t]=min(Edef_AC,Pbuy_max);
             
-            Pbuy[t]=max(0,  min(Edef_AC-Pdg[t],Pbuy_max) );
-            Psell[t]=max(0, min(Pdg[t]-Edef_AC,Psell_max) );
+    #         Edef_DC=(Eload[t]-Pbuy[t])/n_I-P_RE(t);
+    #         Eb_e=(Eb[t]-Ebmin)*ef_bat;
+    #         Pdch[t]= min( Eb_e,Edef_DC);
+    #         Pdch[t]=min(Pdch[t],Pdch_max);
             
-            Edef_DC=(Eload[t]-Pbuy(t)-Pdg[t])/n_I-P_RE[t];
-            Edef_DC=Edef_DC*(Edef_DC>0);
-            Eb_e=(Eb[t]-Ebmin)*ef_bat;
-            Pdch[t]= min( Eb_e,Edef_DC);
-            Pdch[t]=min(Pdch[t],Pdch_max);
-        elif (price_dg<Cbw) and (Cbw<Cbuy[t]):  #DG, Bat , Grid :4
-            print(24)  
-            Pdg[t]=min(Edef_AC,Pn_DG);
-            Pdg[t]=Pdg[t]*(Pdg[t]>=LR_DG*Pn_DG)+LR_DG*Pn_DG*(Pdg[t]<LR_DG*Pn_DG)*(Pdg[t]>Pdg_min);    
+    #         Edef_AC=Eload[t]-Pbuy[t]-min(Pinv_max, n_I*(P_RE[t]+Pdch[t]));
+    #         Pdg[t]=min(Edef_AC,Pn_DG);
+    #         Pdg[t]=Pdg[t]*(Pdg[t]>=LR_DG*Pn_DG)+LR_DG*Pn_DG*(Pdg[t]<LR_DG*Pn_DG)*(Pdg[t]>Pdg_min);
+
+
+    #     elif (price_dg<Cbuy[t]) and (Cbuy[t]<=Cbw): #DG, Grid , Bat :3
+    #         print(23)
+    #         Pdg[t]=min(Edef_AC,Pn_DG);
+    #         Pdg[t]=Pdg(t)*(Pdg[t]>=LR_DG*Pn_DG)+LR_DG*Pn_DG*(Pdg[t]<LR_DG*Pn_DG)*(Pdg[t]>Pdg_min);
             
-            Edef_DC=(Eload[t]-Pdg[t])/n_I-P_RE[t];
-            Edef_DC=Edef_DC*(Edef_DC>0);
-            Eb_e=(Eb[t]-Ebmin)*ef_bat;
-            Pdch[t]= min( Eb_e,Edef_DC);  
-            Pdch[t]= min(Pdch[t],Pdch_max);
+    #         Pbuy[t]=max(0,  min(Edef_AC-Pdg[t],Pbuy_max) );
+    #         Psell[t]=max(0, min(Pdg[t]-Edef_AC,Psell_max) );
             
-            Edef_AC=Eload[t]-Pdg[t]-min(Pinv_max, n_I*(P_RE[t]+Pdch[t]) );
-            Pbuy[t]=max(0,  min(Edef_AC,Pbuy_max) );
-            Psell[t]=max(0, min(-Edef_AC,Psell_max) );
+    #         Edef_DC=(Eload[t]-Pbuy(t)-Pdg[t])/n_I-P_RE[t];
+    #         Edef_DC=Edef_DC*(Edef_DC>0);
+
+    #         # Edef_DC = np.where(((Eload[t]-Pbuy(t)-Pdg[t])/n_I-P_RE[t])>0, ((Eload[t]-Pbuy(t)-Pdg[t])/n_I-P_RE[t])**2, ((Eload[t]-Pbuy(t)-Pdg[t])/n_I-P_RE[t]))
+
+    #         Eb_e=(Eb[t]-Ebmin)*ef_bat;
+    #         Pdch[t]= min( Eb_e,Edef_DC);
+    #         Pdch[t]=min(Pdch[t],Pdch_max);
+    #     elif (price_dg<Cbw) and (Cbw<Cbuy[t]):  #DG, Bat , Grid :4
+    #         print(24)  
+    #         Pdg[t]=min(Edef_AC,Pn_DG);
+    #         Pdg[t]=Pdg[t]*(Pdg[t]>=LR_DG*Pn_DG)+LR_DG*Pn_DG*(Pdg[t]<LR_DG*Pn_DG)*(Pdg[t]>Pdg_min);    
             
-        elif (Cbw<price_dg) and (price_dg<Cbuy[t]):  #Bat ,DG, Grid :5
-            print(25)
-            Edef_DC=Eload[t]/n_I-P_RE[t];
-            Eb_e=(Eb[t]-Ebmin)*ef_bat;
-            Pdch[t]=min( Eb_e,Edef_DC);  
-            Pdch[t]=min(Pdch[t],Pdch_max);  
+    #         Edef_DC=(Eload[t]-Pdg[t])/n_I-P_RE[t];
+    #         Edef_DC=Edef_DC*(Edef_DC>0);
+
+    #         # Edef_DC = np.where(((Eload[t]-Pdg[t])/n_I-P_RE[t])>0, ((Eload[t]-Pbuy(t)-Pdg[t])/n_I-P_RE[t])**2, ((Eload[t]-Pbuy(t)-Pdg[t])/n_I-P_RE[t]))
+
+    #         Eb_e=(Eb[t]-Ebmin)*ef_bat;
+    #         Pdch[t]= min( Eb_e,Edef_DC);  
+    #         Pdch[t]= min(Pdch[t],Pdch_max);
             
-            Edef_AC=Eload[t]-min(Pinv_max, n_I*(P_RE[t]+Pdch[t]) );
-            Pdg[t]=min(Edef_AC,Pn_DG);
-            Pdg[t]=Pdg[t]*(Pdg[t]>=LR_DG*Pn_DG)+LR_DG*Pn_DG*(Pdg[t]<LR_DG*Pn_DG)*(Pdg[t]>Pdg_min); 
+    #         Edef_AC=Eload[t]-Pdg[t]-min(Pinv_max, n_I*(P_RE[t]+Pdch[t]) );
+    #         Pbuy[t]=max(0,  min(Edef_AC,Pbuy_max) );
+    #         Psell[t]=max(0, min(-Edef_AC,Psell_max) );
             
-            Pbuy[t]=max(0,  min(Edef_AC-Pdg[t],Pbuy_max) );
-            Psell[t]=max(0, min(Pdg[t]-Edef_AC,Psell_max) );
-        else: #Bat , Grid , DG: 6
-            Edef_DC=min(Pinv_max, Eload[t]/n_I)-P_RE[t];
-            Eb_e=(Eb[t]-Ebmin)*ef_bat;
-            Pdch[t]=min( Eb_e,Edef_DC)*(Edef_DC>0);  
-            Pdch[t]=min( Pdch[t],Pdch_max ); 
+    #     elif (Cbw<price_dg) and (price_dg<Cbuy[t]):  #Bat ,DG, Grid :5
+    #         print(25)
+    #         Edef_DC=Eload[t]/n_I-P_RE[t];
+    #         Eb_e=(Eb[t]-Ebmin)*ef_bat;
+    #         Pdch[t]=min( Eb_e,Edef_DC);  
+    #         Pdch[t]=min(Pdch[t],Pdch_max);  
             
-            Edef_AC=Eload[t]-min(Pinv_max, n_I*(P_RE[t]+Pdch[t]) );
-            Pbuy[t]= min( Edef_AC, Pbuy_max);
+    #         Edef_AC=Eload[t]-min(Pinv_max, n_I*(P_RE[t]+Pdch[t]) );
+    #         Pdg[t]=min(Edef_AC,Pn_DG);
+    #         Pdg[t]=Pdg[t]*(Pdg[t]>=LR_DG*Pn_DG)+LR_DG*Pn_DG*(Pdg[t]<LR_DG*Pn_DG)*(Pdg[t]>Pdg_min); 
             
-            Pdg[t]=min(Edef_AC-Pbuy[t],Pn_DG);
-            Pdg[t]=Pdg[t]*(Pdg[t]>=LR_DG*Pn_DG)+LR_DG*Pn_DG*(Pdg[t]<LR_DG*Pn_DG)*(Pdg[t]>Pdg_min); 
+    #         Pbuy[t]=max(0,  min(Edef_AC-Pdg[t],Pbuy_max) );
+    #         Psell[t]=max(0, min(Pdg[t]-Edef_AC,Psell_max) );
+    #     else: #Bat , Grid , DG: 6
+    #         Edef_DC=min(Pinv_max, Eload[t]/n_I)-P_RE[t];
+    #         Eb_e=(Eb[t]-Ebmin)*ef_bat;
+    #         Pdch[t]=min( Eb_e,Edef_DC)*(Edef_DC>0);  
+    #         Pdch[t]=min( Pdch[t],Pdch_max ); 
+            
+    #         Edef_AC=Eload[t]-min(Pinv_max, n_I*(P_RE[t]+Pdch[t]) );
+    #         Pbuy[t]= min( Edef_AC, Pbuy_max);
+            
+    #         Pdg[t]=min(Edef_AC-Pbuy[t],Pn_DG);
+    #         Pdg[t]=Pdg[t]*(Pdg[t]>=LR_DG*Pn_DG)+LR_DG*Pn_DG*(Pdg[t]<LR_DG*Pn_DG)*(Pdg[t]>Pdg_min); 
             
     
         
-        Edef_DC=(Eload[t]+Psell[t]-Pdg[t]-Pbuy[t])/n_I-(P_RE[t]+Pdch[t]-Pch[t]);
-        if Edef_DC<0:
-            Eb_e=(Ebmax-Eb[t])/ef_bat;
-            Pch[t]=min(Eb_e, Pch[t]-Edef_DC);
-            Pch[t]=min(Pch[t],Pch_max);
+    #     Edef_DC=(Eload[t]+Psell[t]-Pdg[t]-Pbuy[t])/n_I-(P_RE[t]+Pdch[t]-Pch[t]);
+    #     if Edef_DC<0:
+    #         Eb_e=(Ebmax-Eb[t])/ef_bat;
+    #         Pch[t]=min(Eb_e, Pch[t]-Edef_DC);
+    #         Pch[t]=min(Pch[t],Pch_max);
 
-        Esur=Eload[t]+Psell[t]-Pbuy[t]-Pdg[t]-min(Pinv_max, (P_RE[t]+Pdch[t]-Pch[t])*n_I);  
-        Ens[t]=Esur*(Esur>0);
-        Edump[t]=-Esur*(Esur<0);
+    #     Esur=Eload[t]+Psell[t]-Pbuy[t]-Pdg[t]-min(Pinv_max, (P_RE[t]+Pdch[t]-Pch[t])*n_I);  
+    #     Ens[t]=Esur*(Esur>0);
+    #     Edump[t]=-Esur*(Esur<0);
 
     
-    #%% Battery charging and discharging energy is determined based on charging and discharging power and the battery charge level is updated.
-    Ech[t]=Pch[t]*dt;
-    Edch[t]=Pdch[t]*dt;
-    # index out of bounds error check
-    Eb[t+1]=(1-self_discharge_rate)*Eb[t]+ef_bat*Ech[t]-Edch[t]/ef_bat;
+    # #%% Battery charging and discharging energy is determined based on charging and discharging power and the battery charge level is updated.
+    # Ech[t]=Pch[t]*dt;
+    # Edch[t]=Pdch[t]*dt;
+    # # index out of bounds error check
+    # Eb[t+1]=(1-self_discharge_rate)*Eb[t]+ef_bat*Ech[t]-Edch[t]/ef_bat;
     
-    # print(process_time()-start)
-    return np.array(Eb), np.array(Pdg), np.array(Edump), np.array(Ens), np.array(Pch), np.array(Pdch), np.array(Pbuy), np.array(Psell), np.array(Pinv)
+    # return Eb, Pdg, Edump, Ens, Pch, Pdch, Pbuy, Psell, Pinv
 
 
 
