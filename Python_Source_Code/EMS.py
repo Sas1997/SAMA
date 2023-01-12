@@ -24,7 +24,7 @@ def energy_management(Ppv,Pwt,Eload,Cn_B,Nbat,
     Pinv=np.zeros(NT);
     Ebmax=SOC_max*Cn_B;
     Ebmin=SOC_min*Cn_B;
-    Eb[0]=SOC_initial*Cn_B;
+    Eb=SOC_initial*Cn_B;
     dt=1;
 
 

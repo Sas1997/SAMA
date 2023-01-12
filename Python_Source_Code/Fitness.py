@@ -4,36 +4,53 @@ from Input_Data import *
 from EMS import energy_management
 
 
+def fitness(X, Eload, G, T, Vw):
+    
+    # if(len(X))==1:
+    #     X=X[0]
+    
 
+    # reshape arrays
+    nVar = len(X)
+    Eload_vector = np.tile(Eload, (nVar, 1))
+    G_vector = np.tile(G, (nVar, 1))
+    T_vector = np.tile(T, (nVar, 1))
+    Vw_vector = np.tile(Vw, (nVar, 1))
 
-    
-def fitness(X,Eload, G, T, Vw):
-    
-    if(len(X))==1:
-        X=X[0]
-    
-    NT=len(Eload);        # time step numbers
-    Npv=round(X[0]);      # PV number
-    Nwt=round(X[1]);      # WT number
-    Nbat=round(X[2]);     # Battery pack number
-    N_DG=round(X[3]);     # number of Diesel Generator
-    Cn_I=X[4];            # Inverter Capacity
-    
+    NT=len(Eload);              # time step numbers
+    Npv=np.around(X[:,0]);      # PV numbers
+    Nwt=np.around(X[:,1]);      # WT numbers
+    Nbat=np.around(X[:,2]);     # Battery pack numbers
+    N_DG=np.around(X[:,3]);     # number of Diesel Generator
+    Cn_I=X[:,4];                   # Inverter Capacity
+
+    shape = np.swapaxes(Eload_vector, Eload_vector.ndim-1, 0).shape
+    Npv = np.swapaxes(np.broadcast_to(Npv, shape), Eload_vector.ndim-1, 0)
+    Nwt = np.swapaxes(np.broadcast_to(Nwt, shape), Eload_vector.ndim-1, 0)
+    Nbat = np.swapaxes(np.broadcast_to(Nbat, shape), Eload_vector.ndim-1, 0)
+    N_DG = np.swapaxes(np.broadcast_to(N_DG, shape), Eload_vector.ndim-1, 0)
+    Cn_I = np.swapaxes(np.broadcast_to(Cn_I, shape), Eload_vector.ndim-1, 0)
+
     Pn_PV=Npv*Ppv_r;   # PV Total Capacity
     Pn_WT=Nwt*Pwt_r;   # WT Total Capacity
     Cn_B=Nbat*Cbt_r;   # Battery Total Capacity
     Pn_DG=N_DG*Cdg_r;  # Diesel Total Capacity
+
+    # Pn_PV = np.swapaxes(np.broadcast_to(Pn_PV, shape), Eload_vector.ndim-1, 0)
+    # Pn_WT = np.swapaxes(np.broadcast_to(Pn_WT, shape), Eload_vector.ndim-1, 0)
+    # Cn_B = np.swapaxes(np.broadcast_to(Cn_B, shape), Eload_vector.ndim-1, 0)
+    # Pn_DG = np.swapaxes(np.broadcast_to(Pn_DG, shape), Eload_vector.ndim-1, 0)
     
     #%% PV Power Calculation
     Tc   = T+(((Tnoct-20)/800)*G); # Module Temprature
-    Ppv = fpv*Pn_PV*(G/Gref)*(1+Tcof*(Tc-Tref)); # output power(kw)_hourly
+    Ppv = fpv*Pn_PV*(G_vector/Gref)*(1+Tcof*(Tc-Tref)); # output power(kw)_hourly
     
     # %% Wind turbine Power Calculation
-    v1=Vw;     #hourly wind speed
-    v2=((h_hub/h0)**(alfa_wind_turbine))*v1; # v1 is the speed at a reference height;v2 is the speed at a hub height h2
-    Pwt=np.zeros(8760);
-    
-    
+    v1=Vw_vector;     #hourly wind speed
+    v2=((h_hub/h0)**(alfa_wind_turbine))*v1 # v1 is the speed at a reference height;v2 is the speed at a hub height h2
+    Pwt=np.zeros((nVar,8760))
+
+
     Pwt[v2<v_cut_in]=0
     Pwt[v2>v_cut_out]=0
     true_value=np.logical_and(v_cut_in<=v2,v2<v_rated)
@@ -44,22 +61,31 @@ def fitness(X,Eload, G, T, Vw):
     
     #%% Energy Management 
     #% Battery Wear Cost
-    if Cn_B>0:
-        Cbw=R_B*Cn_B/(Nbat*Q_lifetime*np.sqrt(ef_bat) );
-    else:
-        Cbw=0;
+    Cbw = np.where(Cn_B>0, R_B*Cn_B/(Nbat*Q_lifetime*np.sqrt(ef_bat)), 0)
+    # if Cn_B>0:
+    #     Cbw=R_B*Cn_B/(Nbat*Q_lifetime*np.sqrt(ef_bat) );
+    # else:
+    #     Cbw=0;
     
     
     #  DG Fix cost
     cc_gen=b*Pn_DG*C_fuel+R_DG*Pn_DG/TL_DG+MO_DG;
     
-    
+    # from time import process_time
+    # start = process_time()
+
+    # reshape Cbuy
+    global Cbuy
+    Cbuy_reshaped = np.tile(Cbuy, (nVar, 1))
+
     (Eb, Pdg, Edump, Ens, Pch, Pdch, Pbuy, Psell, Pinv) =\
-        energy_management(Ppv,Pwt,Eload,Cn_B,Nbat,Pn_DG,NT,
+        energy_management(Ppv,Pwt,Eload_vector,Cn_B,Nbat,Pn_DG,(nVar, NT),
                           SOC_max,SOC_min,SOC_initial,
-                          n_I,Grid,Cbuy,a,Cn_I,LR_DG,C_fuel,Pbuy_max,Psell_max,cc_gen,Cbw,
+                          n_I,Grid,Cbuy_reshaped,a,Cn_I,LR_DG,C_fuel,Pbuy_max,Psell_max,cc_gen,Cbw,
                           self_discharge_rate,alfa_battery,c,k,Imax,Vnom,ef_bat)
     
+    # print(process_time()-start)
+
     q=(a*Pdg+b*Pn_DG)*(Pdg>0);   # Fuel consumption of a diesel generator 
     
     #%% installation and operation cost
@@ -79,6 +105,7 @@ def fitness(X,Eload, G, T, Vw):
     RC_I = np.zeros(n);
     RC_CH = np.zeros(n);
     
+    print((R_PV*Pn_PV/(1+ir)).shape)
     RC_PV[np.arange(L_PV+1,n,L_PV)]= R_PV*Pn_PV/(1+ir)**(np.arange(1.001*L_PV,n,L_PV)) ;
     RC_WT[np.arange(L_WT+1,n,L_WT)]= R_WT*Pn_WT/(1+ir)** (np.arange(1.001*L_WT,n,L_WT)) ;
     RC_DG[np.arange(L_DG+1,n,L_DG).astype(np.int32)]= R_DG*Pn_DG/(1+ir)**(np.arange(1.001*L_DG,n,L_DG)) ;
