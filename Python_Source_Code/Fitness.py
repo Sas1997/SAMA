@@ -104,22 +104,51 @@ def fitness(X, Eload, G, T, Vw):
     RC_B = np.zeros(n);
     RC_I = np.zeros(n);
     RC_CH = np.zeros(n);
+
+    # we only want to do stuff if np.arange returns an actual range
+    # then we need to resahpe Pn_PV[:,0] to tile it to the num of vals in the range
+    # need to reshape the range to tile it by 50
+    # then element wise pow
+
+    # alt, store the arange in the correct range
+    # then reshape and do pow
+
+    RC_PV[np.arange(L_PV+1,n,L_PV)] = np.arange(1.001*L_PV,n,L_PV)
+    RC_WT[np.arange(L_WT+1,n,L_WT)] = np.arange(1.001*L_WT,n,L_WT)
+    RC_DG[np.arange(L_DG+1,n,L_DG).astype(np.int32)] = np.arange(1.001*L_DG,n,L_DG)
+    RC_B[np.arange(L_B+1,n,L_B)] = np.arange(1.001*L_B,n,L_B)
+    RC_I[np.arange(L_I+1,n,L_I)] = np.arange(1.001*L_I,n,L_I)
+    RC_CH[np.arange(L_CH+1,n,L_CH)] = np.arange(1.001*L_CH,n,L_CH)
     
-    print((R_PV*Pn_PV/(1+ir)).shape)
-    RC_PV[np.arange(L_PV+1,n,L_PV)]= R_PV*Pn_PV/(1+ir)**(np.arange(1.001*L_PV,n,L_PV)) ;
-    RC_WT[np.arange(L_WT+1,n,L_WT)]= R_WT*Pn_WT/(1+ir)** (np.arange(1.001*L_WT,n,L_WT)) ;
-    RC_DG[np.arange(L_DG+1,n,L_DG).astype(np.int32)]= R_DG*Pn_DG/(1+ir)**(np.arange(1.001*L_DG,n,L_DG)) ;
-    RC_B[np.arange(L_B+1,n,L_B)] = R_B*Cn_B /(1+ir)**(np.arange(1.001*L_B,n,L_B)) ;
-    RC_I[np.arange(L_I+1,n,L_I)] = R_I*Cn_I /(1+ir)**(np.arange(1.001*L_I,n,L_I)) ;
-    RC_CH[np.arange(L_CH+1,n,L_CH)]  = R_CH /(1+ir)**(np.arange(1.001*L_CH,n,L_CH)) ;
+    RC_PV = np.swapaxes(np.tile(RC_PV, (nVar,1)), 0, 1)
+    RC_WT = np.swapaxes(np.tile(RC_WT, (nVar,1)), 0, 1)
+    RC_DG = np.swapaxes(np.tile(RC_DG, (nVar,1)), 0, 1)
+    RC_B = np.swapaxes(np.tile(RC_B, (nVar,1)), 0, 1)
+    RC_I = np.swapaxes(np.tile(RC_I, (nVar,1)), 0, 1)
+    RC_CH = np.swapaxes(np.tile(RC_CH, (nVar,1)), 0, 1)
+
+    RC_PV = R_PV*np.tile(Pn_PV[:,0], (n, 1))/(1+ir)**RC_PV
+    RC_WT = R_WT*np.tile(Pn_WT[:,0], (n,1))/(1+ir)**RC_WT
+    RC_DG = R_DG*np.tile(Pn_DG[:,0], (n,1))/(1+ir)**RC_DG
+    RC_B = R_B*np.tile(Cn_B[:,0], (n,1))/(1+ir)**RC_B
+    RC_I = R_I*np.tile(Cn_I[:,0], (n,1))/(1+ir)**RC_I
+    RC_CH = np.tile(R_CH, nVar) /(1+ir)**RC_CH
+
+    # RC_PV[np.arange(L_PV+1,n,L_PV)]= R_PV*Pn_PV[:,0]/(1+ir)**(np.arange(1.001*L_PV,n,L_PV));
+    # RC_WT[np.arange(L_WT+1,n,L_WT)]= R_WT*Pn_WT[:,0]/(1+ir)** (np.arange(1.001*L_WT,n,L_WT)) ;
+    # RC_DG[np.arange(L_DG+1,n,L_DG).astype(np.int32)]= R_DG*Pn_DG[:,0]/(1+ir)**(np.arange(1.001*L_DG,n,L_DG)) ;
+    # RC_B[np.arange(L_B+1,n,L_B)] = R_B*Cn_B[:,0] /(1+ir)**(np.arange(1.001*L_B,n,L_B)) ;
+    # RC_I[np.arange(L_I+1,n,L_I)] = R_I*Cn_I[:,0] /(1+ir)**(np.arange(1.001*L_I,n,L_I)) ;
+    # RC_CH[np.arange(L_CH+1,n,L_CH)]  = np.tile(R_CH, nVar) /(1+ir)**(np.arange(1.001*L_CH,n,L_CH)) ;
     R_Cost=RC_PV+RC_WT+RC_DG+RC_B+RC_I+RC_CH;
     
-    #Total M&O Cost ($/year)
-    MO_Cost=( MO_PV*Pn_PV + MO_WT*Pn_WT+ MO_DG*np.sum(Pn_DG>0)+ \
-             MO_B*Cn_B+ MO_I*Cn_I +MO_CH)/(1+ir)**np.array(range(1,n+1)) ;
+    #Total
+    #  M&O Cost ($/year)
+    MO_Cost=( MO_PV*np.tile(Pn_PV[:,0], (n, 1))+ MO_WT*np.tile(Pn_WT[:,0], (n,1))+ MO_DG*np.sum(np.tile(Pn_DG[:,0], (n,1))>0)+ \
+             MO_B*np.tile(Cn_B[:,0], (n,1))+ MO_I*np.tile(Cn_I[:,0], (n,1))+MO_CH)/(1+ir)**np.swapaxes(np.tile(np.array(range(n)), (nVar,1)),0,1)
     
     # DG fuel Cost
-    C_Fu= sum(C_fuel*q)/(1+ir)**np.array(range(1,n+1));
+    C_Fu= np.tile(np.sum(C_fuel*q, axis=1)/(1+ir), (1,n))**np.swapaxes(np.tile(np.array(range(n)), (1, nVar)), 0,1);
     
     # Salvage
     L_rem=(RT_PV+1)*L_PV-n; 
@@ -165,8 +194,8 @@ def fitness(X, Eload, G, T, Vw):
     RE=1-np.sum(Pdg+Pbuy)/np.sum(Eload+Psell-Ens);
     if(np.isnan(RE)):
         RE=0;
-    
+
     Z=LCOE+EM*LEM+10*(LPSP>LPSP_max)+10*(RE<RE_min)+100*(I_Cost>Budget)+\
-        100*max(0, LPSP-LPSP_max)+100*max(0, RE_min-RE)+100*max(0, I_Cost-Budget);
+        100*max(0, LPSP-LPSP_max)+100*max(0, RE_min-RE)+100*np.fmax(0, I_Cost-Budget);
 
     return Z
