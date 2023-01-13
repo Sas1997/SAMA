@@ -87,8 +87,20 @@ def fitness(X, Eload, G, T, Vw):
     # print(process_time()-start)
 
     q=(a*Pdg+b*Pn_DG)*(Pdg>0);   # Fuel consumption of a diesel generator 
-    
+
     #%% installation and operation cost
+
+    #reset shapes
+    Npv=np.around(X[:,0]);      # PV numbers
+    Nwt=np.around(X[:,1]);      # WT numbers
+    Nbat=np.around(X[:,2]);     # Battery pack numbers
+    N_DG=np.around(X[:,3]);     # number of Diesel Generator
+    Cn_I=X[:,4];                   # Inverter Capacity
+
+    Pn_PV=Npv*Ppv_r;   # PV Total Capacity
+    Pn_WT=Nwt*Pwt_r;   # WT Total Capacity
+    Cn_B=Nbat*Cbt_r;   # Battery Total Capacity
+    Pn_DG=N_DG*Cdg_r;  # Diesel Total Capacity
     
     # Total Investment cost ($)
     I_Cost=C_PV*Pn_PV + C_WT*Pn_WT+ C_DG*Pn_DG+C_B*Cn_B+C_I*Cn_I +C_CH;
@@ -127,11 +139,11 @@ def fitness(X, Eload, G, T, Vw):
     RC_I = np.swapaxes(np.tile(RC_I, (nVar,1)), 0, 1)
     RC_CH = np.swapaxes(np.tile(RC_CH, (nVar,1)), 0, 1)
 
-    RC_PV = R_PV*np.tile(Pn_PV[:,0], (n, 1))/(1+ir)**RC_PV
-    RC_WT = R_WT*np.tile(Pn_WT[:,0], (n,1))/(1+ir)**RC_WT
-    RC_DG = R_DG*np.tile(Pn_DG[:,0], (n,1))/(1+ir)**RC_DG
-    RC_B = R_B*np.tile(Cn_B[:,0], (n,1))/(1+ir)**RC_B
-    RC_I = R_I*np.tile(Cn_I[:,0], (n,1))/(1+ir)**RC_I
+    RC_PV = R_PV*np.tile(Pn_PV, (n, 1))/(1+ir)**RC_PV
+    RC_WT = R_WT*np.tile(Pn_WT, (n,1))/(1+ir)**RC_WT
+    RC_DG = R_DG*np.tile(Pn_DG, (n,1))/(1+ir)**RC_DG
+    RC_B = R_B*np.tile(Cn_B, (n,1))/(1+ir)**RC_B
+    RC_I = R_I*np.tile(Cn_I, (n,1))/(1+ir)**RC_I
     RC_CH = np.tile(R_CH, nVar) /(1+ir)**RC_CH
 
     # RC_PV[np.arange(L_PV+1,n,L_PV)]= R_PV*Pn_PV[:,0]/(1+ir)**(np.arange(1.001*L_PV,n,L_PV));
@@ -144,12 +156,13 @@ def fitness(X, Eload, G, T, Vw):
     
     #Total
     #  M&O Cost ($/year)
-    MO_Cost=( MO_PV*np.tile(Pn_PV[:,0], (n, 1))+ MO_WT*np.tile(Pn_WT[:,0], (n,1))+ MO_DG*np.sum(np.tile(Pn_DG[:,0], (n,1))>0)+ \
-             MO_B*np.tile(Cn_B[:,0], (n,1))+ MO_I*np.tile(Cn_I[:,0], (n,1))+MO_CH)/(1+ir)**np.swapaxes(np.tile(np.array(range(n)), (nVar,1)),0,1)
+    MO_Cost=( MO_PV*np.tile(Pn_PV, (n, 1))+ MO_WT*np.tile(Pn_WT, (n,1))+ MO_DG*np.sum(np.tile(Pn_DG, (n,1))>0)+ \
+             MO_B*np.tile(Cn_B, (n,1))+ MO_I*np.tile(Cn_I, (n,1))+MO_CH)/(1+ir)**np.swapaxes(np.tile(np.array(range(n)), (nVar,1)),0,1)
     
     # DG fuel Cost
-    C_Fu= np.tile(np.sum(C_fuel*q, axis=1)/(1+ir), (1,n))**np.swapaxes(np.tile(np.array(range(n)), (1, nVar)), 0,1);
-    
+    C_Fu= np.tile(np.sum(C_fuel*q, axis=1)/(1+ir), (n,1))**np.swapaxes(np.tile(np.array(range(n)), (nVar, 1)), 0,1)
+
+
     # Salvage
     L_rem=(RT_PV+1)*L_PV-n; 
     S_PV=(R_PV*Pn_PV)*L_rem/L_PV * 1/(1+ir)**n # PV
@@ -164,9 +177,8 @@ def fitness(X, Eload, G, T, Vw):
     L_rem=(RT_CH +1)*L_CH-n; 
     S_CH =(R_CH)*L_rem/L_CH * 1/(1+ir)**n;
     Salvage=S_PV+S_WT+S_DG+S_B+S_I+S_CH;
-    
-    
-    
+
+
     #Emissions produced by Disesl generator (g)
     DG_Emissions=np.sum( q*(CO2 +NOx +SO2) )/1000;           # total emissions (kg/year)
     Grid_Emissions= np.sum( Pbuy*(E_CO2+E_SO2+E_NOx) )/1000; # total emissions (kg/year)
@@ -180,14 +192,16 @@ def fitness(X, Eload, G, T, Vw):
     NPC=I_Cost+np.sum(R_Cost)+ np.sum(MO_Cost)+np.sum(C_Fu) -Salvage+np.sum(Grid_Cost);
     
     Operating_Cost=CRF*(np.sum(R_Cost)+ np.sum(MO_Cost)+np.sum(C_Fu) -Salvage+np.sum(Grid_Cost));
-    
-    if np.sum(Eload-Ens)>1:
-        LCOE=CRF*NPC/np.sum(Eload-Ens+Psell);                #Levelized Cost of Energy ($/kWh)
-        LEM=(DG_Emissions+Grid_Emissions)/sum(Eload-Ens);    #Levelized Emissions(kg/kWh)
-    else:
-        LCOE=100;
-        LEM=100;
-    
+
+
+    LCOE = np.where(np.sum(Eload_vector-Ens, axis=1)>1, CRF*NPC/np.sum(Eload_vector-Ens+Psell, axis=1), 100)
+    LEM = np.where(np.sum(Eload_vector-Ens, axis=1)>1, (DG_Emissions+Grid_Emissions)/np.sum(Eload_vector-Ens, axis=1), 100)
+    # if np.sum(Eload_vector-Ens, axis=1)>1:
+    #     LCOE=CRF*NPC/np.sum(Eload-Ens+Psell);                #Levelized Cost of Energy ($/kWh)
+    #     LEM=(DG_Emissions+Grid_Emissions)/sum(Eload-Ens);    #Levelized Emissions(kg/kWh)
+    # else:
+    #     LCOE=100;
+    #     LEM=100;
     
     LPSP=np.sum(Ens)/np.sum(Eload);   
     
