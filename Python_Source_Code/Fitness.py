@@ -71,9 +71,6 @@ def fitness(X, Eload, G, T, Vw):
     #  DG Fix cost
     cc_gen=b*Pn_DG*C_fuel+R_DG*Pn_DG/TL_DG+MO_DG;
     
-    # from time import process_time
-    # start = process_time()
-
     # reshape Cbuy
     global Cbuy
     Cbuy_reshaped = np.tile(Cbuy, (nVar, 1))
@@ -84,7 +81,6 @@ def fitness(X, Eload, G, T, Vw):
                           n_I,Grid,Cbuy_reshaped,a,Cn_I,LR_DG,C_fuel,Pbuy_max,Psell_max,cc_gen,Cbw,
                           self_discharge_rate,alfa_battery,c,k,Imax,Vnom,ef_bat)
     
-    # print(process_time()-start)
 
     q=(a*Pdg+b*Pn_DG)*(Pdg>0);   # Fuel consumption of a diesel generator 
 
