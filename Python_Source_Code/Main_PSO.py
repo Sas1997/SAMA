@@ -34,7 +34,7 @@ Vw = Data[:,3]
 
 
 # %% Problem Definition
-CostFunction=fitness;             # Cost Function
+CostFunction= fitness             # Cost Function
 nVar = 5                          # number of decision variables
 VarSize = (1, nVar)               # size of decision variables matrix
 
@@ -44,7 +44,6 @@ VarMax = np.array([100,100,60,10,20]) # Upper bound of variables
 
 VarMin = VarMin * [PV,WT,Bat,DG, 1]
 VarMax = VarMax * [PV,WT,Bat,DG, 1]
-Cbuy = calcTouCbuy(daysInMonth,months, holidays)
 
 # %% PSO Parameters
 MaxIt = 100     # Max number of iterations
@@ -62,59 +61,67 @@ Sol= [Solution() for _ in range(Run_Time)]
 for tt in range(Run_Time):
     w = 1 # intertia weight 
     particle = [Particle() for _ in range(nPop)]
-    GlobalBest=Particle()
-    GlobalBest.Cost=np.inf;
-    for i in range(nPop):
-        #Initialize Position
-        particle[i].Position=np.random.uniform(VarMin, VarMax,VarSize)[0]
-        
-        #Initialize Velocity
-        particle[i].Velocity=np.zeros(VarSize)
-    
-        #Evaluation
-        particle[i].Cost= CostFunction(particle[i].Position,Eload, G, T, Vw);
-        #Update Personal Best
-        particle[i].Best=deepcopy(particle[i])
 
-        #Update Global Best
-        if particle[i].Best.Cost<GlobalBest.Cost:
-            GlobalBest=particle[i].Best;   
+    particle_Positions = np.random.uniform(VarMin, VarMax, (1, nPop, nVar))[0]
+    particle_Costs = CostFunction(particle_Positions, Eload, G, T, Vw) # need to vectorize
+    particle_Velocities = np.zeros((nPop, nVar))
+    particle_Best_Positions = deepcopy(particle_Positions)
+    particle_Best_Costs = deepcopy(particle_Costs)
+    particle_Best_Velocities = deepcopy(particle_Velocities)
+
+    GlobalBest_Position = particle_Positions[np.argmin(particle_Best_Costs)]
+    GlobalBest_Cost = np.amin(particle_Best_Costs)
 
     BestCost = np.zeros((MaxIt, 1))
     MeanCost = np.zeros((MaxIt, 1))
     
-    
-    
-    
     #%% PSO Main Loop
     for it in range(MaxIt):
         
+        particle_Velocities = w*particle_Velocities+c1*np.random.rand(nVar)\
+                *(particle_Best_Positions-particle_Positions)\
+                    +c2*np.random.rand(nVar)*(GlobalBest_Position-particle_Positions)
+             
+        particle_Velocities = np.fmax(particle_Velocities,VelMin)
+        particle_Velocities = np.fmin(particle_Velocities,VelMax)
+
+        print(particle_Velocities)
+        particle_Positions = particle_Positions + particle_Velocities
+
+        IsOutside=(np.less(particle_Positions, VarMin) | np.greater(particle_Positions, VarMax))[:, 0]
+        IsOutside=IsOutside.reshape(nPop,-1)    
+        particle_Velocities[IsOutside]=-particle_Velocities[IsOutside];
+        
+        particle_Positions = np.fmax(particle_Positions,VarMin);
+        particle_Positions = np.fmin(particle_Positions,VarMax);
+        
+
         for i in range(nPop):
     
             #Update Velocity
-            particle[i].Velocity = w*particle[i].Velocity+c1*np.random.rand(VarSize[1])\
-                *(particle[i].Best.Position-particle[i].Position)\
-                    +c2*np.random.rand(VarSize[1])*(GlobalBest.Position-particle[i].Position)
+            # particle[i].Velocity = w*particle[i].Velocity+c1*np.random.rand(VarSize[1])\
+            #     *(particle[i].Best.Position-particle[i].Position)\
+            #         +c2*np.random.rand(VarSize[1])*(GlobalBest.Position-particle[i].Position)
              
             # Apply Velocity Limits
-            particle[i].Velocity = np.maximum(particle[i].Velocity,VelMin);
-            particle[i].Velocity = np.minimum(particle[i].Velocity,VelMax);
+            # particle[i].Velocity = np.maximum(particle[i].Velocity,VelMin);
+            # particle[i].Velocity = np.minimum(particle[i].Velocity,VelMax);
             
             # Update Position
-            particle[i].Position = particle[i].Position + particle[i].Velocity;
+            # particle[i].Position = particle[i].Position + particle[i].Velocity;
             
             # Velocity Mirror Effect
-            IsOutside=(np.less(particle[i].Position, VarMin)\
-                        | np.greater(particle[i].Position, VarMax))[0]
-            IsOutside=IsOutside.reshape(1,-1)    
-            particle[i].Velocity[IsOutside]=-particle[i].Velocity[IsOutside];
+            # IsOutside=(np.less(particle[i].Position, VarMin)\
+            #             | np.greater(particle[i].Position, VarMax))[0]
+            # IsOutside=IsOutside.reshape(1,-1)    
+            # particle[i].Velocity[IsOutside]=-particle[i].Velocity[IsOutside];
             
             # Apply Position Limits
             particle[i].Position = np.maximum(particle[i].Position,VarMin);
             particle[i].Position = np.minimum(particle[i].Position,VarMax);
         
             # Evaluation
-            particle[i].Cost= CostFunction(particle[i].Position,Eload, G, T, Vw);
+            particle[i].Cost= fitness(particle[i].Position,Eload, G, T, Vw);
      
             # Update Personal Best
             if particle[i].Cost<particle[i].Best.Cost:
