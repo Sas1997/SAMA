@@ -12,5 +12,3 @@ def calcSeasonalRate(prices, months, daysInMonth):
         hCount = hoursEnd
 
     return Cbuy
-
-np.savetxt("Cbuy.csv", calcSeasonalRate([0.08, 0.12], [0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0], [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]))
