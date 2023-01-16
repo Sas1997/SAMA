@@ -1,4 +1,3 @@
-from getLoad import getLoad
 import numpy as np
 
 def calcTieredRate(base_charge_tier_1, base_charge_tier_2, base_charge_tier_3, prices, tierMax, load, daysInMonth):
@@ -33,9 +32,3 @@ def calcTieredRate(base_charge_tier_1, base_charge_tier_2, base_charge_tier_3, p
             base_charge[m] = base_charge_tier_3
 
     return [Cbuy, base_charge]
-
-load = getLoad("Load.csv")
-
-tiered = calcTieredRate(1, 2, 3, [0.1, 0.2, 0.3], [500, 1000, 2000], load, [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31])
-np.savetxt("Cbuy.csv", tiered[0])
-np.savetxt("mc.csv", tiered[1])
