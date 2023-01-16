@@ -10,5 +10,3 @@ def calcMonthlyRate(prices, daysInMonth):
             hCount += 1
 
     return Cbuy
-
-np.savetxt("Cbuy.csv", calcMonthlyRate([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]))
