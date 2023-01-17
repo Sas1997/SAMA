@@ -55,18 +55,13 @@ def energy_management(Ppv,Pwt,Eload,Cn_B,Nbat,
                 np.logical_and(np.logical_not(case3),
                     np.logical_and(np.logical_not(case4), np.logical_not(case5))))))
 
-    Eb_e = np.where(load_greater, (Ebmax-Eb)/ef_bat,    #Battery charge power calculated based on surEloadus energy and battery empty  capacity
-        np.where(case1, (Eb-Ebmin)*ef_bat,
-            np.where(case2, (Eb-Ebmin)*ef_bat,
-                np.where(case3, (Eb-Ebmin)*ef_bat,
-                    np.where(case4, (Eb-Ebmin)*ef_bat,
-                        np.where(case5, (Eb-Ebmin)*ef_bat, (Eb-Ebmin)*ef_bat))))))
+    #Battery charge power calculated based on surEloadus energy and battery empty  capacity
+    Eb_e = np.where(load_greater, (Ebmax-Eb)/ef_bat, (Eb-Ebmin)*ef_bat)
     
     #if PV+Pwt greater than load  (battery should charge)
     #Battery charge power calculated based on surEloadus energy and battery empty  capacity 
-    Pch = np.where(load_greater, np.amin((np.amin((Eb_e, P_RE-Eload/n_I), axis=0), Pch_max), axis=0), Pch) # Battery maximum charge power limit
-    Psur_AC = np.where(load_greater, n_I*(P_RE-Pch-Eload), float('inf')) #surplus Energy
-    Psell = np.where(load_greater, np.amin((np.fmin(Psur_AC, Psell_max), np.fmax(0, Pinv_max-Eload)), axis=0), Psell)
+    Pch = np.where(load_greater, np.fmin(np.fmin(Eb_e, P_RE-Eload/n_I), Pch_max), Pch) # Battery maximum charge power limit
+    Psell = np.where(load_greater, np.fmin(np.fmin(n_I*(P_RE-Pch-Eload), Psell_max), np.fmax(0, Pinv_max-Eload)), Psell)
     Edump = np.where(load_greater, P_RE-Pch-(Eload+Psell)/n_I, Edump)
 
     #%% if load greater than PV+Pwt 
@@ -77,7 +72,7 @@ def energy_management(Ppv,Pwt,Eload,Cn_B,Nbat,
     Pdg = np.where(case1, np.fmin(Edef_AC-Pbuy, Pn_DG), Pdg)
     Pdg = np.where(case1, Pdg*(Pdg>=LR_DG*Pn_DG)+LR_DG*Pn_DG*(Pdg<LR_DG*Pn_DG)*(Pdg>Pdg_min), Pdg)
     Edef_AC = np.where(case1, Eload-Pdg-Pbuy-np.fmin(Pinv_max, n_I*P_RE), Edef_AC)
-    Edef_DC = np.where(case1, Edef_AC/n_I*(Edef_AC>0), 0)
+    Edef_DC = np.where(case1, Edef_AC/n_I*(Edef_AC>0), np.fmin(Pinv_max, Eload/n_I)-P_RE)
     Pdch = np.where(case1, np.amin((np.amin((Eb_e, Edef_DC), axis=0), Pdch_max), axis=0), Pdch)
     Esur_AC = np.where(case1, -Edef_AC*(Edef_AC<0), Edef_AC)
     Pbuy = np.where(case1, Pbuy-Esur_AC*(Grid==1), Pbuy)
@@ -115,7 +110,7 @@ def energy_management(Ppv,Pwt,Eload,Cn_B,Nbat,
     Pdch = np.where(case5, np.amin((Pdch,Pdch_max), axis=0), Pdch)  
     Edef_AC = np.where(case5, Eload-np.fmin(Pinv_max, n_I*(P_RE+Pdch)), Edef_AC)
     Pdg = np.where(case5, np.fmin(Edef_AC,Pn_DG), Pdg)
-    Pdg = np.where(case5, Pdg *(Pdg>=LR_DG*Pn_DG)+LR_DG*Pn_DG*(Pdg<LR_DG*Pn_DG)*(Pdg>Pdg_min), Pdg) 
+    Pdg = np.where(case5, Pdg*(Pdg>=LR_DG*Pn_DG)+LR_DG*Pn_DG*(Pdg<LR_DG*Pn_DG)*(Pdg>Pdg_min), Pdg) 
     Pbuy = np.where(case5, np.fmax(0, np.fmin(Edef_AC-Pdg,Pbuy_max)), Pbuy)
     Psell = np.where(case5, np.fmax(0, np.fmin(Pdg-Edef_AC,Psell_max)), Psell)
 
