@@ -24,7 +24,7 @@ def energy_management(Ppv,Pwt,Eload,Cn_B,Nbat,
     Pinv=np.zeros(NT);
     Ebmax=SOC_max*Cn_B;
     Ebmin=SOC_min*Cn_B;
-    Eb=np.full(Eb.shape, SOC_initial*Cn_B);
+    Eb[0]=SOC_initial*Cn_B;
     dt=1;
 
 
@@ -39,7 +39,8 @@ def energy_management(Ppv,Pwt,Eload,Cn_B,Nbat,
     Pdg_min=0.05*Pn_DG; # LR_DG
 
     Pdch_max, Pch_max = battery_model(Nbat, Eb, alfa_battery, c, k, Imax, Vnom, ef_bat) # kW    
-
+    np.set_printoptions(threshold=np.inf)
+    # print(Pdch_max)
     # numpy conditionals
     load_greater = np.logical_and(P_RE>=(Eload/n_I),(Eload<=Pinv_max))                                          #if PV+Pwt greater than load  (battery should charge)
 
