@@ -11,21 +11,23 @@ def energy_management(Ppv,Pwt,Eload,Cn_B,Nbat,
                       Psell_max,cc_gen,Cbw,self_discharge_rate,
                       alfa_battery,c,k,Imax,Vnom,ef_bat):
     #^^^^^^^^^^^^^^READ INPUTS^^^^^^^^^^^^^^^^^^
-    # Eb=np.zeros(NT+1);
-    # Pch=np.zeros(NT);
-    # Pdch=np.zeros(NT);
-    # Ech=np.zeros(NT);
-    # Edch=np.zeros(NT);
-    # Pdg=np.zeros(NT);
-    # Edump=np.zeros(NT);
-    # Ens=np.zeros(NT);
-    # Psell=np.zeros(NT);
-    # Pbuy=np.zeros(NT);
-    # Pinv=np.zeros(NT);
-    # Ebmax=SOC_max*Cn_B;
-    # Ebmin=SOC_min*Cn_B;
-    # Eb[0]=SOC_initial*Cn_B;
-    # dt=1;
+    Eb=np.zeros(NT);
+    Pch=np.zeros(NT);
+    Pdch=np.zeros(NT);
+    Ech=np.zeros(NT);
+    Edch=np.zeros(NT);
+    Pdg=np.zeros(NT);
+    Edump=np.zeros(NT);
+    Ens=np.zeros(NT);
+    Psell=np.zeros(NT);
+    Pbuy=np.zeros(NT);
+    Pinv=np.zeros(NT);
+    Ebmax=SOC_max*Cn_B;
+    Ebmin=SOC_min*Cn_B;
+    Eb=np.full(Eb.shape, SOC_initial*Cn_B);
+    dt=1;
+
+
     
     if Grid==0:
         Pbuy_max=0
