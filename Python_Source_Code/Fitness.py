@@ -4,11 +4,9 @@ from Input_Data import *
 from EMS import energy_management
 
 
-
-
     
-def fitness(X,Eload, G, T, Vw):
-    
+def fitness(X):
+
     if(len(X))==1:
         X=X[0]
     
@@ -53,7 +51,7 @@ def fitness(X,Eload, G, T, Vw):
     #  DG Fix cost
     cc_gen=b*Pn_DG*C_fuel+R_DG*Pn_DG/TL_DG+MO_DG;
     
-    
+
     (Eb, Pdg, Edump, Ens, Pch, Pdch, Pbuy, Psell, Pinv) =\
         energy_management(Ppv,Pwt,Eload,Cn_B,Nbat,Pn_DG,NT,
                           SOC_max,SOC_min,SOC_initial,
