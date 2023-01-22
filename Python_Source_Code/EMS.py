@@ -17,11 +17,9 @@ def energy_management(Ppv,Pwt,Eload,Cn_B,Nbat,
     Ech=np.zeros(NT);
     Edch=np.zeros(NT);
     Pdg=np.zeros(NT);
-    Edump=np.zeros(NT);
     Ens=np.zeros(NT);
     Psell=np.zeros(NT);
     Pbuy=np.zeros(NT);
-    Pinv=np.zeros(NT);
     Ebmax=SOC_max*Cn_B;
     Ebmin=SOC_min*Cn_B;
     Eb[0]=SOC_initial*Cn_B;
@@ -58,7 +56,6 @@ def energy_management(Ppv,Pwt,Eload,Cn_B,Nbat,
             Psell[t]=min(Psur_AC,Psell_max); 
             Psell[t]=min( max(0, Pinv_max-Eload[t]),Psell[t]);
             
-            Edump[t]=P_RE[t]-Pch[t]-(Eload[t]+Psell[t])/n_I;
                    
             #%% if load greater than PV+Pwt 
         else:
@@ -161,7 +158,6 @@ def energy_management(Ppv,Pwt,Eload,Cn_B,Nbat,
     
             Esur=Eload[t]+Psell[t]-Pbuy[t]-Pdg[t]-min(Pinv_max, (P_RE[t]+Pdch[t]-Pch[t])*n_I);  
             Ens[t]=Esur*(Esur>0);
-            Edump[t]=-Esur*(Esur<0);
     
         
         #%% Battery charging and discharging energy is determined based on charging and discharging power and the battery charge level is updated.
@@ -170,7 +166,7 @@ def energy_management(Ppv,Pwt,Eload,Cn_B,Nbat,
         # index out of bounds error check
         Eb[t+1]=(1-self_discharge_rate)*Eb[t]+ef_bat*Ech[t]-Edch[t]/ef_bat;
     
-    return Eb, Pdg, Edump, Ens, Pch, Pdch, Pbuy, Psell, Pinv
+    return Eb, Pdg, Ens, Pch, Pdch, Pbuy, Psell
 
 
 
