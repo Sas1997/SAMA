@@ -96,7 +96,6 @@ class Swarm:
                 # Print results for current iteration
                 print(f'Run time = {tt}, Iteration = {it}, Best Cost = {round(global_best_cost, 4)}, Mean Cost = {round(mean_cost[-1], 4)}')
 
-
             self.solution.append({
                 "cost": global_best_cost,
                 "position": global_best_position,

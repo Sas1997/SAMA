@@ -1,5 +1,5 @@
 import numpy as np
-import math
+from math import ceil
 
 path='Data.csv'
 Data = np.genfromtxt(path, delimiter=",")
@@ -80,7 +80,7 @@ L_PV=25;          # Life time (year)
 n_PV=0.205;       # Efficiency of PV module
 D_PV=0.01;        # PV yearly degradation
 CE_PV=50;         # Engineering cost of system per kW for first year
-RT_PV=math.ceil(n/L_PV)-1   # Replecement time
+RT_PV=ceil(n/L_PV)-1   # Replecement time
 
 #%% WT data
 h_hub=17;               # Hub height 
@@ -96,7 +96,7 @@ MO_WT = 40 ;      # O&M  cost ($/year/kw)
 L_WT=20;          # Life time (year)
 n_WT=0.30;        # Efficiency of WT module
 D_WT=0.05;        # WT yearly degradation
-RT_WT=math.ceil(n/L_WT)-1   # Replecement time
+RT_WT=ceil(n/L_WT)-1   # Replecement time
 
 #%% Diesel generator
 C_DG = 352;       # Capital cost ($/KWh)
@@ -125,7 +125,7 @@ SOC_min=0.2;
 SOC_max=1;
 SOC_initial=0.5;
 D_B=0.05;               # Degradation
-RT_B=math.ceil(n/L_B)-1;     # Replecement time
+RT_B=ceil(n/L_B)-1;     # Replecement time
 Q_lifetime=8000;        # kWh
 self_discharge_rate=0;  # Hourly self-discharge rate
 alfa_battery=1;         # is the storage's maximum charge rate [A/Ah]
@@ -140,7 +140,7 @@ R_I = 788;        # Replacement cost ($/kW)
 MO_I =20;         # O&M cost ($/kw.year)
 L_I=25;           # Life time (year)
 n_I=0.85;         # Efficiency
-RT_I=math.ceil(n/L_I)-1; # Replecement time
+RT_I=ceil(n/L_I)-1; # Replecement time
 
 # %% Charger
 #New edits
@@ -149,13 +149,13 @@ if Bat==1:
     R_CH = 150;  # Replacement Cost ($)
     MO_CH = 5;   # O&M cost ($/year)
     L_CH=25;     # Life time (year)
-    RT_CH=math.ceil(n/L_CH)-1; # Replecement time
+    RT_CH=ceil(n/L_CH)-1; # Replecement time
 else:
     C_CH = 0;  # Capital Cost ($)
     R_CH = 0;  # Replacement Cost ($)
     MO_CH = 0;   # O&M cost ($/year)
     L_CH=25;     # Life time (year)
-    RT_CH=math.ceil(n/L_CH)-1; # Replecement time
+    RT_CH=ceil(n/L_CH)-1; # Replecement time
 
 
 # calculate Cbuy
@@ -166,7 +166,7 @@ daysInMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 Cbuy = calcTouCbuy(daysInMonth, months)
 Csell = 0.1
 
-Pbuy_max=math.ceil(1.2*max(Eload)) # kWh
+Pbuy_max=ceil(1.2*max(Eload)) # kWh
 Psell_max=Pbuy_max
 
 ## Emissions produced by Grid generators (g/kW)
