@@ -1,4 +1,3 @@
-from getLoad import getLoad
 import numpy as np
 
 def calcSubsidizedRate(standardPrice, subsidizedPrice, subsidyThreshold, load, daysInMonth):
@@ -21,6 +20,3 @@ def calcSubsidizedRate(standardPrice, subsidizedPrice, subsidyThreshold, load, d
             Cbuy[hoursRange] = standardPrice
 
     return Cbuy
-
-load = getLoad("Load.csv")
-np.savetxt("Cbuy.csv", calcSubsidizedRate(2, 1, 1000, load, [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]))
