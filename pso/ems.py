@@ -140,7 +140,7 @@ def energy_management(Ppv,Pwt,Eload,Cn_B,Nbat,
 
 
 
-    return Pdg, Ens, Pbuy, Psell
+    return Pdg, Ens, Pbuy, Psell, Edump, Pch, Pdch, Eb
 
 
 

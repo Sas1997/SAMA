@@ -6,7 +6,7 @@ from input_data import *
 from ems import energy_management
 
 
-def fitness(X):
+def fitness(X, final_solution=False, print_result=False):
 
     if X.size==1:
         X=X[0]
@@ -45,7 +45,7 @@ def fitness(X):
     #  DG Fix cost
     cc_gen=b*Pn_DG*C_fuel+R_DG*Pn_DG/TL_DG+MO_DG;
 
-    Pdg, Ens, Pbuy, Psell = energy_management(Ppv,Pwt,Eload,Cn_B,Nbat,Pn_DG,NT,
+    Pdg, Ens, Pbuy, Psell, Edump, Pch, Pdch, Eb = energy_management(Ppv,Pwt,Eload,Cn_B,Nbat,Pn_DG,NT,
         SOC_max,SOC_min,SOC_initial,n_I,Grid,Cbuy,a,Cn_I,LR_DG,C_fuel,Pbuy_max,Psell_max,cc_gen,Cbw,
         self_discharge_rate,alfa_battery,c,k,Imax,Vnom,ef_bat)
     
@@ -81,7 +81,7 @@ def fitness(X):
              MO_B*Cn_B+ MO_I*Cn_I +MO_CH)/(1+ir)**np.array(range(1,n+1))
     
     # DG fuel Cost
-    C_Fu= sum(C_fuel*q)/(1+ir)**np.array(range(1,n+1))
+    C_Fu= np.sum(C_fuel*q)/(1+ir)**np.array(range(1,n+1))
     
     # Salvage
     L_rem=(RT_PV+1)*L_PV-n 
@@ -126,6 +126,68 @@ def fitness(X):
     if(np.isnan(RE)):
         RE=0
     
+    if final_solution == True:
+        Investment=np.zeros(n)
+        Investment[0]=I_Cost
+        Salvage1 = np.zeros(n)
+        Salvage1[-1] = Salvage
+        Salage = Salvage1
+
+        Operating=np.zeros(n)
+        Operating[0:n+1]=MO_PV*Pn_PV + MO_WT*Pn_WT+ MO_DG\
+            *Pn_DG+ MO_B*Cn_B+ MO_I*Cn_I+np.sum(Pbuy*Cbuy)-np.sum(Psell*Csell)
+        
+        Fuel=np.zeros(n)
+        Fuel[0:n+1]=np.sum(C_fuel*q)
+
+        RC_PV[np.arange(L_PV+1,n,L_PV)]= R_PV*Pn_PV
+        RC_WT[np.arange(L_WT+1,n,L_WT)]=R_WT*Pn_WT 
+        RC_DG[np.arange(L_DG+1,n,L_DG).astype(np.int32)]= R_DG*Pn_DG
+        RC_B[np.arange(L_B+1,n,L_B)] = R_B*Cn_B
+        RC_I[np.arange(L_I+1,n,L_I)] =R_I*Cn_I 
+        Replacement=RC_PV+RC_WT+RC_DG+RC_B+RC_I
+
+        Cash_Flow=np.zeros((n,5))
+        Cash_Flow[:,0]=-Investment
+        Cash_Flow[:,1]=-Operating
+        Cash_Flow[:,2]=Salvage
+        Cash_Flow[:,3]=-Fuel
+        Cash_Flow[:,4]=-Replacement
+
+        if print_result == True:
+            print('\nSystem Size ')
+            print('Cpv  (kW) = ', str(Pn_PV))
+            print('Cwt  (kW) = ' ,str(Pn_WT))
+            print('Cbat (kWh) = ' ,str(Cn_B))
+            print('Cdg  (kW) = ' ,str(Pn_DG))
+            print('Cinverter (kW) = ', str(Cn_I))
+
+            print('\nResult: ')
+            print('NPC  = ', str(NPC) ,' $ ')
+            print('LCOE  = ', str(LCOE) ,' $/kWh ')
+            print('Operation Cost  = ', str(Operating_Cost), ' $ ')
+            print('Initial Cost  =, ' , str(I_Cost), ' $ ')
+            print('RE  = ', str(100*RE) ,' % ')
+            print('Total operation and maintainance cost  = ', str(np.sum(MO_Cost)), ' $ ')
+
+            print('LPSP  = ', str(100*LPSP) ,' % ')
+            print('excess Elecricity = ', str(np.sum(Edump)))
+
+            print('Total power bought from Grid= ', str(np.sum(Pbuy)), ' kWh ')
+            print('Total Money paid to the Grid= ', str(np.sum(Grid_Cost)), ' $ ')
+            print('Total Money paid by the user= ', str(np.sum(NPC)), ' $ ')
+            print('Grid Sales = ', str(np.sum(Psell)), ' kWh ')
+            print('LEM  = ', str(LEM), ' kg/kWh ')
+            print('PV Power  = ', str(np.sum(Ppv)),' kWh ')
+            print('WT Power  = ', str(np.sum(Pwt)), ' kWh ')
+            print('DG Power  = ', str(np.sum(Pdg)), ' kWh ')
+            print('total fuel consumed by DG   = ', str(np.sum(q)) ,' (kg/year) ')
+
+            print('DG Emissions   = ', str(DG_Emissions),' (kg/year) ')
+            print('Grid Emissions   = ', str(Grid_Emissions), ' (kg/year) ')
+
+        return Cash_Flow, Pbuy, Psell, Eload, Ens, Pdg, Pch, Pdch, Ppv, Pwt, Eb, Cn_B, Edump
+
     Z=LCOE+EM*LEM+10*(LPSP>LPSP_max)+10*(RE<RE_min)+100*(I_Cost>Budget)+\
         100*max(0, LPSP-LPSP_max)+100*max(0, RE_min-RE)+100*max(0, I_Cost-Budget)
 

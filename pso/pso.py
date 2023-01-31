@@ -7,5 +7,6 @@ if __name__ == "__main__":
 
     swarm = Swarm()
     swarm.optimize()
+    swarm.get_final_result(print_result=True, plot_curve=True)
 
     print(process_time()-start)
