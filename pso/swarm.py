@@ -148,8 +148,6 @@ class Swarm:
             plt.ylabel('SOC')
             plt.xlabel('t[hour]')
 
-            plt.show()
-
             # Plot results for one specific day 
             Day=180;
             t1=Day*24+1;
