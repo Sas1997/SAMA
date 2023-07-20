@@ -29,7 +29,7 @@ class Swarm:
 
         # Variable: PV number, WT number, Battery number, number of DG, Rated Power Inverter
         self.VarMin = np.array([0, 0, 0, 0, 0]) * [PV, WT, Bat, DG, 1]  # Lower bound of variables
-        self.VarMax = np.array([30, 100, 50, 5, 12]) * [PV, WT, Bat, DG, 1]  # Upper bound of variables
+        self.VarMax = np.array([120, 240, 120, 10, 50]) * [PV, WT, Bat, DG, 1]  # Upper bound of variables
 
         # Velocity limits
         self.VelMax = 0.3 * (self.VarMax - self.VarMin)
@@ -41,7 +41,8 @@ class Swarm:
 
     def optimize(self):
         w = InData.w
-
+        plt.rcParams["font.family"] = "Times New Roman"
+        fig, ax = plt.subplots(dpi=300)
         for tt in range(Run_Time):
 
             # Initialize particle positions
@@ -114,15 +115,18 @@ class Swarm:
             self.solution_best_positions.append(global_best_position)
             self.solution_cost_curve.append(best_cost)
 
+            ax.plot(best_cost, '-.', label=str(tt+1))
 
-            X = self.solution_best_positions
+        Best= [self.solution_best_costs[t] for t in range(len(self.solution_best_positions))]
+        index = np.argmin(Best)
+        X = self.solution_best_positions[index]
 
+        # Run Results file
 
-            plt.figure(1)
-            plt.plot(best_cost, '-.')
-            plt.xlabel('iteration')
-            plt.ylabel('Cost of Best Solution ')
-            plt.title('Converage Curve')
-            plt.show()
-            # Run Results file
-            Gen_Results(X)
+        plt.xlabel('Iteration')
+        plt.ylabel('Cost of Best Solution')
+        plt.title('Convergence curve')
+        plt.legend()  # Display the legend
+        plt.show()
+        Gen_Results(X)
+
