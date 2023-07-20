@@ -139,7 +139,7 @@ def Gen_Results(X):
     Cbw = R_B * Cn_B / (Nbat * Q_lifetime * np.sqrt(ef_bat)) if Cn_B > 0 else 0
 
     #  DG Fix cost
-    cc_gen = b * Pn_DG * C_fuel + R_DG * Pn_DG / TL_DG + MO_DG
+    cc_gen = b * Pn_DG * C_fuel + ((R_DG * Pn_DG) / (TL_DG)) + MO_DG
 
     Pdg, Ens, Pbuy, Psell, Edump, Pch, Pdch, Eb = EMS(Ppv, Pwt, Eload, Cn_B, Nbat, Pn_DG, NT,
                                                       SOC_max, SOC_min, SOC_initial, n_I, Grid, Cbuy, a,
@@ -152,8 +152,8 @@ def Gen_Results(X):
     ## Installation and operation cost
 
     # Total Investment cost ($)
-    I_Cost = C_PV * (1 - RE_incentives) * Pn_PV + C_WT * (1 - RE_incentives) * Pn_WT + C_DG * Pn_DG + C_B * (1 - RE_incentives) * Cn_B + C_I * (1 - RE_incentives) * Cn_I + C_CH * (1 - RE_incentives) + Engineering_Costs * (1 - RE_incentives) * Pn_PV
-    I_Cost_without_incentives = C_PV * Pn_PV + C_WT * Pn_WT + C_DG * Pn_DG + C_B * Cn_B + C_I * Cn_I + C_CH + Engineering_Costs * Pn_PV
+    I_Cost = C_PV * (1 - RE_incentives) * Pn_PV + C_WT * (1 - RE_incentives) * Pn_WT + C_DG * Pn_DG + C_B * (1 - RE_incentives) * Cn_B + C_I * (1 - RE_incentives) * Cn_I + C_CH * (1 - RE_incentives)*(Nbat > 0) + Engineering_Costs * (1 - RE_incentives) * Pn_PV
+    I_Cost_without_incentives = C_PV * Pn_PV + C_WT * Pn_WT + C_DG * Pn_DG + C_B * Cn_B + C_I * Cn_I + C_CH*(Nbat > 0) + Engineering_Costs * Pn_PV
     Total_incentives_received = I_Cost_without_incentives - I_Cost
 
 
@@ -175,10 +175,10 @@ def Gen_Results(X):
     RC_B[np.arange(L_B + 1, n, L_B).astype(np.int32)] = R_B * Cn_B / (1 + ir) ** (np.arange(1.001 * L_B, n, L_B))
     RC_I[np.arange(L_I + 1, n, L_I)] = R_I * Cn_I / (1 + ir) ** (np.arange(1.001 * L_I, n, L_I))
     RC_CH[np.arange(L_CH + 1, n, L_CH)] = R_CH / (1 + ir) ** (np.arange(1.001 * L_CH, n, L_CH))
-    R_Cost = RC_PV + RC_WT + RC_DG + RC_B + RC_I + RC_CH
+    R_Cost = RC_PV + RC_WT + RC_DG + RC_B + RC_I + RC_CH*(Nbat > 0)
 
     # Total M&O Cost ($/year)
-    MO_Cost = (MO_PV * Pn_PV + MO_WT * Pn_WT + MO_DG * Pn_DG * np.sum(Pdg > 0) + MO_B * Cn_B + MO_I * Cn_I + MO_CH) / (1 + ir) ** np.array(range(1, n + 1))
+    MO_Cost = (MO_PV * Pn_PV + MO_WT * Pn_WT + MO_DG * Pn_DG * np.sum(Pdg > 0) + MO_B * Cn_B + MO_I * Cn_I + MO_CH*(Nbat > 0)) / (1 + ir) ** np.array(range(1, n + 1))
 
     # DG fuel Cost
     C_Fu = np.sum(C_fuel * q) / (1 + ir) ** np.array(range(1, n + 1))
@@ -196,14 +196,14 @@ def Gen_Results(X):
     S_I = (R_I * Cn_I) * L_rem / L_I * 1 / (1 + ir) ** n
     L_rem = (RT_CH + 1) * L_CH - n
     S_CH = (R_CH) * L_rem / L_CH * 1 / (1 + ir) ** n
-    Salvage = S_PV + S_WT + S_DG + S_B + S_I + S_CH
+    Salvage = S_PV + S_WT + S_DG + S_B + S_I + S_CH*(Nbat > 0)
 
     # Emissions produced by Disesl generator (g)
     DG_Emissions = np.sum(q * (CO2 + NOx + SO2)) / 1000  # total emissions (kg/year)
     Grid_Emissions = np.sum(Pbuy * (E_CO2 + E_SO2 + E_NOx)) / 1000  # total emissions (kg/year)
 
     Grid_Cost = ((Annual_expenses + np.sum(Service_charge) + np.sum(Pbuy * Cbuy) - np.sum(Psell * Csell)) * 1 / (1 + ir) ** np.array(range(1, n + 1))) * (1 + Grid_Tax) * (Grid > 0)
-    Grid_Cost_onlyG = ((Annual_expenses + np.sum(Service_charge) + np.sum(Eload * Cbuy)) * 1 / (1 + ir) ** np.arange(1, n+1)) * (1 + Grid_Tax)
+    Grid_Cost_onlyG = ((Annual_expenses + np.sum(Service_charge) + np.sum(Eload * Cbuy)) * 1 / (1 + ir) ** np.arange(1, n + 1)) * (1 + Grid_Tax)
 
     # Capital recovery factor
     CRF = ir * (1 + ir) ** n / ((1 + ir) ** n - 1)
@@ -224,26 +224,30 @@ def Gen_Results(X):
     Ptot = (Ppv + Pwt + Pb_min) * n_I + Pdg + Grid * Pbuy_max  # total available power in system for each hour
     DE = np.maximum((Eload - Ptot), 0)  # power shortage in each hour
     LPSP = np.sum(Ens) / np.sum(Eload)
-
-    import pandas as pd
-
-    Psell_df = pd.DataFrame(Psell, columns=['Column_Name'])
-    Psell_df.index = Psell_df.index + 1
-    Psell_df = Psell_df.reset_index(drop=True)
-    Psell_df.to_excel('Psell.xlsx', header=False, index=False)
-
     RE = 1 - np.sum(Pdg + Pbuy) / np.sum(Eload + Psell - Ens)  # sum(Ppv + Pwt - Edump) / sum(Eload + Psell - Ens)
     if (np.isnan(RE)):
         RE = 0
 
+    print(LCOE)
+
+    import pandas as pd
+
+    #Extracting data for plotting
+    data = {'Ppv': Ppv, 'Pdg': Pdg, 'Pch': Pch, 'Pdch': Pdch, 'SOC': Eb / Cn_B}
+
+    df = pd.DataFrame(data)
+
+    df.to_csv('Outputforplotting.csv', index=False)
+
+
     print(' ')
     print('System Size ')
-    print('Cpv  (kW) =', Pn_PV)
+    print('Cpv  (kW) =', round(Pn_PV, 2))
     if WT == 1:
-        print('Cwt  (kW) =', Pn_WT)
-    print('Cbat (kWh) =', Cn_B)
-    print('Cdg  (kW) =', Pn_DG)
-    print('Cinverter (kW) =', Cn_I)
+        print('Cwt  (kW) =', round(Pn_WT, 2))
+    print('Cbat (kWh) =', round(Cn_B))
+    print('Cdg  (kW) =', round(Pn_DG, 2))
+    print('Cinverter (kW) =', round(Cn_I, 2))
 
     print(' ')
     print('Result: ')
@@ -265,6 +269,8 @@ def Gen_Results(X):
     if WT == 1:
         print('WT Power  =', np.sum(Pwt), 'kWh')
     print('DG Power  =', np.sum(Pdg), 'kWh')
+    print('Battery Energy In  =', np.sum(Pch), 'kWh')
+    print('Battery Energy Out  =', np.sum(Pdch), 'kWh')
     print('LPSP  =', round(100 * LPSP, 2), '%')
     print('Excess Electricity =', np.sum(Edump), 'kWh')
 
@@ -318,146 +324,119 @@ def Gen_Results(X):
     plt.xlabel('Year')
     plt.ylabel('$')
 
+    #Grid purchase and sale figure
     if Grid == 0:
         Pbuy = 0
         Psell = 0
     else:
-        plt.figure(2)
-        plt.plot(Pbuy)
-        plt.plot(Psell)
-        plt.legend(['Buy', 'Sell'])
-        plt.ylabel('Pgrid (kWh)')
-        plt.xlabel('t(hour)')
+        fig, ax = plt.subplots(figsize=(14, 10), dpi=300)  # Increased figure size and resolution
+        ax.plot(Pbuy, marker='.', linestyle='-', linewidth=0.5, color='blue',label='Buy')  # Added markers and reduced line width
+        ax.plot(Psell, marker='.', linestyle='-', linewidth=0.5, color='red',label='Sell')  # Added markers and reduced line width
+        ax.set_ylabel('Pgrid (kWh)', fontsize=22)  # Increased font size
+        ax.set_xlabel('Month', fontsize=22)  # Increased font size and changed label to 'Month'
+        ax.tick_params(axis='both', which='major', labelsize=18)  # Increased tick label size
+        ax.legend(loc='upper left', bbox_to_anchor=(1, 1), fontsize=22)  # Moved legend closer to the figure
+        ax.set_title('Power Purchase vs Sale', fontsize=22)  # Increased font size
+        # Assuming a non-leap year (365 days), set the x-ticks at the beginning of each month.
+        hours_per_month = [0, 31 * 24, 59 * 24, 90 * 24, 120 * 24, 151 * 24, 181 * 24, 212 * 24, 243 * 24, 273 * 24,304 * 24, 334 * 24]
+        month_labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+        ax.set_xticks(hours_per_month)
+        ax.set_xticklabels(month_labels)
+        # Set x-axis and y-axis to start from zero
+        ax.set_xlim([0, max(hours_per_month)])
+        ax.set_ylim([0, max(max(Pbuy), max(Psell))])
+        # Adjust the margins and space between subplots
+        plt.subplots_adjust(left=0.05, right=0.85, top=0.95, bottom=0.08)
 
-    plt.figure(3)
-    plt.plot(Eload - Ens, 'b-.', linewidth=1)
-    plt.plot(Pdg, 'r')
-    plt.plot(Pch - Pdch, 'g')
-    plt.plot(Ppv + Pwt, '--')
-    plt.legend(['Load-Ens', 'Pdg', 'Pbat', 'P_RE'])
+    # Energy Distribution figure
+    fig, ax = plt.subplots(figsize=(14, 10), dpi=300)  # Increased figure size and resolution
+    # Increased linewidth and added distinct colors, line styles, and markers for visibility
+    ax.plot(Eload - Ens, linestyle='-', linewidth=2, color='blue', marker='o', markersize=4, label='Load-Ens')
+    ax.plot(Pdg, linestyle='--', linewidth=2, color='red', marker='x', markersize=4, label='Pdg')
+    ax.plot(Pch - Pdch, linestyle='-.', linewidth=2, color='green', marker='^', markersize=4, label='Pbat')
+    ax.plot(Ppv + Pwt, linestyle=':', linewidth=2, color='purple', marker='s', markersize=4, label='P_RE')
+    ax.set_ylabel('Power [kWh]', fontsize=22)  # Increased font size
+    ax.set_xlabel('Month', fontsize=22)  # Increased font size
+    ax.tick_params(axis='both', which='major', labelsize=18)  # Increased tick label size
+    ax.legend(loc='upper left', bbox_to_anchor=(1, 1), fontsize=22)  # Moved legend closer to the figure
+    ax.set_title('Energy Distribution', fontsize=22)  # Increased font size
+    # Set x-ticks
+    hours_per_month = [0, 31 * 24, 59 * 24, 90 * 24, 120 * 24, 151 * 24, 181 * 24, 212 * 24, 243 * 24, 273 * 24, 304 * 24, 334 * 24]
+    month_labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    ax.set_xticks(hours_per_month)
+    ax.set_xticklabels(month_labels)
+    # Set x-axis to start from zero and y-axis according to data
+    ax.set_xlim([0, max(hours_per_month)])
+    ax.set_ylim([0, max(max(Eload - Ens), max(Pdg), max(Pch - Pdch), max(Ppv + Pwt))])
+    # Adjust the margins and space between subplots
+    plt.subplots_adjust(left=0.05, right=0.82, top=0.95, bottom=0.08)
 
-    plt.figure(4)
-    plt.plot(Eb / Cn_B)
-    plt.title('State of Charge')
-    plt.ylabel('SOC')
-    plt.xlabel('t[hour]')
+    # State of charge figure
+    if Nbat > 0:
+        fig, ax = plt.subplots(figsize=(14, 10), dpi=300)  # Increased figure size and resolution
+        # Plot 'State of Charge'
+        ax.plot(Eb / Cn_B, marker='.', linestyle='-', linewidth=0.5, color='blue')
+        ax.set_ylabel('SOC', fontsize=22)  # Increased font size
+        ax.set_xlabel('Month', fontsize=22)  # Increased font size
+        ax.tick_params(axis='both', which='major', labelsize=18)  # Increased tick label size
+        ax.set_title('State of Charge', fontsize=22)  # Increased font size
+        # Assuming a non-leap year (365 days), set the x-ticks at the beginning of each month.
+        hours_per_month = [0, 31 * 24, 59 * 24, 90 * 24, 120 * 24, 151 * 24, 181 * 24, 212 * 24, 243 * 24, 273 * 24, 304 * 24, 334 * 24]
+        month_labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+        ax.set_xticks(hours_per_month)
+        ax.set_xticklabels(month_labels)
+        # Set x-axis and y-axis to start from zero
+        ax.set_xlim([0, max(hours_per_month)])
+        ax.set_ylim([0, max(Eb / Cn_B)])
+        # Adjust the margins and space between subplots
+        plt.subplots_adjust(left=0.05, right=0.95, top=0.95, bottom=0.08)
 
     # Plot results for one specific day
-    Day = 180;
-    t1 = Day * 24 + 1;
-    t2 = Day * 24 + 24;
+    # Function to filter out data series with sum less than 0.1 in the specified range
+    def non_zero_data_series(data_series, t1, t2):
+        return [(title, data, label) for title, data, label in data_series if np.sum(data[t1:t2 + 1]) >= 0.1]
 
-    plt.figure(figsize=(10, 10))
-    plt.title(['Results for ', str(Day), ' -th day'])
-    plt.subplot(4, 4, 1)
-    plt.plot(Eload)
-    plt.title('Load Profile')
-    plt.ylabel('E_{load} [kWh]')
-    plt.xlabel('t[hour]')
-    plt.xlim([t1, t2])
+    # Specific day number
+    Day = 180
+    t1 = Day * 24
+    t2 = (Day + 1) * 24
 
-    plt.subplot(4, 4, 5)
-    plt.plot(Eload)
-    plt.title('Load Profile')
-    plt.ylabel('E_{load} [kWh]')
-    plt.xlabel('t[hour]')
-    plt.xlim([t1, t2])
+    data_series = [('Load Profile', Eload, '$E_{load}$ [kWh]'),
+                   ('Plane of Array Irradiance', G, 'G[W/m^2]'),
+                   ('Ambient Temperature', T, '$T$[^o C]'),
+                   ('PV Power', Ppv, '$P_{pv}$ [kWh]'),
+                   ('WT Energy', Pwt, '$P_{wt}$ [kWh]'),
+                   ('Diesel Generator Energy', Pdg, '$E_{DG}$ [kWh]'),
+                   ('Battery Energy Level', Eb, '$E_{b}$ [kWh]'),
+                   ('State of Charge', Eb / Cn_B if not np.all(Eb[t1:t2] == 0) else np.zeros_like(Eb), 'SOC'),
+                   ('Loss of Power Supply', Ens, 'LPS[kWh]'),
+                   ('Dumped Energy', Edump, '$E_{dump}$ [kWh]'),
+                   ('Battery decharge Energy', Pdch, '$E_{dch}$ [kWh]'),
+                   ('Battery charge Energy', Pch, '$E_{ch}$ [kWh]')]
 
-    plt.subplot(4, 4, 2)
-    plt.plot(G)
-    plt.title('Plane of Array Irradiance')
-    plt.ylabel('G[W/m^2]')
-    plt.xlabel('t[hour]')
-    plt.xlim([t1, t2])
+    # Apply the filter function to remove series with sum less than 0.1
+    non_zero_series = non_zero_data_series(data_series, t1, t2)
 
-    plt.subplot(4, 4, 6)
-    plt.plot(T)
-    plt.title('Ambient Temperature')
-    plt.ylabel('T[^o C]')
-    plt.xlabel('t[hour]')
-    plt.xlim([t1, t2])
+    n_non_zeros = len(non_zero_series)  # Number of non-zero series
+    n_cols = 3  # Number of columns
+    n_rows = n_non_zeros // n_cols + (n_non_zeros % n_cols > 0)  # Number of rows
 
-    plt.subplot(4, 4, 3)
-    plt.plot(Ppv)
-    plt.title('PV Power')
-    plt.ylabel('P_{pv} [kWh]')
-    plt.xlabel('t[hour]')
-    plt.xlim([t1, t2])
+    fig, axs = plt.subplots(n_rows, n_cols, figsize=(16, n_rows * 4))  # Adjusting figure size based on number of rows
+    fig.suptitle('Results for ' + str(Day) + ' -th day', fontsize=24)  # Increase font size
+    axs = axs.flatten()  # Flatten the 2D array to 1D for easy iteration
 
-    plt.subplot(4, 4, 4)
-    plt.plot(Ppv)
-    plt.title('PV Power')
-    plt.ylabel('P_{pv} [kWh]')
-    plt.xlabel('t[hour]')
-    plt.xlim([t1, t2])
+    for i, (title, data, label) in enumerate(non_zero_series):
+        ax = axs[i]
+        ax.plot(range(t1, t2), data[t1:t2], linewidth=2)  # Increase line width
+        ax.set_title(title, fontsize=12)  # Increase font size
+        ax.set_ylabel(label, fontsize=10)  # Increase font size
+        ax.set_xlabel('t[hour]', fontsize=10)  # Increase font size
+        ax.tick_params(axis='both', which='major', labelsize=10)  # Increase font size
 
-    plt.subplot(4, 4, 7)
-    plt.plot(Pwt)
-    plt.title('WT Energy')
-    plt.ylabel('P_{wt} [kWh]')
-    plt.xlabel('t[hour]')
-    plt.xlim([t1, t2])
-    plt.subplot(4, 4, 8)
-    plt.plot(Pwt)
-    plt.title('WT Energy')
-    plt.ylabel('P_{wt} [kWh]')
-    plt.xlabel('t[hour]')
-    plt.xlim([t1, t2])
+    for j in range(i + 1, n_rows * n_cols):  # Turn off unused subplots
+        axs[j].axis('off')
 
-    plt.subplot(4, 4, 9)
-    plt.plot(Pdg)
-    plt.title('Diesel Generator Energy')
-    plt.ylabel('E_{DG} [kWh]')
-    plt.xlabel('t[hour]')
-    plt.xlim([t1, t2])
-    plt.subplot(4, 4, 10)
-    plt.plot(Pdg)
-    plt.title('Diesel Generator Energy')
-    plt.ylabel('E_{DG} [kWh]')
-    plt.xlabel('t[hour]')
-    plt.xlim([t1, t2])
-
-    plt.subplot(4, 4, 11)
-    plt.plot(Eb)
-    plt.title('Battery Energy Level')
-    plt.ylabel('E_{b} [kWh]')
-    plt.xlabel('t[hour]')
-    plt.xlim([t1, t2])
-
-    plt.subplot(4, 4, 12)
-    plt.plot(Eb / Cn_B)
-    plt.title('State of Charge')
-    plt.ylabel('SOC')
-    plt.xlabel('t[hour]')
-    plt.xlim([t1, t2])
-
-    plt.subplot(4, 4, 13)
-    plt.plot(Ens)
-    plt.title('Loss of Power Suply')
-    plt.ylabel('LPS[kWh]')
-    plt.xlabel('t[hour]')
-    plt.xlim([t1, t2])
-
-    plt.subplot(4, 4, 14)
-    plt.plot(Edump)
-    plt.title('Dumped Energy')
-    plt.ylabel('E_{dump} [kWh]')
-    plt.xlabel('t[hour]')
-    plt.xlim([t1, t2])
-
-    plt.subplot(4, 4, 15)
-    plt.bar(range(len(Pdch)), Pdch)
-    plt.title('Battery decharge Energy')
-    plt.ylabel('E_{dch} [kWh]')
-    plt.xlabel('t[hour]')
-    plt.xlim([t1, t2])
-
-    plt.subplot(4, 4, 16)
-    plt.bar(range(len(Pdch)), Pch)
-    plt.title('Battery charge Energy')
-    plt.ylabel('E_{ch} [kWh]')
-    plt.xlabel('t[hour]')
-    plt.xlim([t1, t2])
+    plt.tight_layout(rect=[0, 0, 1, 0.96])  # Adjust the layout to make space for the title
 
     # Utility figures
 
@@ -478,6 +457,7 @@ def Gen_Results(X):
     AE_c[np.where(AE_c == 0)] = np.nan
     # Increase the figure size
     fig = plt.figure(figsize=(20, 15))
+    fig.suptitle('Average cost of energy system for each day ($)', fontsize=24, y=0.92)
     # Define grid and increase the space between heatmap and colorbar
     gs = gridspec.GridSpec(2, 1, height_ratios=[19, 1])
     gs.update(wspace=0.025, hspace=0.2)  # Increase hspace
@@ -486,8 +466,7 @@ def Gen_Results(X):
     sns.heatmap(AE_c, cmap='jet', annot=True, fmt=".1f", yticklabels=False, ax=ax0, cbar=False, annot_kws={"size": 18},
                 linewidths=0)
     # Set the y-tick labels
-    months = ["January", "February", "March", "April", "May", "June",
-              "July", "August", "September", "October", "November", "December"]
+    months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
     ax0.set_yticks(np.arange(len(months)) + 0.5)  # Centering the labels
     ax0.set_yticklabels(months)
     # Adjust the x-ticks and labels to start from 1
@@ -516,104 +495,84 @@ def Gen_Results(X):
 
     # Plot average hourly Grid cost (Cbuy) for each day in each month heatmap
     Gh_c[np.where(Gh_c == 0)] = np.nan
-
     # Increase the figure size
     fig = plt.figure(7, figsize=(20, 15))
-
+    fig.suptitle('Average Grid hourly cost in each day [$/kWh]', fontsize=24)
     # Define grid and increase the space between heatmap and colorbar
     gs = gridspec.GridSpec(2, 1, height_ratios=[19, 1])
     gs.update(wspace=0.025, hspace=0.2)  # Increase hspace
-
     ax0 = plt.subplot(gs[0])
-
     # Increase the size of the annotation and set linewidths to 0
-    sns.heatmap(np.round(Gh_c, 2), cmap='jet', annot=True, fmt=".2f", yticklabels=False, ax=ax0, cbar=False,
-                annot_kws={"size": 15}, linewidths=0)
-
+    sns.heatmap(np.round(Gh_c, 2), cmap='jet', annot=True, fmt=".2f", yticklabels=False, ax=ax0, cbar=False, annot_kws={"size": 15}, linewidths=0)
     # Set the y-tick labels
-    months = ["January", "February", "March", "April", "May", "June",
-              "July", "August", "September", "October", "November", "December"]
-
+    months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
     ax0.set_yticks(np.arange(len(months)) + 0.5)  # Centering the labels
     ax0.set_yticklabels(months)
-
     # Adjust the x-ticks and labels to start from 1
     xticks = np.arange(1, Gh_c.shape[1] + 1)
     ax0.set_xticks(xticks - 0.5, minor=False)  # Shift the ticks to be centered
     ax0.set_xticklabels(xticks)
-
     # Increase the size of y and x tick labels
     ax0.tick_params(axis='y', labelsize=22)
     ax0.tick_params(axis='x', labelsize=22)
-
     # Define colorbar axes and plot colorbar
     ax1 = plt.subplot(gs[1])
     cb = plt.colorbar(ax0.collections[0], cax=ax1, orientation='horizontal')
-
     # Increase the size of colorbar tick labels
     ax1.tick_params(labelsize=22)
+
 
     # Calculate average only grid connected system cost for each day in each month
     AG_c = np.round(LCOE_Grid * A_l, 2)
 
     # Plot average only grid connected system cost heatmap for each day in each month
     AG_c[np.where(AG_c == 0)] = np.nan
-
     # Increase the figure size
     fig = plt.figure(8, figsize=(20, 15))
-
+    fig.suptitle('Average only Grid-connected system cost in each day [$]', fontsize=24)
     # Define grid and increase the space between heatmap and colorbar
     gs = gridspec.GridSpec(2, 1, height_ratios=[19, 1])
     gs.update(wspace=0.025, hspace=0.2)  # Increase hspace
-
     ax0 = plt.subplot(gs[0])
 
     # Increase the size of the annotation and set linewidths to 0
-    sns.heatmap(AG_c, cmap='jet', annot=True, fmt=".1f", yticklabels=False, ax=ax0, cbar=False, annot_kws={"size": 15},
-                linewidths=0)
-
+    sns.heatmap(AG_c, cmap='jet', annot=True, fmt=".1f", yticklabels=False, ax=ax0, cbar=False, annot_kws={"size": 15}, linewidths=0)
     # Set the y-tick labels
-    months = ["January", "February", "March", "April", "May", "June",
-              "July", "August", "September", "October", "November", "December"]
-
+    months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
     ax0.set_yticks(np.arange(len(months)) + 0.5)  # Centering the labels
     ax0.set_yticklabels(months)
-
     # Adjust the x-ticks and labels to start from 1
     xticks = np.arange(1, AG_c.shape[1] + 1)
     ax0.set_xticks(xticks - 0.5, minor=False)  # Shift the ticks to be centered
     ax0.set_xticklabels(xticks)
-
     # Increase the size of y and x tick labels
     ax0.tick_params(axis='y', labelsize=22)
     ax0.tick_params(axis='x', labelsize=22)
-
     # Define colorbar axes and plot colorbar
     ax1 = plt.subplot(gs[1])
     cb = plt.colorbar(ax0.collections[0], cax=ax1, orientation='horizontal')
-
     # Increase the size of colorbar tick labels
     ax1.tick_params(labelsize=22)
 
-    #Hourly Grid electrcity price color map
+    # Hourly Grid electrcity price color map
     # Assuming Cbuy is a 1D numpy array
     Cbuy_2D = np.reshape(Cbuy, (1, len(Cbuy)))  # Reshape to 2D
-
     fig, ax = plt.subplots(figsize=(10, 2), dpi=300)  # Increase figure size and resolution
-
     img = ax.imshow(Cbuy_2D, cmap='jet', aspect='auto')  # Display the data
-
-    cbar = fig.colorbar(img, ax=ax, orientation='horizontal', pad=0.4,
-                        shrink=0.8)  # Add a colorbar and adjust its position
+    cbar = fig.colorbar(img, ax=ax, orientation='horizontal', pad=0.4, shrink=0.8)  # Add a colorbar and adjust its position
     cbar.set_label('Cbuy', size=15, labelpad=10)  # Add a label to colorbar and adjust its size and position
-
     # Set y ticks and labels empty
     ax.set_yticks([])
-
     # Increase x-tick label size
     ax.tick_params(axis='x', labelsize=15)
-
-    fig.subplots_adjust(left=0.05, right=0.95)  # Adjust the left and right space
+    # Add a title
+    ax.set_title('Grid Hourly Cost [$/kWh]', fontsize=20)
+    fig.subplots_adjust(left=0.05, right=0.95, top=0.85)  # Adjust the left, right, and top space
+    # Assuming a non-leap year (365 days), set the x-ticks at the beginning of each month.
+    hours_per_month = [0, 31 * 24, 59 * 24, 90 * 24, 120 * 24, 151 * 24, 181 * 24, 212 * 24, 243 * 24, 273 * 24, 304 * 24, 334 * 24]
+    month_labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    ax.set_xticks(hours_per_month)
+    ax.set_xticklabels(month_labels)
 
     # Calculate average money earned by selling electricity to grid in each day in each month
     if np.sum(Psell) > 0.1:
@@ -630,44 +589,30 @@ def Gen_Results(X):
 
         # Plot average money earned by selling electricity to grid in each day in each month heatmap
         AG_sc[np.where(AG_sc == 0)] = np.nan
-
         # Increase the figure size
         fig = plt.figure(10, figsize=(20, 15))
-
+        fig.suptitle('Sell to the Grid in each day [$/kWh]', fontsize=24)
         # Define grid and increase the space between heatmap and colorbar
         gs = gridspec.GridSpec(2, 1, height_ratios=[19, 1])
         gs.update(wspace=0.025, hspace=0.2)  # Increase hspace
-
         ax0 = plt.subplot(gs[0])
-
         # Increase the size of the annotation and set linewidths to 0
-        sns.heatmap(AG_sc, cmap='jet', annot=True, fmt=".1f", yticklabels=False, ax=ax0, cbar=False,
-                    annot_kws={"size": 15}, linewidths=0)
-
+        sns.heatmap(AG_sc, cmap='jet', annot=True, fmt=".1f", yticklabels=False, ax=ax0, cbar=False, annot_kws={"size": 15}, linewidths=0)
         # Set the y-tick labels
-        months = ["January", "February", "March", "April", "May", "June",
-                  "July", "August", "September", "October", "November", "December"]
-
+        months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
         ax0.set_yticks(np.arange(len(months)) + 0.5)  # Centering the labels
         ax0.set_yticklabels(months)
-
         # Adjust the x-ticks and labels to start from 1
         xticks = np.arange(1, AG_sc.shape[1] + 1)
         ax0.set_xticks(xticks - 0.5, minor=False)  # Shift the ticks to be centered
         ax0.set_xticklabels(xticks)
-
         # Increase the size of y and x tick labels
         ax0.tick_params(axis='y', labelsize=22)
         ax0.tick_params(axis='x', labelsize=22)
-
         # Define colorbar axes and plot colorbar
         ax1 = plt.subplot(gs[1])
         cb = plt.colorbar(ax0.collections[0], cax=ax1, orientation='horizontal')
-
         # Increase the size of colorbar tick labels
         ax1.tick_params(labelsize=22)
 
     plt.show()
-
-    # paperout = pd.DataFrame({'Ppv': Ppv, 'Pdg': Pdg, 'Pch': Pch, 'Pdch': Pdch})
-    # paperout.to_excel('Output.xlsx', index=False)
