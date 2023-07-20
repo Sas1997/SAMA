@@ -17,20 +17,20 @@ def EMS(Ppv, Pwt, Eload, Cn_B, Nbat,
                       Psell_max, cc_gen, Cbw, self_discharge_rate,
                       alfa_battery, c, k, Imax, Vnom, ef_bat):
 
-    Eb = np.zeros(NT);
-    Pch = np.zeros(NT);
-    Pdch = np.zeros(NT);
-    Ech = np.zeros(NT);
-    Edch = np.zeros(NT);
-    Pdg = np.zeros(NT);
-    Edump = np.zeros(NT);
-    Ens = np.zeros(NT);
-    Psell = np.zeros(NT);
-    Pbuy = np.zeros(NT);
-    Ebmax = SOC_max * Cn_B;
-    Ebmin = SOC_min * Cn_B;
+    Eb = np.zeros(NT)
+    Pch = np.zeros(NT)
+    Pdch = np.zeros(NT)
+    Ech = np.zeros(NT)
+    Edch = np.zeros(NT)
+    Pdg = np.zeros(NT)
+    Edump = np.zeros(NT)
+    Ens = np.zeros(NT)
+    Psell = np.zeros(NT)
+    Pbuy = np.zeros(NT)
+    Ebmax = SOC_max * Cn_B
+    Ebmin = SOC_min * Cn_B
     Eb[0] = SOC_initial * Cn_B
-    dt = 1;
+    dt = 1
 
     if Grid == 0:
         Pbuy_max = 0
@@ -42,9 +42,9 @@ def EMS(Ppv, Pwt, Eload, Cn_B, Nbat,
     else:
         Pdg_min = 0
 
-    Eload_max=200000000*max(Eload)
+    Eload_max=2*max(Eload)
     # define cases
-    load_greater = np.logical_and(P_RE >= (Eload / n_I), (Eload <= Pinv_max))
+    load_greater = np.logical_and(P_RE >= (Eload / n_I), (Eload <= Eload_max))
     price_dg = cc_gen + a * C_fuel  # DG cost ($/kWh)
     case1 = np.logical_and(np.logical_not(load_greater),
                            np.logical_and(Cbuy <= price_dg, price_dg <= Cbw))  # Grid, DG , Bat : 1
@@ -79,8 +79,7 @@ def EMS(Ppv, Pwt, Eload, Cn_B, Nbat,
                 Pbuy[t] = min(Edef_AC, Pbuy_max)
 
                 Pdg[t] = min(Edef_AC - Pbuy[t], Pn_DG)
-                Pdg[t] = Pdg[t] * (Pdg[t] >= LR_DG * Pn_DG) + LR_DG * Pn_DG * (Pdg[t] < LR_DG * Pn_DG) * (
-                            Pdg[t] > Pdg_min)
+                Pdg[t] = Pdg[t] * (Pdg[t] >= LR_DG * Pn_DG) + LR_DG * Pn_DG * (Pdg[t] < LR_DG * Pn_DG) * (Pdg[t] > Pdg_min)
                 Edef_AC = Eload[t] - Pdg[t] - Pbuy[t] - min(Pinv_max, n_I * P_RE[t])
                 Edef_DC = (Edef_AC / n_I) * (Edef_AC > 0)
                 Eb_e = (Eb[t] - Ebmin) * sqrt(ef_bat)
@@ -100,8 +99,7 @@ def EMS(Ppv, Pwt, Eload, Cn_B, Nbat,
 
                 Edef_AC = Eload[t] - Pbuy[t] - min(Pinv_max, n_I * (P_RE[t] + Pdch[t]))
                 Pdg[t] = min(Edef_AC, Pn_DG)
-                Pdg[t] = Pdg[t] * (Pdg[t] >= LR_DG * Pn_DG) + LR_DG * Pn_DG * (Pdg[t] < LR_DG * Pn_DG) * (
-                            Pdg[t] > Pdg_min)
+                Pdg[t] = Pdg[t] * (Pdg[t] >= LR_DG * Pn_DG) + LR_DG * Pn_DG * (Pdg[t] < LR_DG * Pn_DG) * (Pdg[t] > Pdg_min)
 
             elif case3[t]:
                 Pdg[t] = min(Edef_AC, Pn_DG)
