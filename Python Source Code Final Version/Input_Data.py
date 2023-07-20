@@ -8,14 +8,14 @@ from math import ceil
 class Input_Data:
     def __init__(self):
         self.MaxIt = 100  # Maximum Number of Iterations
-        self.nPop = 50  # Population Size (Swarm Size)
+        self.nPop = 100  # Population Size (Swarm Size)
         self.w = 1  # Inertia Weight
         self.wdamp = 0.99  # Inertia Weight Damping Ratio
         self.c1 = 2 # Personal Learning Coefficient
         self.c2 = 2  # Global Learning Coefficient
 
         # Multi-run
-        self.Run_Time = 1  # Total number of runs in each click
+        self.Run_Time = 10  # Total number of runs in each click
 
         # Calendar
         self.n = 25  # Lifetime of system in simulations (years)
@@ -60,12 +60,12 @@ class Input_Data:
         # Type of system (1: included, 0=not included)
         self.PV = 1
         self.WT = 0
-        self.DG = 1
+        self.DG = 0
         self.Bat = 1
-        self.Grid = 1
+        self.Grid = 0
 
         # Constraints
-        self.LPSP_max_rate = 0.00001  # Maximum loss of power supply probability
+        self.LPSP_max_rate = 0.1  # Maximum loss of power supply probability
         self.LPSP_max = self.LPSP_max_rate / 100
 
         self.RE_min_rate = 75  # Minimum Renewable Energy Capacity
@@ -124,7 +124,7 @@ class Input_Data:
         self.SOC_min = 0.2
         self.SOC_max = 1
         self.SOC_initial = 0.5
-        self.Q_lifetime = 8000       # kWh
+        self.Q_lifetime = 8000       # Throughout in kWh
         self.self_discharge_rate = 0     # Hourly self-discharge rate
         self.alfa_battery = 1       # is the storage's maximum charge rate [A/Ah]
         self.c = 0.403              # the storage capacity ratio [unitless]
@@ -133,11 +133,11 @@ class Input_Data:
         self.Vnom = 12              # the storage's nominal voltage [V]
         self.ef_bat = 0.8           # Round trip efficiency
         self.L_B = 7.5              # Life time (year)
-        self.RT_B = ceil(self.n/self.L_B) - 1    # Replecement time
+        self.RT_B = ceil(self.n/self.L_B) - 1    # Replacement time
 
         # Charger
         self.L_CH = 25      # Life time (year)
-        self.RT_CH = ceil(self.n/self.L_CH) - 1    # Replecement time
+        self.RT_CH = ceil(self.n/self.L_CH) - 1    # Replacement time
 
         # Economic Parameters
         self.n_ir_rate = 4.5             # Nominal discount rate
@@ -156,7 +156,7 @@ class Input_Data:
         self.RE_incentives = self.RE_incentives_rate / 100
 
         # Pricing method
-        self.Pricing_method = 2  # 1=Top down 2=bottom up
+        self.Pricing_method = 1  # 1=Top down 2=bottom up
 
         # Top-down price definition
         if self.Pricing_method == 1:
@@ -215,14 +215,10 @@ class Input_Data:
             self.MO_B = 10 * (1 + self.r_Sales_tax)                   # Maintenance cost ($/kWh.year)
 
             # Charger
-            if self.Bat == 1:
-                self.C_CH = 149.99 * (1 + self.r_Sales_tax)  # Capital Cost ($)
-                self.R_CH = 149.99 * (1 + self.r_Sales_tax)  # Replacement Cost ($)
-                self.MO_CH = 0 * (1 + self.r_Sales_tax)   # O&M cost ($/year)
-            else:
-                self.C_CH = 0  # Capital Cost ($)
-                self.R_CH = 0  # Replacement Cost ($)
-                self.MO_CH = 0   # O&M cost ($/year)
+            self.C_CH = 149.99 * (1 + self.r_Sales_tax)  # Capital Cost ($)
+            self.R_CH = 149.99 * (1 + self.r_Sales_tax)  # Replacement Cost ($)
+            self.MO_CH = 0 * (1 + self.r_Sales_tax)   # O&M cost ($/year)
+
         else:
         ####### Pricing method 2=bottom up
         # Engineering Costs (Per/kW)
@@ -267,14 +263,9 @@ class Input_Data:
             self.MO_B = 10                # Maintenance cost ($/kw.year)
 
             # Charger
-            if self.Bat == 1:
-                self.C_CH = 149.99  # Capital Cost ($)
-                self.R_CH = 149.99  # Replacement Cost ($)
-                self.MO_CH = 0   # O&M cost ($/year)
-            else:
-                self.C_CH = 0  # Capital Cost ($)
-                self.R_CH = 0  # Replacement Cost ($)
-                self.MO_CH = 0   # O&M cost ($/year)
+            self.C_CH = 149.99 * (1 + self.r_Sales_tax)  # Capital Cost ($)
+            self.R_CH = 149.99 * (1 + self.r_Sales_tax)  # Replacement Cost ($)
+            self.MO_CH = 0 * (1 + self.r_Sales_tax)  # O&M cost ($/year)
 
         # Prices for Utility
         # Definition for the Utility Structures
@@ -294,18 +285,18 @@ class Input_Data:
 
 
         # Rate Structure
-        self.rateStructure = 7
+        self.rateStructure = 4
 
         # Fixed expenses
         self.Annual_expenses = 0
-        self.Grid_sale_tax_rate = 9.5
+        self.Grid_sale_tax_rate = 7
         self.Grid_Tax = self.Grid_sale_tax_rate / 100
 
         # Monthly fixed charge
-        self.Monthly_fixed_charge_system = 2
+        self.Monthly_fixed_charge_system = 1
 
         if self.Monthly_fixed_charge_system == 1:  # Flat
-            self.SC_flat = 12
+            self.SC_flat = 9.95
             self.Service_charge = np.ones(12) * self.SC_flat
         else:  # Tiered
             self.SC_1 = 2.30  # tier 1 service charge
@@ -336,7 +327,7 @@ class Input_Data:
 
         # Hourly charges
         if self.rateStructure == 1:  # Flat rate
-            self.flatPrice = 0.112
+            self.flatPrice = 0.18035
             from calcFlatRate import calcFlatRate
             self.Cbuy = calcFlatRate(self.flatPrice)
 
@@ -352,8 +343,8 @@ class Input_Data:
             self.Cbuy = calcMonthlyRate(self.monthlyPrices, self.daysInMonth)
 
         elif self.rateStructure == 4:  # Tiered rate
-            self.tieredPrices = np.array([0.1, 0.12, 0.15])  # prices for tiers
-            self.tierMax = np.array([680, 720, 1050])  # max kWh limits for tiers
+            self.tieredPrices = np.array([0.1018, 0.1175, 0.1175])  # prices for tiers
+            self.tierMax = np.array([300, 999999, 999999])  # max kWh limits for tiers
             from calcTieredRate import calcTieredRate
             self.Cbuy = calcTieredRate(self.tieredPrices, self.tierMax, self.Eload, self.daysInMonth)
 
@@ -397,19 +388,15 @@ class Input_Data:
             self.Cbuy = calcMonthlyTieredRate(self.monthlyTieredPrices, self.monthlyTierLimits, self.Eload)
 
         elif self.rateStructure == 7:  # Time of use rate
-            self.onPrice = np.array([0.17, 0.17])  # prices for on-peak hours [summer, winter]
-            self.midPrice = np.array([0.113, 0.113])   # prices for mid-peak hours [summer, winter]
-            self.offPrice = np.array([0.083, 0.083])  # prices for off-peak hours [summer, winter]
-            self.onHours = np.array([[11, 12, 13, 14, 15, 16], [7, 8, 9, 10, 17, 18]])  # on-peak hours [summer, winter]
-            self.midHours = np.array([[7, 8, 9, 10, 17, 18], [11, 12, 13, 14, 15, 16]])  # mid-peak hours [summer, winter]
-            self.offHours = np.array([
-                [1, 2, 3, 4, 5, 6, 19, 20, 21, 22, 23, 24],
-                [1, 2, 3, 4, 5, 6, 19, 20, 21, 22, 23, 24]
-            ]) # off-peak hours [summer, winter]
-            self.season = np.array([0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0])  # define summer season 1= Summer
-            self.holidays = np.array([10, 50, 76, 167, 298, 340])  # Holidays based on the day in 365 days format
+            self.onPrice = np.array([0.3279, 0.1547])  # prices for on-peak hours [summer, winter]
+            self.midPrice = np.array([0.1864, 0.1864])   # prices for mid-peak hours [summer, winter]
+            self.offPrice = np.array([0.1350, 0.1120])  # prices for off-peak hours [summer, winter]
+            self.onHours = np.array([[17, 18, 19], [17, 18, 19]], dtype=object)  # on-peak hours [summer, winter]
+            self.midHours = np.array([[13, 14, 15, 16, 20, 21, 22, 23, 24], []], dtype=object)  # mid-peak hours [summer, winter]
+            self.season = np.array([0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0])  # define summer season 1= Summer
+            self.holidays = np.array([1, 16, 51, 149, 170, 185, 247, 282, 315, 327, 359])  # Holidays based on the day in 365 days format
             from calcTouRate import calcTouRate
-            self.Cbuy = calcTouRate(self.year, self.onPrice, self.midPrice, self.offPrice, self.onHours, self.midHours, self.offHours, self.season, self.daysInMonth, self.holidays)
+            self.Cbuy = calcTouRate(self.year, self.onPrice, self.midPrice, self.offPrice, self.onHours, self.midHours, self.season, self.daysInMonth, self.holidays)
 
         #Saving the Cbuy values
         Cbuy_df = pd.DataFrame(self.Cbuy, columns=['Column_Name'])
@@ -417,7 +404,7 @@ class Input_Data:
         Cbuy_df = Cbuy_df.reset_index(drop=True)
         Cbuy_df.to_excel('Cbuy.xlsx', header=False, index=False)
 
-        self.Csell = 0.14
+        self.Csell = 0.0487
 
         ## Emissions produced by Grid generators (g/kW)
         self.E_CO2 = 1.43;
