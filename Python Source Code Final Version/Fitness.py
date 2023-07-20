@@ -136,7 +136,7 @@ def fitness(X, final_solution=False, print_result=False):
     Cbw = R_B * Cn_B / (Nbat * Q_lifetime * np.sqrt(ef_bat)) if Cn_B > 0 else 0
 
     #  DG Fix cost
-    cc_gen = b * Pn_DG * C_fuel + (R_DG * Pn_DG / TL_DG) + MO_DG
+    cc_gen = b * Pn_DG * C_fuel + ((R_DG * Pn_DG) / (TL_DG)) + MO_DG
 
     Pdg, Ens, Pbuy, Psell, Edump, Pch, Pdch, Eb= EMS(Ppv, Pwt, Eload, Cn_B, Nbat, Pn_DG, NT,
                                                                     SOC_max, SOC_min, SOC_initial, n_I, Grid, Cbuy, a,
@@ -149,11 +149,11 @@ def fitness(X, final_solution=False, print_result=False):
     ## Installation and operation cost
 
     # Total Investment cost ($)
-    I_Cost = C_PV * (1 - RE_incentives) * Pn_PV + C_WT * (1 - RE_incentives) * Pn_WT + C_DG * Pn_DG + C_B * (1 - RE_incentives) * Cn_B + C_I * (1 - RE_incentives) * Cn_I + C_CH * (1 - RE_incentives) + Engineering_Costs * (1 - RE_incentives) * Pn_PV
+    I_Cost = C_PV * (1 - RE_incentives) * Pn_PV + C_WT * (1 - RE_incentives) * Pn_WT + C_DG * Pn_DG + C_B * (1 - RE_incentives) * Cn_B + C_I * (1 - RE_incentives) * Cn_I + C_CH * (1 - RE_incentives)*(Nbat > 0) + Engineering_Costs * (1 - RE_incentives) * Pn_PV
 
     Top_DG = np.sum(Pdg > 0) + 1
     L_DG = TL_DG / Top_DG
-    RT_DG = ceil(n / L_DG) - 1  # Replecement time
+    RT_DG = ceil(n / L_DG) - 1  # Replacement time
 
     # Total Replacement Cost ($/year)
 
@@ -170,10 +170,10 @@ def fitness(X, final_solution=False, print_result=False):
     RC_B[np.arange(L_B + 1, n, L_B).astype(np.int32)] = R_B * Cn_B / (1 + ir) ** (np.arange(1.001 * L_B, n, L_B))
     RC_I[np.arange(L_I + 1, n, L_I)] = R_I * Cn_I / (1 + ir) ** (np.arange(1.001 * L_I, n, L_I))
     RC_CH[np.arange(L_CH + 1, n, L_CH)] = R_CH / (1 + ir) ** (np.arange(1.001 * L_CH, n, L_CH))
-    R_Cost = RC_PV + RC_WT + RC_DG + RC_B + RC_I + RC_CH
+    R_Cost = RC_PV + RC_WT + RC_DG + RC_B + RC_I + (RC_CH)*(Nbat > 0)
 
     # Total M&O Cost ($/year)
-    MO_Cost = (MO_PV * Pn_PV + MO_WT * Pn_WT + MO_DG * Pn_DG * np.sum(Pdg > 0) + MO_B * Cn_B + MO_I * Cn_I + MO_CH) / (1 + ir) ** np.array(range(1, n + 1))
+    MO_Cost = (MO_PV * Pn_PV + MO_WT * Pn_WT + MO_DG * Pn_DG * np.sum(Pdg > 0) + MO_B * Cn_B + MO_I * Cn_I + MO_CH*(Nbat > 0)) / (1 + ir) ** np.array(range(1, n + 1))
 
     # DG fuel Cost
     C_Fu = np.sum(C_fuel * q) / (1 + ir) ** np.array(range(1, n + 1))
@@ -191,7 +191,7 @@ def fitness(X, final_solution=False, print_result=False):
     S_I = (R_I * Cn_I) * L_rem / L_I * 1 / (1 + ir) ** n
     L_rem = (RT_CH + 1) * L_CH - n
     S_CH = (R_CH) * L_rem / L_CH * 1 / (1 + ir) ** n
-    Salvage = S_PV + S_WT + S_DG + S_B + S_I + S_CH
+    Salvage = S_PV + S_WT + S_DG + S_B + S_I + S_CH*(Nbat > 0)
 
     # Emissions produced by Disesl generator (g)
     DG_Emissions = np.sum(q * (CO2 + NOx + SO2)) / 1000  # total emissions (kg/year)
@@ -218,9 +218,6 @@ def fitness(X, final_solution=False, print_result=False):
     if (np.isnan(RE)):
         RE = 0
 
-    Z = LCOE + EM * LEM + 1e6 * (LPSP > LPSP_max) + 1e6 * (RE < RE_min) + 100 * (I_Cost > Budget) +\
+    Z = NPC + 1e5*EM * LEM + 1e6*(Pn_PV >= 1.99*Cn_I) + 1e6 * (LPSP > LPSP_max) + 1e6 * (RE < RE_min) + 100 * (I_Cost > Budget) +\
         1e8 * np.maximum(0, LPSP - LPSP_max) + 1e8 * np.maximum(0, RE_min - RE) + 1e4 * np.maximum(0, I_Cost - Budget)
     return Z
-
-
-
