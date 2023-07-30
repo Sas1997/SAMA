@@ -127,6 +127,7 @@ class Swarm:
         plt.ylabel('Cost of Best Solution')
         plt.title('Convergence curve')
         plt.legend()  # Display the legend
+        plt.tight_layout()
         plt.show()
         Gen_Results(X)
 
