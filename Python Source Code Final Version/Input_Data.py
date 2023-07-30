@@ -7,7 +7,7 @@ from math import ceil
 # PSO Parameters
 class Input_Data:
     def __init__(self):
-        self.MaxIt = 100  # Maximum Number of Iterations
+        self.MaxIt = 99  # Maximum Number of Iterations
         self.nPop = 100  # Population Size (Swarm Size)
         self.w = 1  # Inertia Weight
         self.wdamp = 0.99  # Inertia Weight Damping Ratio
@@ -15,7 +15,7 @@ class Input_Data:
         self.c2 = 2  # Global Learning Coefficient
 
         # Multi-run
-        self.Run_Time = 10  # Total number of runs in each click
+        self.Run_Time = 1  # Total number of runs in each click
 
         # Calendar
         self.n = 25  # Lifetime of system in simulations (years)
@@ -60,12 +60,12 @@ class Input_Data:
         # Type of system (1: included, 0=not included)
         self.PV = 1
         self.WT = 0
-        self.DG = 0
+        self.DG = 1
         self.Bat = 1
-        self.Grid = 0
+        self.Grid = 1
 
         # Constraints
-        self.LPSP_max_rate = 0.1  # Maximum loss of power supply probability
+        self.LPSP_max_rate = 0.0999999  # Maximum loss of power supply probability
         self.LPSP_max = self.LPSP_max_rate / 100
 
         self.RE_min_rate = 75  # Minimum Renewable Energy Capacity
@@ -95,6 +95,7 @@ class Input_Data:
         # Inverter
         self.n_I = 0.96      # Efficiency
         self.L_I = 25        # Life time (year)
+        self.DC_AC_ratio = 1.99 # Maximum acceptable DC to AC ratio
         self.RT_I = ceil(self.n/self.L_I) - 1    # Replecement time
 
         # WT data
@@ -407,12 +408,12 @@ class Input_Data:
         self.Csell = 0.0487
 
         ## Emissions produced by Grid generators (g/kW)
-        self.E_CO2 = 1.43;
-        self.E_SO2 = 0.01;
-        self.E_NOx = 0.39;
+        self.E_CO2 = 1.43
+        self.E_SO2 = 0.01
+        self.E_NOx = 0.39
 
-        #Constraints for buying/selling from/to grid
-        self.Pbuy_max =6 #ceil(1.2 * max(self.Eload))  # kWh
-        self.Psell_max =200 #self.Pbuy_max
+        # Constraints for buying/selling from/to grid
+        self.Pbuy_max = 6 # ceil(1.2 * max(self.Eload))  # kWh
+        self.Psell_max = 200 # self.Pbuy_max
 
 InData = Input_Data()
