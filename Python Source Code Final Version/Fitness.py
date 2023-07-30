@@ -41,6 +41,7 @@ SOC_max = InData.SOC_max
 SOC_min = InData.SOC_min
 SOC_initial = InData.SOC_initial
 n_I = InData.n_I
+DC_AC_ratio=InData.DC_AC_ratio
 Grid = InData.Grid
 Cbuy = InData.Cbuy
 a = InData.a
@@ -156,27 +157,44 @@ def fitness(X, final_solution=False, print_result=False):
     RT_DG = ceil(n / L_DG) - 1  # Replacement time
 
     # Total Replacement Cost ($/year)
+    R_Cost = np.zeros(n)
+    # Define a resolution factor, for example 10 for deciles of a year
+    res = 10
+    # Multiply all times by the resolution factor
+    n_res = n * res
+    L_PV_res = np.int_(L_PV * res)
+    L_WT_res = np.int_(L_WT * res)
+    L_DG_res = np.int_(L_DG * res)
+    L_B_res = np.int_(L_B * res)
+    L_I_res = np.int_(L_I * res)
+    L_CH_res = np.int_(L_CH * res)
 
-    RC_PV = np.zeros(n)
-    RC_WT = np.zeros(n)
-    RC_DG = np.zeros(n)
-    RC_B = np.zeros(n)
-    RC_I = np.zeros(n)
-    RC_CH = np.zeros(n)
+    # Initialize arrays
+    RC_PV = np.zeros(n_res)
+    RC_WT = np.zeros(n_res)
+    RC_DG = np.zeros(n_res)
+    RC_B = np.zeros(n_res)
+    RC_I = np.zeros(n_res)
+    RC_CH = np.zeros(n_res)
 
-    RC_PV[np.arange(L_PV + 1, n, L_PV)] = R_PV * Pn_PV / (1 + ir) ** (np.arange(1.001 * L_PV, n, L_PV))
-    RC_WT[np.arange(L_WT + 1, n, L_WT)] = R_WT * Pn_WT / (1 + ir) ** (np.arange(1.001 * L_WT, n, L_WT))
-    RC_DG[np.arange(L_DG + 1, n, L_DG).astype(np.int32)] = R_DG * Pn_DG / (1 + ir) ** (np.arange(L_DG+1, n, L_DG))
-    RC_B[np.arange(L_B + 1, n, L_B).astype(np.int32)] = R_B * Cn_B / (1 + ir) ** (np.arange(1.001 * L_B, n, L_B))
-    RC_I[np.arange(L_I + 1, n, L_I)] = R_I * Cn_I / (1 + ir) ** (np.arange(1.001 * L_I, n, L_I))
-    RC_CH[np.arange(L_CH + 1, n, L_CH)] = R_CH / (1 + ir) ** (np.arange(1.001 * L_CH, n, L_CH))
-    R_Cost = RC_PV + RC_WT + RC_DG + RC_B + RC_I + (RC_CH)*(Nbat > 0)
+    # Calculate replacement costs
+    RC_PV[np.arange(L_PV_res, n_res, L_PV_res)] = R_PV * Pn_PV / np.power((1 + ir), 1.001 * np.arange(L_PV_res, n_res, L_PV_res) / res)
+    RC_WT[np.arange(L_WT_res, n_res, L_WT_res)] = R_WT * Pn_WT / np.power((1 + ir), 1.001 * np.arange(L_WT_res, n_res, L_WT_res) / res)
+    RC_DG[np.arange(L_DG_res, n_res, L_DG_res)] = R_DG * Pn_DG / np.power((1 + ir), 1.001 * np.arange(L_DG_res, n_res, L_DG_res) / res)
+    RC_B[np.arange(L_B_res, n_res, L_B_res)] = R_B * Cn_B / np.power((1 + ir), 1.001 * np.arange(L_B_res, n_res, L_B_res) / res)
+    RC_I[np.arange(L_I_res, n_res, L_I_res)] = R_I * Cn_I / np.power((1 + ir), 1.001 * np.arange(L_I_res, n_res, L_I_res) / res)
+    RC_CH[np.arange(L_CH_res, n_res, L_CH_res)] = R_CH / np.power((1 + ir), 1.001 * np.arange(L_CH_res, n_res, L_CH_res) / res)
+
+    R_Cost_res = RC_PV + RC_WT + RC_DG + RC_B + RC_I + (RC_CH) * (Nbat > 0)
+
+    for i in range(n):
+            R_Cost[i] = np.sum(R_Cost_res[i * res: (i + 1) * res])
 
     # Total M&O Cost ($/year)
-    MO_Cost = (MO_PV * Pn_PV + MO_WT * Pn_WT + MO_DG * Pn_DG * np.sum(Pdg > 0) + MO_B * Cn_B + MO_I * Cn_I + MO_CH*(Nbat > 0)) / (1 + ir) ** np.array(range(1, n + 1))
+    MO_Cost = ((MO_PV * Pn_PV + MO_WT * Pn_WT + MO_DG * Pn_DG * np.sum(Pdg > 0) + MO_B * Cn_B + MO_I * Cn_I + MO_CH * (Nbat > 0)) / (1 + ir) ** np.arange(1, n + 1))
 
     # DG fuel Cost
-    C_Fu = np.sum(C_fuel * q) / (1 + ir) ** np.array(range(1, n + 1))
+    C_Fu = (np.sum(C_fuel * q) / (1 + ir) ** np.arange(1, n + 1))
 
     # Salvage
     L_rem = (RT_PV + 1) * L_PV - n
@@ -191,18 +209,18 @@ def fitness(X, final_solution=False, print_result=False):
     S_I = (R_I * Cn_I) * L_rem / L_I * 1 / (1 + ir) ** n
     L_rem = (RT_CH + 1) * L_CH - n
     S_CH = (R_CH) * L_rem / L_CH * 1 / (1 + ir) ** n
-    Salvage = S_PV + S_WT + S_DG + S_B + S_I + S_CH*(Nbat > 0)
+    Salvage = S_PV + S_WT + S_DG + S_B + S_I + S_CH * (Nbat > 0)
 
     # Emissions produced by Disesl generator (g)
     DG_Emissions = np.sum(q * (CO2 + NOx + SO2)) / 1000  # total emissions (kg/year)
     Grid_Emissions = np.sum(Pbuy * (E_CO2 + E_SO2 + E_NOx)) / 1000  # total emissions (kg/year)
 
-    Grid_Cost = ((Annual_expenses + np.sum(Service_charge) + np.sum(Pbuy * Cbuy) - np.sum(Psell * Csell)) * 1 / (1 + ir) ** np.array(range(1, n+1))) * (1 + Grid_Tax) * (Grid > 0)
+    Grid_Cost = ((((Annual_expenses + np.sum(Service_charge) + np.sum(Pbuy * Cbuy)) * (1 + Grid_Tax)) - np.sum(Psell * Csell)) * 1 / (1 + ir) ** np.arange(1, n + 1)) * (Grid > 0)
 
     # Capital recovery factor
     CRF = ir * (1 + ir) ** n / ((1 + ir) ** n - 1)
 
-    # Totall Cost
+    # Total Cost
     NPC = (((I_Cost + np.sum(R_Cost) + np.sum(MO_Cost) + np.sum(C_Fu) - Salvage) * (1 + System_Tax)) + np.sum(Grid_Cost))
     Operating_Cost = (CRF * (((np.sum(R_Cost) + np.sum(MO_Cost) + np.sum(C_Fu) - Salvage) * (1 + System_Tax)) + np.sum(Grid_Cost)))
 
@@ -218,6 +236,6 @@ def fitness(X, final_solution=False, print_result=False):
     if (np.isnan(RE)):
         RE = 0
 
-    Z = NPC + 1e5*EM * LEM + 1e6*(Pn_PV >= 1.99*Cn_I) + 1e6 * (LPSP > LPSP_max) + 1e6 * (RE < RE_min) + 100 * (I_Cost > Budget) +\
+    Z = NPC + 1e5*EM * LEM + 1e6*(Pn_PV >= DC_AC_ratio*(Cn_I+Pn_DG+Pbuy_max*(sum(Pbuy) > 0.001))) + 1e6 * (LPSP > LPSP_max) + 1e6 * (RE < RE_min) + 100 * (I_Cost > Budget) +\
         1e8 * np.maximum(0, LPSP - LPSP_max) + 1e8 * np.maximum(0, RE_min - RE) + 1e4 * np.maximum(0, I_Cost - Budget)
     return Z
