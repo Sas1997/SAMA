@@ -99,8 +99,8 @@ LPSP_max=InData.LPSP_max
 RE_min=InData.RE_min
 Budget=InData.Budget
 
-
-def fitness(X, final_solution=False, print_result=False):
+#@jit(nopython=True, fastmath=True)
+def fitness(X):
     if X.size == 1:
         X = X[0]
 
@@ -133,17 +133,8 @@ def fitness(X, final_solution=False, print_result=False):
     Pwt = Pwt * Nwt
 
     ## Energy Management
-    # Battery Wear Cost
-    Cbw = R_B * Cn_B / (Nbat * Q_lifetime * np.sqrt(ef_bat)) if Cn_B > 0 else 0
 
-    #  DG Fix cost
-    cc_gen = b * Pn_DG * C_fuel + ((R_DG * Pn_DG) / (TL_DG)) + MO_DG
-
-    Pdg, Ens, Pbuy, Psell, Edump, Pch, Pdch, Eb= EMS(Ppv, Pwt, Eload, Cn_B, Nbat, Pn_DG, NT,
-                                                                    SOC_max, SOC_min, SOC_initial, n_I, Grid, Cbuy, a,
-                                                                    Cn_I, LR_DG, C_fuel, Pbuy_max, Psell_max, cc_gen,
-                                                                    Cbw,self_discharge_rate, alfa_battery, c, k, Imax, Vnom,
-                                                                    ef_bat)
+    Pdg, Ens, Pbuy, Psell, Edump, Pch, Pdch, Eb= EMS(Ppv, Pwt, Eload, Cn_B, Nbat, Pn_DG, NT, SOC_max, SOC_min, SOC_initial, n_I, Grid, Cbuy, a, b, R_DG, TL_DG, MO_DG, Cn_I, LR_DG, C_fuel, Pbuy_max, Psell_max, R_B, Q_lifetime, self_discharge_rate, alfa_battery, c, k, Imax, Vnom, ef_bat)
 
     q = (a * Pdg + b * Pn_DG) * (Pdg > 0)  # Fuel consumption of a diesel generator
 
