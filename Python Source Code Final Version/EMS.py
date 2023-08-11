@@ -9,12 +9,7 @@ Energy management
 
 
 @jit(nopython=True, fastmath=True)
-def EMS(Ppv, Pwt, Eload, Cn_B, Nbat,
-                      Pn_DG, NT, SOC_max, SOC_min,
-                      SOC_initial, n_I, Grid, Cbuy,
-                      a, Pinv_max, LR_DG, C_fuel, Pbuy_max,
-                      Psell_max, cc_gen, Cbw, self_discharge_rate,
-                      alfa_battery, c, k, Imax, Vnom, ef_bat):
+def EMS(Ppv, Pwt, Eload, Cn_B, Nbat, Pn_DG, NT, SOC_max, SOC_min, SOC_initial, n_I, Grid, Cbuy, a, b, R_DG, TL_DG, MO_DG, Pinv_max, LR_DG, C_fuel, Pbuy_max, Psell_max, R_B, Q_lifetime, self_discharge_rate, alfa_battery, c, k, Imax, Vnom, ef_bat):
 
     Eb = np.zeros(NT)
     Pch = np.zeros(NT)
@@ -29,7 +24,6 @@ def EMS(Ppv, Pwt, Eload, Cn_B, Nbat,
     Ebmax = SOC_max * Cn_B
     Ebmin = SOC_min * Cn_B
     Eb[0] = SOC_initial * Cn_B
-    price_dg = cc_gen + a * C_fuel
     dt = 1
 
     if Grid == 0:
@@ -42,8 +36,20 @@ def EMS(Ppv, Pwt, Eload, Cn_B, Nbat,
     else:
         Pdg_min = 0
 
+    # Battery Wear Cost
+    Cbw = R_B * Cn_B / (Nbat * Q_lifetime * np.sqrt(ef_bat)) if Cn_B > 0 else 0
 
-    # define cases
+    # DG fixed cost
+    cc_gen = (b * Pn_DG * C_fuel) + ((R_DG*Pn_DG) / (TL_DG)) + MO_DG
+    # DG marginal cost
+    mar_gen = a * C_fuel
+    # DG cost for cases
+    for t in range(NT):
+        price_dg = (cc_gen / Eload[t]) + mar_gen
+
+
+    # Define cases
+
     load_greater = np.logical_and(P_RE >= (Eload / n_I), (Eload <= Pinv_max))
 
     case1 = np.logical_and(np.logical_not(load_greater),
