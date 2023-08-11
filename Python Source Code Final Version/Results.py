@@ -3,6 +3,8 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import numpy as np
+from numba import jit
+import pandas as pd
 from math import ceil
 from EMS import EMS
 
@@ -102,6 +104,7 @@ Budget=InData.Budget
 WT=InData.WT
 daysInMonth=InData.daysInMonth
 
+#@jit(nopython=True, fastmath=True)
 def Gen_Results(X):
     if (len(X)) == 1:
         X = X[0]
@@ -136,17 +139,8 @@ def Gen_Results(X):
     Pwt = Pwt * Nwt
 
     ## Energy Management
-    # Battery Wear Cost
-    Cbw = R_B * Cn_B / (Nbat * Q_lifetime * np.sqrt(ef_bat)) if Cn_B > 0 else 0
 
-    #  DG Fix cost
-    cc_gen = b * Pn_DG * C_fuel + ((R_DG * Pn_DG) / (TL_DG)) + MO_DG
-
-    Pdg, Ens, Pbuy, Psell, Edump, Pch, Pdch, Eb = EMS(Ppv, Pwt, Eload, Cn_B, Nbat, Pn_DG, NT,
-                                                      SOC_max, SOC_min, SOC_initial, n_I, Grid, Cbuy, a,
-                                                      Cn_I, LR_DG, C_fuel, Pbuy_max, Psell_max, cc_gen,
-                                                      Cbw, self_discharge_rate, alfa_battery, c, k, Imax, Vnom,
-                                                      ef_bat)
+    Pdg, Ens, Pbuy, Psell, Edump, Pch, Pdch, Eb= EMS(Ppv, Pwt, Eload, Cn_B, Nbat, Pn_DG, NT, SOC_max, SOC_min, SOC_initial, n_I, Grid, Cbuy, a, b, R_DG, TL_DG, MO_DG, Cn_I, LR_DG, C_fuel, Pbuy_max, Psell_max, R_B, Q_lifetime, self_discharge_rate, alfa_battery, c, k, Imax, Vnom, ef_bat)
 
     q = (a * Pdg + b * Pn_DG) * (Pdg > 0)  # Fuel consumption of a diesel generator
 
@@ -250,9 +244,12 @@ def Gen_Results(X):
     if (np.isnan(RE)):
         RE = 0
 
+    # Avoided costs calc
+    P_avo = Ppv + Pdg + Pwt
+    avoided_costs = (np.sum(P_avo * Cbuy) + Annual_expenses + np.sum(Service_charge)) / ((1 + ir) ** np.arange(1, n + 1))
+
     print(LCOE)
 
-    import pandas as pd
 
     # Extracting data for plotting
     data = {'Ppv': Ppv, 'Pdg': Pdg, 'Pch': Pch, 'Pdch': Pdch, 'SOC': Eb / Cn_B}
@@ -276,6 +273,7 @@ def Gen_Results(X):
     print('NPC  = $', round(NPC, 2))
     print('NPC without incentives = $', round(NPC_without_incentives, 2))
     print('NPC for only Grid connected system = $', round(NPC_Grid, 2))
+    print('Total avoided costs = $', round(np.sum(avoided_costs), 2))
     print('LCOE  =', round(LCOE, 2), '$/kWh')
     print('LCOE without incentives =', round(LCOE_without_incentives, 2), '$/kWh')
     print('LCOE for only Grid connected system =', round(LCOE_Grid, 2), '$/kWh')
@@ -305,7 +303,7 @@ def Gen_Results(X):
         print('Grid Emissions   =', Grid_Emissions, '(kg/year)')
 
     print('Total Money paid by the user= $', round(np.sum(NPC), 2))
-    print('total fuel consumed by DG   =', np.sum(q), '(Liter/year)')
+    print('Annual fuel consumed by DG   =', np.sum(q), '(Liter/year)')
     print('DG Emissions   =', DG_Emissions, '(kg/year)')
     print('LEM  =', LEM, 'kg/kWh')
 
@@ -321,13 +319,16 @@ def Gen_Results(X):
     Grid_Cost = Grid_Cost.tolist()  # Convert to list
     Grid_Cost_pos = [x if x > 0 else 0 for x in Grid_Cost]  # Only keep positive values and flip the sign
     Grid_Cost_neg = [-x if x < 0 else 0 for x in Grid_Cost]  # Only keep negative values and flip the sign
+    avoided_costs = [x for x in avoided_costs.tolist()]
 
     # Define years from 0 to n
     years = list(range(n + 1))
 
     # Calculate the yearly total cost for year 1 to n (without including Salvage)
-    yearly_total_cost = [sum(x) + g for x, g in zip(zip(R_Cost, MO_Cost, C_Fu, Salvage, Grid_Cost_pos), Grid_Cost_neg)]
+    yearly_total_cost = [sum(x) + g + a for x, g, a in zip(zip(R_Cost, MO_Cost, C_Fu, Salvage, Grid_Cost_pos), Grid_Cost_neg, avoided_costs)]
     yearly_total_cost = [-I_Cost] + yearly_total_cost  # Add initial investment (flipped) at year 0
+    # Calculate the cumulative total cost
+    cumulative_total_cost = [sum(yearly_total_cost[:i + 1]) for i in range(n + 1)]
 
     # Create the bar chart
     plt.figure(figsize=(10, 6), dpi=300)
@@ -340,21 +341,24 @@ def Gen_Results(X):
 
     # Plot grid revenues
     plt.bar(years[1:], Grid_Cost_neg, label='Grid Revenue', color='pink', bottom=0)
-
-    # Plot revenues (Start from x-axis)
-    plt.bar(years[-1:], Salvage, label='Salvage', color='green')
+    # Plot avoided costs as revenue above x-axis
+    plt.bar(years[1:], avoided_costs, bottom=Grid_Cost_neg, label='Avoided Costs', color='cyan', alpha=1)
+    # Plot salvage revenues (Start from x-axis)
+    plt.bar(years[-1:], Salvage, bottom=[i + j for i, j in zip(Grid_Cost_neg, avoided_costs)], label='Salvage', color='green')
 
     # Initial capital cost
     plt.bar(0, -I_Cost, label='Initial Investment', color='red')  # Flip the sign
 
     # Plot total cost curve
-    plt.plot(years, yearly_total_cost, color='black', marker='o', label='Total Cost')
+    plt.plot(years, cumulative_total_cost, color='black', marker='o', label='Total Cost')
 
     # Add details and labels
     #plt.title('Cash Flow Chart', fontsize=20)
     plt.xlabel('Year', fontsize=16)
     plt.ylabel('Cash Flow [$]', fontsize=16)
-    plt.legend(loc='lower right', fontsize=12)
+    plt.legend(loc='center right', bbox_to_anchor=(1, 0.5), fontsize=12)
+    # Make x-axis visible
+    plt.axhline(0, color='black', linewidth=0.8)
     plt.tight_layout()
 
 
@@ -434,7 +438,7 @@ def Gen_Results(X):
         return [(title, data, label) for title, data, label in data_series if np.sum(data[t1:t2 + 1]) >= 0.1]
 
     # Specific day number
-    Day = 1
+    Day = 180
     t1 = Day * 24
     t2 = (Day + 1) * 24
 
@@ -442,8 +446,8 @@ def Gen_Results(X):
                    ('Plane of Array Irradiance', G, '$POA [W/m^{2}]$'),
                    ('Ambient Temperature', T, '$T [^{o}C]$'),
                    ('PV Power', Ppv, '$P_{pv}$ [kW]'),
-                   ('WT Energy', Pwt, '$P_{wt}$ [kW]'),
-                   ('Diesel Generator Energy', Pdg, '$P_{DG}$ [kW]'),
+                   ('WT Power', Pwt, '$P_{wt}$ [kW]'),
+                   ('Diesel Generator Power', Pdg, '$P_{DG}$ [kW]'),
                    ('Battery Energy Level', Eb, '$E_{b}$ [kWh]'),
                    ('State of Charge', Eb / Cn_B if not np.all(Eb[t1:t2] == 0) else np.zeros_like(Eb), 'SOC (%)'),
                    ('Loss of Power Supply', Ens, 'LPS[kWh]'),
