@@ -9,6 +9,7 @@ from math import ceil
 from EMS import EMS
 
 # Loading all inputs
+daysInMonth = InData.daysInMonth
 Eload = InData.Eload
 Ppv_r = InData.Ppv_r
 Pwt_r = InData.Pwt_r
@@ -102,7 +103,6 @@ LPSP_max=InData.LPSP_max
 RE_min=InData.RE_min
 Budget=InData.Budget
 WT=InData.WT
-daysInMonth=InData.daysInMonth
 
 #@jit(nopython=True, fastmath=True)
 def Gen_Results(X):
@@ -244,6 +244,12 @@ def Gen_Results(X):
     if (np.isnan(RE)):
         RE = 0
 
+    # Battery Power
+    P_bat = Pch - Pdch
+    # Renewable Generation
+    P_RE = Ppv + Pwt
+    # Served load
+    Eload_served = Eload - Ens
     # Avoided costs calc
     P_avo = Ppv + Pdg + Pwt
     avoided_costs = (np.sum(P_avo * Cbuy) + Annual_expenses + np.sum(Service_charge)) / ((1 + ir) ** np.arange(1, n + 1))
@@ -281,8 +287,11 @@ def Gen_Results(X):
     print('Initial Cost  = $', round(I_Cost, 2))
     print('Initial Cost without incentives= $', round(I_Cost_without_incentives, 2))
     print('Total incentives received= $', round(Total_incentives_received, 2))
-    print('RE  =', round(100 * RE, 2), '%')
     print('Total operation and maintenance cost  = $', round(np.sum(MO_Cost), 2))
+    if Grid == 1:
+        print('Total Money paid to the Grid= $', round(np.sum(Grid_Cost), 2))
+
+    print('Total Money paid by the user= $', round(np.sum(NPC), 2))
 
     print(' ')
     print('PV Power  =', np.sum(Ppv), 'kWh')
@@ -291,7 +300,11 @@ def Gen_Results(X):
     print('DG Power  =', np.sum(Pdg), 'kWh')
     print('Battery Energy In  =', np.sum(Pch), 'kWh')
     print('Battery Energy Out  =', np.sum(Pdch), 'kWh')
+    print('RE  =', round(100 * RE, 2), '%')
     print('LPSP  =', round(100 * LPSP, 2), '%')
+    print('Annual Load =', np.sum(Eload), 'kW')
+    print('Annual Served Load =', np.sum(Eload_served), 'kW')
+    print('Annual Capacity Shortage =', np.sum(Ens), 'kWh')
     print('Excess Electricity =', np.sum(Edump), 'kWh')
 
     if Grid == 1:
@@ -299,10 +312,8 @@ def Gen_Results(X):
         Total_Psell = (np.sum(Psell)) * (Grid > 0)
         print('Total power bought from Grid= ', Total_Pbuy, 'kWh')
         print('Power sold to Grid= ', Total_Psell, 'kWh')
-        print('Total Money paid to the Grid= $', round(np.sum(Grid_Cost), 2))
         print('Grid Emissions   =', Grid_Emissions, '(kg/year)')
 
-    print('Total Money paid by the user= $', round(np.sum(NPC), 2))
     print('Annual fuel consumed by DG   =', np.sum(q), '(Liter/year)')
     print('DG Emissions   =', DG_Emissions, '(kg/year)')
     print('LEM  =', LEM, 'kg/kWh')
@@ -356,7 +367,7 @@ def Gen_Results(X):
     #plt.title('Cash Flow Chart', fontsize=20)
     plt.xlabel('Year', fontsize=16)
     plt.ylabel('Cash Flow [$]', fontsize=16)
-    plt.legend(loc='center right', bbox_to_anchor=(1, 0.5), fontsize=12)
+    plt.legend(loc='upper left', fontsize=12)
     # Make x-axis visible
     plt.axhline(0, color='black', linewidth=0.8)
     plt.tight_layout()
@@ -387,13 +398,13 @@ def Gen_Results(X):
         plt.subplots_adjust(left=0.05, right=0.85, top=0.95, bottom=0.08)
         plt.tight_layout()
 
-    # Energy Distribution figure
+    # Energy/Power Distribution figure
     fig, ax = plt.subplots(figsize=(30, 10), dpi=300)  # Increased figure size and resolution
     # Increased linewidth and added distinct colors, line styles, and markers for visibility
-    ax.plot(Eload - Ens, linestyle='-', linewidth=1, color='blue', marker='o', markersize=4, label='Served load')
+    ax.plot(Eload_served, linestyle='-', linewidth=1, color='blue', marker='o', markersize=4, label='Served load')
     ax.plot(Pdg, linestyle='--', linewidth=1, color='red', marker='x', markersize=4, label='$P_{dg}$')
-    ax.plot(Pch - Pdch, linestyle='-.', linewidth=1, color='green', marker='^', markersize=4, label='$P_{bat}$')
-    ax.plot(Ppv + Pwt, linestyle=':', linewidth=1, color='purple', marker='s', markersize=4, label='$P_{RE}$')
+    ax.plot(P_bat, linestyle='-.', linewidth=1, color='green', marker='^', markersize=4, label='$P_{bat}$')
+    ax.plot(P_RE, linestyle=':', linewidth=1, color='purple', marker='s', markersize=4, label='$P_{RE}$')
     ax.set_ylabel('Power [kW]', fontsize=22)  # Increased font size
     ax.set_xlabel('Month', fontsize=22)  # Increased font size
     ax.tick_params(axis='both', which='major', labelsize=18)  # Increased tick label size
@@ -481,14 +492,14 @@ def Gen_Results(X):
 
     # Utility figures
 
-    #The figure showing each day average cost of energy system
+    # The figure showing each day/month/year average cost of energy system
     A_l = np.zeros((12, 31))
     index = 1
     for m in range(12):
         index1 = index
         for d in range(daysInMonth[m]):
-            Total_daily_load = np.sum(Eload[index1:index1 + 23])
-            A_l[m, d] = Total_daily_load
+            Total_daily_served_load = np.sum(Eload_served[index1:index1 + 23])
+            A_l[m, d] = Total_daily_served_load
             index1 = index1 + 24
         index = (24 * daysInMonth[m]) + index
 
@@ -555,15 +566,15 @@ def Gen_Results(X):
     for m in range(12):
         index1 = index
         for d in range(daysInMonth[m]):
-            gridcost = np.mean(Cbuy[index1:index1 + 23])
+            gridcost = (np.mean(Cbuy[index1:index1 + 23]) + ((Service_charge[m]) / daysInMonth[m]) + ((Annual_expenses) / daysInMonth[m])) * (1 + Grid_Tax)
             Gh_c[m, d] = gridcost
             index1 = index1 + 24
         index = (24 * daysInMonth[m]) + index
 
     # Compute monthly sums
-    averages = np.nanmean(Gh_c, axis=1, keepdims=True)
+    averages_grid_hourly_cost = np.nanmean(Gh_c, axis=1, keepdims=True)
     yearly_mean = np.nanmean(Gh_c)
-    Gh_c = np.hstack((Gh_c, averages))
+    Gh_c = np.hstack((Gh_c, averages_grid_hourly_cost))
 
     # Plot average hourly Grid cost (Cbuy) for each day in each month heatmap
     Gh_c[np.where(Gh_c == 0)] = np.nan
@@ -616,7 +627,7 @@ def Gen_Results(X):
     cbar_total.ax.set_title('Monthly average hourly cost of connecting to the grid [$/kWh]', fontsize=32, rotation=270, x=3.85, y=0.04)
     fig.subplots_adjust(left=0.075, right=0.9, top=0.98, bottom=0.075)
 
-    # Calculate average only grid connected system cost for each day in each month
+    # Calculate average only grid connected system cost for each day/month/year
     AG_c = np.round(LCOE_Grid * A_l, 2)
 
     # Compute monthly sums
@@ -677,7 +688,7 @@ def Gen_Results(X):
 
     # Hourly Grid electricity price color bar map
     # Assuming Cbuy is a 1D numpy array
-    Cbuy_2D = np.reshape(Cbuy, (1, len(Cbuy)))  # Reshape to 2D
+    Cbuy_2D = np.reshape(Cbuy * (1 + Grid_Tax), (1, len(Cbuy)))  # Reshape to 2D
     fig, ax = plt.subplots(figsize=(10, 2), dpi=300)  # Increase figure size and resolution
     img = ax.imshow(Cbuy_2D, cmap='jet', aspect='auto')  # Display the data
     cbar = fig.colorbar(img, ax=ax, orientation='horizontal', pad=0.4, shrink=0.8)  # Add a colorbar and adjust its position
@@ -695,7 +706,7 @@ def Gen_Results(X):
     ax.set_xticks(hours_per_month)
     ax.set_xticklabels(month_labels)
 
-    # Calculate average money earned by selling electricity to grid in each day in each month
+    # Calculate average money earned by selling electricity to grid in each day/month/year
     if np.sum(Psell) > 0.1:
         AG_s = np.zeros((12, 31))
         index = 1
