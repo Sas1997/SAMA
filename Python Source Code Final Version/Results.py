@@ -103,7 +103,10 @@ LPSP_max=InData.LPSP_max
 RE_min=InData.RE_min
 Budget=InData.Budget
 WT=InData.WT
-
+Grid_escalation = InData.Grid_escalation
+C_fuel_adj = InData.C_fuel_adj
+Grid_Tax_amount = InData.Grid_Tax_amount
+Grid_credit = InData.Grid_credit
 #@jit(nopython=True, fastmath=True)
 def Gen_Results(X):
     if (len(X)) == 1:
@@ -195,7 +198,7 @@ def Gen_Results(X):
     MO_Cost = ((MO_PV * Pn_PV + MO_WT * Pn_WT + MO_DG * Pn_DG * np.sum(Pdg > 0) + MO_B * Cn_B + MO_I * Cn_I + MO_CH * (Nbat > 0)) / (1 + ir) ** np.arange(1, n + 1))
 
     # DG fuel Cost
-    C_Fu = (np.sum(C_fuel * q) / (1 + ir) ** np.arange(1, n + 1))
+    C_Fu = (np.sum(C_fuel * q)) * (((1 + C_fuel_adj) ** np.arange(1, n + 1)) / ((1 + ir) ** np.arange(1, n + 1)))
 
     # Salvage
     Salvage = np.zeros(n)
@@ -218,8 +221,8 @@ def Gen_Results(X):
     # Emissions produced by Disesl generator (g)
     DG_Emissions = np.sum(q * (CO2 + NOx + SO2)) / 1000  # total emissions (kg/year)
     Grid_Emissions = np.sum(Pbuy * (E_CO2 + E_SO2 + E_NOx)) / 1000  # total emissions (kg/year)
-    Grid_Cost = ((((Annual_expenses + np.sum(Service_charge) + np.sum(Pbuy * Cbuy)) * (1 + Grid_Tax)) - np.sum(Psell * Csell)) * 1 / (1 + ir) ** np.arange(1, n + 1)) * (Grid > 0)
-    Grid_Cost_onlyG = ((Annual_expenses + np.sum(Service_charge) + np.sum(Eload * Cbuy)) * 1 / (1 + ir) ** np.arange(1, n + 1)) * (1 + Grid_Tax)
+    Grid_Cost = ((((Annual_expenses + np.sum(Service_charge) + np.sum(Pbuy * Cbuy) + Grid_Tax_amount * np.sum(Pbuy)) * (((1 + Grid_escalation) ** np.arange(1, n + 1)) / ((1 + ir) ** np.arange(1, n + 1)))) * (1 + Grid_Tax)) - ((np.sum(Psell * Csell) + Grid_credit) / ((1 + ir) ** np.arange(1, n + 1)))) * (Grid > 0)
+    Grid_Cost_onlyG = (((Annual_expenses + np.sum(Service_charge) + np.sum(Eload * Cbuy) + Grid_Tax_amount * np.sum(Eload)) * (((1 + Grid_escalation) ** np.arange(1, n + 1)) / ((1 + ir) ** np.arange(1, n + 1)))) * (1 + Grid_Tax)) - (Grid_credit / ((1 + ir) ** np.arange(1, n + 1)))
 
     # Capital recovery factor
     CRF = ir * (1 + ir) ** n / ((1 + ir) ** n - 1)
@@ -232,7 +235,7 @@ def Gen_Results(X):
 
     LCOE = CRF * NPC / np.sum(Eload - Ens + Psell) # Levelized Cost of Energy ($/kWh)
     LCOE_without_incentives = CRF * NPC_without_incentives / np.sum(Eload - Ens + Psell)
-    LCOE_Grid = CRF * NPC_Grid / np.sum(Eload - Ens)
+    LCOE_Grid = CRF * NPC_Grid / np.sum(Eload)
     LEM = (DG_Emissions + Grid_Emissions) / np.sum(Eload - Ens)  # Levelized Emissions(kg/kWh)
 
     Ebmin = SOC_min * Cn_B  # Battery minimum energy
@@ -251,8 +254,7 @@ def Gen_Results(X):
     # Served load
     Eload_served = Eload - Ens
     # Avoided costs calc
-    P_avo = Ppv + Pdg + Pwt
-    avoided_costs = (np.sum(P_avo * Cbuy) + Annual_expenses + np.sum(Service_charge)) / ((1 + ir) ** np.arange(1, n + 1))
+    avoided_costs = (((np.sum(Eload_served * Cbuy) + Annual_expenses + np.sum(Service_charge) + Grid_Tax_amount * np.sum(Eload_served)) * (((1 + Grid_escalation) ** np.arange(1, n + 1)) / ((1 + ir) ** np.arange(1, n + 1)))) * (1 + Grid_Tax)) - ((np.sum(Psell * Csell) + Grid_credit) / ((1 + ir) ** np.arange(1, n + 1)))
 
     print(LCOE)
 
@@ -310,8 +312,8 @@ def Gen_Results(X):
     if Grid == 1:
         Total_Pbuy = (np.sum(Pbuy)) * (Grid > 0)
         Total_Psell = (np.sum(Psell)) * (Grid > 0)
-        print('Total power bought from Grid= ', Total_Pbuy, 'kWh')
-        print('Power sold to Grid= ', Total_Psell, 'kWh')
+        print('Annual power bought from Grid= ', Total_Pbuy, 'kWh')
+        print('Annual Power sold to Grid= ', Total_Psell, 'kWh')
         print('Grid Emissions   =', Grid_Emissions, '(kg/year)')
 
     print('Annual fuel consumed by DG   =', np.sum(q), '(Liter/year)')
@@ -367,7 +369,7 @@ def Gen_Results(X):
     #plt.title('Cash Flow Chart', fontsize=20)
     plt.xlabel('Year', fontsize=16)
     plt.ylabel('Cash Flow [$]', fontsize=16)
-    plt.legend(loc='upper left', fontsize=12)
+    plt.legend(loc='best', fontsize=12)
     # Make x-axis visible
     plt.axhline(0, color='black', linewidth=0.8)
     plt.tight_layout()
@@ -492,18 +494,29 @@ def Gen_Results(X):
 
     # Utility figures
 
-    # The figure showing each day/month/year average cost of energy system
     A_l = np.zeros((12, 31))
     index = 1
     for m in range(12):
         index1 = index
         for d in range(daysInMonth[m]):
-            Total_daily_served_load = np.sum(Eload_served[index1:index1 + 23])
-            A_l[m, d] = Total_daily_served_load
+            Total_daily_load = np.sum(Eload[index1:index1 + 23])
+            A_l[m, d] = Total_daily_load
             index1 = index1 + 24
         index = (24 * daysInMonth[m]) + index
 
-    AE_c = np.round(LCOE * A_l, 2)
+    # The figure showing each day/month/year average cost of energy system
+    A_l_served = np.zeros((12, 31))
+    index = 1
+    for m in range(12):
+        index1 = index
+        for d in range(daysInMonth[m]):
+            Total_daily_served_load = np.sum(Eload_served[index1:index1 + 23])
+            A_l_served[m, d] = Total_daily_served_load
+            index1 = index1 + 24
+        index = (24 * daysInMonth[m]) + index
+
+
+    AE_c = np.round(LCOE * A_l_served, 2)
     # Compute monthly sums
     sums = np.sum(AE_c, axis=1, keepdims=True)
     yearly_sum = np.nansum(AE_c)
@@ -566,7 +579,7 @@ def Gen_Results(X):
     for m in range(12):
         index1 = index
         for d in range(daysInMonth[m]):
-            gridcost = (np.mean(Cbuy[index1:index1 + 23]) + ((Service_charge[m]) / daysInMonth[m]) + ((Annual_expenses) / daysInMonth[m])) * (1 + Grid_Tax)
+            gridcost = ((np.mean(Cbuy[index1:index1 + 23])) * (1 + Grid_Tax)) + Grid_Tax_amount
             Gh_c[m, d] = gridcost
             index1 = index1 + 24
         index = (24 * daysInMonth[m]) + index
@@ -688,7 +701,7 @@ def Gen_Results(X):
 
     # Hourly Grid electricity price color bar map
     # Assuming Cbuy is a 1D numpy array
-    Cbuy_2D = np.reshape(Cbuy * (1 + Grid_Tax), (1, len(Cbuy)))  # Reshape to 2D
+    Cbuy_2D = np.reshape(Cbuy * (1 + Grid_Tax) + Grid_Tax_amount, (1, len(Cbuy)))  # Reshape to 2D
     fig, ax = plt.subplots(figsize=(10, 2), dpi=300)  # Increase figure size and resolution
     img = ax.imshow(Cbuy_2D, cmap='jet', aspect='auto')  # Display the data
     cbar = fig.colorbar(img, ax=ax, orientation='horizontal', pad=0.4, shrink=0.8)  # Add a colorbar and adjust its position
