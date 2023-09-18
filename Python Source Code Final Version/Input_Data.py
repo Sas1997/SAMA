@@ -7,8 +7,8 @@ from math import ceil
 # PSO Parameters
 class Input_Data:
     def __init__(self):
-        self.MaxIt = 99  # Maximum Number of Iterations
-        self.nPop = 100  # Population Size (Swarm Size)
+        self.MaxIt = 200  # Maximum Number of Iterations
+        self.nPop = 50  # Population Size (Swarm Size)
         self.w = 1  # Inertia Weight
         self.wdamp = 0.99  # Inertia Weight Damping Ratio
         self.c1 = 2 # Personal Learning Coefficient
@@ -62,7 +62,7 @@ class Input_Data:
         self.WT = 0
         self.DG = 1
         self.Bat = 1
-        self.Grid = 1
+        self.Grid = 0
 
         # Constraints
         self.LPSP_max_rate = 0.0999999  # Maximum loss of power supply probability
@@ -90,13 +90,13 @@ class Input_Data:
         self.n_PV = 0.2182   # Efficiency of PV module
         self.Gref = 1000     # 1000 W/m^2
         self.L_PV = 25       # Life time (year)
-        self.RT_PV = ceil(self.n/self.L_PV) - 1   # Replecement time
+        self.RT_PV = ceil(self.n/self.L_PV) - 1   # Replacement time
 
         # Inverter
         self.n_I = 0.96      # Efficiency
         self.L_I = 25        # Life time (year)
-        self.DC_AC_ratio = 1.99 # Maximum acceptable DC to AC ratio
-        self.RT_I = ceil(self.n/self.L_I) - 1    # Replecement time
+        self.DC_AC_ratio = 1.99     # Maximum acceptable DC to AC ratio
+        self.RT_I = ceil(self.n/self.L_I) - 1    # Replacement time
 
         # WT data
         self.h_hub = 17              # Hub height
@@ -105,7 +105,7 @@ class Input_Data:
         self.v_cut_out = 25          # cut out speed
         self.v_cut_in = 2.5          # cut in speed
         self.v_rated = 9.5           # rated speed(m/s)
-        self.alfa_wind_turbine = 0.14    # coefficient of friction (0.11 for extreme wind conditions, and 0.20 for normal wind conditions)
+        self.alfa_wind_turbine = 0.14       # Coefficient of friction (0.11 for extreme wind conditions, and 0.20 for normal wind conditions)
         self.L_WT = 20           # Life time (year)
         self.RT_WT = ceil(self.n/self.L_WT) - 1    # Replecement time
 
@@ -115,7 +115,7 @@ class Input_Data:
         self.a = 0.2730          # L/hr/kW output
         self.b = 0.0330          # L/hr/kW rated
         self.TL_DG = 24000       # Life time (h)
-        # Emissions produced by Diesel generator for each fuel in littre [L] g/L
+        # Emissions produced by Diesel generator for each fuel in litre [L] g/L
         self.CO2 = 2621.7
         self.CO = 16.34
         self.NOx = 6.6
@@ -143,7 +143,7 @@ class Input_Data:
         # Economic Parameters
         self.n_ir_rate = 4.5             # Nominal discount rate
         self.n_ir = self.n_ir_rate / 100
-        self.e_ir_rate = 2               # Expected inflation rate
+        self.e_ir_rate = 2              # Expected inflation rate
         self.e_ir = self.e_ir_rate / 100
 
         self.ir = (self.n_ir - self.e_ir) / (1 + self.e_ir)  # real discount rate
@@ -192,6 +192,8 @@ class Input_Data:
             # PV
             self.C_PV = self.Total_PV_price * self.r_PV         # Capital cost ($) per KW
             self.R_PV = self.Total_PV_price * self.r_PV        # Replacement Cost of PV modules Per KW
+            # self.R_PV_adj_rate = 0                            # PV module replacement cost yearly esclation rate (if positive) and reduction rate (if negative)
+            # self.R_PV_adj = self.R_PV_adj_rate / 100
             self.MO_PV = 28.12 * (1 + self.r_Sales_tax)      # PV O&M cost ($/year/kw)
 
             # Inverter
@@ -209,6 +211,8 @@ class Input_Data:
             self.R_DG = 240.45 * (1 + self.r_Sales_tax)       # Replacement Cost ($/kW)
             self.MO_DG = 0.064 * (1 + self.r_Sales_tax)     # O&M+ running cost ($/op.h)
             self.C_fuel = 1.39 * (1 + self.r_Sales_tax)             # Fuel Cost ($/L)
+            self.C_fuel_adj_rate = 0                                # DG fuel cost yearly esclation rate (if positive) and reduction rate (if negative)
+            self.C_fuel_adj = self.C_fuel_adj_rate / 100
 
             # Battery
             self.C_B = 458.06 * (1 + self.r_Sales_tax)              # Capital cost ($/kWh)
@@ -257,6 +261,8 @@ class Input_Data:
             self.R_DG = 240.45       # Replacement Cost ($/kW)
             self.MO_DG = 0.064    # O&M+ running cost ($/op.h)
             self.C_fuel = 1.39  # Fuel Cost ($/L)
+            self.C_fuel_adj_rate = 0  # DG fuel cost yearly esclation rate (if positive) and reduction rate (if negative)
+            self.C_fuel_adj = self.C_fuel_adj_rate / 100
 
             # Battery
             self.C_B = 458.06              # Capital cost ($/KWh)
@@ -285,28 +291,32 @@ class Input_Data:
         self.E_NOx = 0.39
 
 
-        # Rate Structure
-        self.rateStructure = 4
+        # Hourly Rate Structure
+        self.rateStructure = 1
 
         # Fixed expenses
         self.Annual_expenses = 0
-        self.Grid_sale_tax_rate = 7
+        self.Grid_sale_tax_rate = 0
         self.Grid_Tax = self.Grid_sale_tax_rate / 100
+        self.Grid_Tax_amount = 0
+        self.Grid_escalation_rate = 0
+        self.Grid_escalation = self.Grid_escalation_rate / 100
+        self.Grid_credit = 0
 
-        # Monthly fixed charge
+        # Monthly fixed charge structure
         self.Monthly_fixed_charge_system = 1
 
         if self.Monthly_fixed_charge_system == 1:  # Flat
-            self.SC_flat = 9.95
+            self.SC_flat = 10.58
             self.Service_charge = np.ones(12) * self.SC_flat
         else:  # Tiered
-            self.SC_1 = 2.30  # tier 1 service charge
-            self.Limit_SC_1 = 500  # limit for tier 1
-            self.SC_2 = 7.9  # tier 2 service charge
+            self.SC_1 = 31.04  # tier 1 service charge
+            self.Limit_SC_1 = 800  # limit for tier 1
+            self.SC_2 = 41.79  # tier 2 service charge
             self.Limit_SC_2 = 1500  # limit for tier 2
-            self.SC_3 = 22.7  # tier 3 service charge
+            self.SC_3 = 60.79  # tier 3 service charge
             self.Limit_SC_3 = 1500  # limit for tier 3
-            self.SC_4 = 22.7  # tier 4 service charge
+            self.SC_4 = 60.79  # tier 4 service charge
             self.totalmonthlyload = np.zeros((12, 1))
             self.hourCount = 0
             for m in range(12):
@@ -328,7 +338,7 @@ class Input_Data:
 
         # Hourly charges
         if self.rateStructure == 1:  # Flat rate
-            self.flatPrice = 0.18035
+            self.flatPrice = 0.35601
             from calcFlatRate import calcFlatRate
             self.Cbuy = calcFlatRate(self.flatPrice)
 
@@ -339,7 +349,7 @@ class Input_Data:
             self.Cbuy = calcSeasonalRate(self.seasonalPrices, self.season, self.daysInMonth)
 
         elif self.rateStructure == 3:  # Monthly rate
-            self.monthlyPrices = np.array([0.15, 0.14, 0.13, 0.16, 0.11, 0.10, 0.12, 0.13, 0.14, 0.10, 0.15, 0.16])
+            self.monthlyPrices = np.array([0.54207, 0.53713, 0.38689, 0.30496, 0.28689, 0.28168, 0.30205, 0.28956, 0.26501, 0.26492, 0.3108, 0.40715])
             from calcMonthlyRate import calcMonthlyRate
             self.Cbuy = calcMonthlyRate(self.monthlyPrices, self.daysInMonth)
 
@@ -358,32 +368,32 @@ class Input_Data:
 
         elif self.rateStructure == 6:  # Monthly tiered rate
             self.monthlyTieredPrices = np.array([
-                [0.19488, 0.25347, 0.25347],
-                [0.19488, 0.25347, 0.25347],
-                [0.19488, 0.25347, 0.25347],
-                [0.19375, 0.25234, 0.25234],
-                [0.19375, 0.25234, 0.25234],
-                [0.19375, 0.25234, 0.33935],
-                [0.18179, 0.24038, 0.32739],
-                [0.18179, 0.24038, 0.32739],
-                [0.18179, 0.24038, 0.32739],
-                [0.19192, 0.25051, 0.25051],
-                [0.19192, 0.25051, 0.25051],
-                [0.19192, 0.25051, 0.25051]
+                [0.36, 0.45, 0.45],
+                [0.36, 0.45, 0.45],
+                [0.36, 0.45, 0.45],
+                [0.36, 0.45, 0.45],
+                [0.36, 0.45, 0.45],
+                [0.36, 0.45, 0.45],
+                [0.36, 0.45, 0.45],
+                [0.36, 0.45, 0.45],
+                [0.36, 0.45, 0.45],
+                [0.36, 0.45, 0.45],
+                [0.36, 0.45, 0.45],
+                [0.36, 0.45, 0.45]
             ])
             self.monthlyTierLimits = np.array([
-                [500, 1500, 1501],
-                [500, 1500, 1501],
-                [500, 1500, 1501],
-                [500, 1500, 1501],
-                [500, 1500, 1501],
-                [500, 1500, 1501],
-                [500, 1500, 1501],
-                [500, 1500, 1501],
-                [500, 1500, 1501],
-                [500, 1500, 1501],
-                [500, 1500, 1501],
-                [500, 1500, 1501]
+                [399.9, 999999, 999999],
+                [361.2, 999999, 999999],
+                [399.9, 999999, 999999],
+                [387, 999999, 999999],
+                [399.9, 999999, 999999],
+                [213, 999999, 999999],
+                [220.1, 999999, 999999],
+                [220.1, 999999, 999999],
+                [213, 999999, 999999],
+                [399.9, 999999, 999999],
+                [387, 999999, 999999],
+                [399.9, 999999, 999999]
             ])
             from calcMonthlyTieredRate import calcMonthlyTieredRate
             self.Cbuy = calcMonthlyTieredRate(self.monthlyTieredPrices, self.monthlyTierLimits, self.Eload)
@@ -405,7 +415,7 @@ class Input_Data:
         Cbuy_df = Cbuy_df.reset_index(drop=True)
         Cbuy_df.to_excel('Cbuy.xlsx', header=False, index=False)
 
-        self.Csell = 0.0487
+        self.Csell = 0.0563
 
         ## Emissions produced by Grid generators (g/kW)
         self.E_CO2 = 1.43
