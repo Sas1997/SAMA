@@ -98,6 +98,10 @@ EM=InData.EM
 LPSP_max=InData.LPSP_max
 RE_min=InData.RE_min
 Budget=InData.Budget
+Grid_escalation = InData.Grid_escalation
+C_fuel_adj = InData.C_fuel_adj
+Grid_Tax_amount = InData.Grid_Tax_amount
+Grid_credit = InData.Grid_credit
 
 #@jit(nopython=True, fastmath=True)
 def fitness(X):
@@ -185,7 +189,7 @@ def fitness(X):
     MO_Cost = ((MO_PV * Pn_PV + MO_WT * Pn_WT + MO_DG * Pn_DG * np.sum(Pdg > 0) + MO_B * Cn_B + MO_I * Cn_I + MO_CH * (Nbat > 0)) / (1 + ir) ** np.arange(1, n + 1))
 
     # DG fuel Cost
-    C_Fu = (np.sum(C_fuel * q) / (1 + ir) ** np.arange(1, n + 1))
+    C_Fu = (np.sum(C_fuel * q)) * (((1 + C_fuel_adj) ** np.arange(1, n + 1)) / ((1 + ir) ** np.arange(1, n + 1)))
 
     # Salvage
     L_rem = (RT_PV + 1) * L_PV - n
@@ -206,7 +210,7 @@ def fitness(X):
     DG_Emissions = np.sum(q * (CO2 + NOx + SO2)) / 1000  # total emissions (kg/year)
     Grid_Emissions = np.sum(Pbuy * (E_CO2 + E_SO2 + E_NOx)) / 1000  # total emissions (kg/year)
 
-    Grid_Cost = ((((Annual_expenses + np.sum(Service_charge) + np.sum(Pbuy * Cbuy)) * (1 + Grid_Tax)) - np.sum(Psell * Csell)) * 1 / (1 + ir) ** np.arange(1, n + 1)) * (Grid > 0)
+    Grid_Cost = ((((Annual_expenses + np.sum(Service_charge) + np.sum(Pbuy * Cbuy) + Grid_Tax_amount * np.sum(Pbuy)) * (((1 + Grid_escalation) ** np.arange(1, n + 1)) / ((1 + ir) ** np.arange(1, n + 1)))) * (1 + Grid_Tax)) - ((np.sum(Psell * Csell) + Grid_credit) / ((1 + ir) ** np.arange(1, n + 1)))) * (Grid > 0)
 
     # Capital recovery factor
     CRF = ir * (1 + ir) ** n / ((1 + ir) ** n - 1)
