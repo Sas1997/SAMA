@@ -102,6 +102,8 @@ Grid_escalation = InData.Grid_escalation
 C_fuel_adj = InData.C_fuel_adj
 Grid_Tax_amount = InData.Grid_Tax_amount
 Grid_credit = InData.Grid_credit
+NEM = InData.NEM
+NEM_fee = InData.NEM_fee
 
 #@jit(nopython=True, fastmath=True)
 def fitness(X):
@@ -145,7 +147,7 @@ def fitness(X):
     ## Installation and operation cost
 
     # Total Investment cost ($)
-    I_Cost = C_PV * (1 - RE_incentives) * Pn_PV + C_WT * (1 - RE_incentives) * Pn_WT + C_DG * Pn_DG + C_B * (1 - RE_incentives) * Cn_B + C_I * (1 - RE_incentives) * Cn_I + C_CH * (1 - RE_incentives)*(Nbat > 0) + Engineering_Costs * (1 - RE_incentives) * Pn_PV
+    I_Cost = C_PV * (1 - RE_incentives) * Pn_PV + C_WT * (1 - RE_incentives) * Pn_WT + C_DG * Pn_DG + C_B * (1 - RE_incentives) * Cn_B + C_I * (1 - RE_incentives) * Cn_I + C_CH * (1 - RE_incentives)*(Nbat > 0) + Engineering_Costs * (1 - RE_incentives) * Pn_PV + NEM_fee
 
     Top_DG = np.sum(Pdg > 0) + 1
     L_DG = TL_DG / Top_DG
@@ -212,6 +214,8 @@ def fitness(X):
 
     Grid_Cost = ((((Annual_expenses + np.sum(Service_charge) + np.sum(Pbuy * Cbuy) + Grid_Tax_amount * np.sum(Pbuy)) * (((1 + Grid_escalation) ** np.arange(1, n + 1)) / ((1 + ir) ** np.arange(1, n + 1)))) * (1 + Grid_Tax)) - ((np.sum(Psell * Csell) + Grid_credit) / ((1 + ir) ** np.arange(1, n + 1)))) * (Grid > 0)
 
+    Grid_Cost_ADJ = (Annual_expenses + np.sum(Service_charge) + np.sum(Pbuy * Cbuy) + Grid_Tax_amount * np.sum(Pbuy)) - (np.sum(Psell * Csell) + Grid_credit)
+
     # Capital recovery factor
     CRF = ir * (1 + ir) ** n / ((1 + ir) ** n - 1)
 
@@ -231,6 +235,6 @@ def fitness(X):
     if (np.isnan(RE)):
         RE = 0
 
-    Z = NPC + 1e5*EM * LEM + 1e6*(Pn_PV >= DC_AC_ratio*(Cn_I+Pn_DG+Pbuy_max*(sum(Pbuy) > 0.001))) + 1e6 * (LPSP > LPSP_max) + 1e6 * (RE < RE_min) + 100 * (I_Cost > Budget) +\
+    Z = NPC + 1e8 * (np.sum(Grid_Cost) < 0) * (NEM == 1) + 1e4 * (np.sum(Edump)) * (NEM == 1) + 1e6 * EM * LEM + 1e6 * (Pn_PV >= DC_AC_ratio * (Cn_I + Pn_DG + Pbuy_max * (np.sum(Pbuy) > 0.1))) + 1e6 * (LPSP > LPSP_max) + 1e6 * (RE < RE_min) + 100 * (I_Cost > Budget) +\
         1e8 * np.maximum(0, LPSP - LPSP_max) + 1e8 * np.maximum(0, RE_min - RE) + 1e4 * np.maximum(0, I_Cost - Budget)
     return Z
