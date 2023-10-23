@@ -63,6 +63,12 @@ class Input_Data:
         self.DG = 1
         self.Bat = 1
         self.Grid = 0
+        # Net metering scheme
+        # If compensation is towrds credits in Net metering, not monetary comenstation, by choosing the below option (putting NEM equals to 1), the yearly credits will be reconciled after 12 months
+        self.NEM = 1
+
+        if self.Grid == 0:
+            self.NEM = 0
 
         # Constraints
         self.LPSP_max_rate = 0.0999999  # Maximum loss of power supply probability
@@ -141,7 +147,7 @@ class Input_Data:
         self.RT_CH = ceil(self.n/self.L_CH) - 1    # Replacement time
 
         # Economic Parameters
-        self.n_ir_rate = 4.5             # Nominal discount rate
+        self.n_ir_rate = 5.5             # Nominal discount rate
         self.n_ir = self.n_ir_rate / 100
         self.e_ir_rate = 2              # Expected inflation rate
         self.e_ir = self.e_ir_rate / 100
@@ -211,7 +217,7 @@ class Input_Data:
             self.R_DG = 240.45 * (1 + self.r_Sales_tax)       # Replacement Cost ($/kW)
             self.MO_DG = 0.064 * (1 + self.r_Sales_tax)     # O&M+ running cost ($/op.h)
             self.C_fuel = 1.39 * (1 + self.r_Sales_tax)             # Fuel Cost ($/L)
-            self.C_fuel_adj_rate = 0                                # DG fuel cost yearly esclation rate (if positive) and reduction rate (if negative)
+            self.C_fuel_adj_rate = 2                                # DG fuel cost yearly esclation rate (if positive) and reduction rate (if negative)
             self.C_fuel_adj = self.C_fuel_adj_rate / 100
 
             # Battery
@@ -261,7 +267,7 @@ class Input_Data:
             self.R_DG = 240.45       # Replacement Cost ($/kW)
             self.MO_DG = 0.064    # O&M+ running cost ($/op.h)
             self.C_fuel = 1.39  # Fuel Cost ($/L)
-            self.C_fuel_adj_rate = 0  # DG fuel cost yearly esclation rate (if positive) and reduction rate (if negative)
+            self.C_fuel_adj_rate = 2  # DG fuel cost yearly esclation rate (if positive) and reduction rate (if negative)
             self.C_fuel_adj = self.C_fuel_adj_rate / 100
 
             # Battery
@@ -296,27 +302,28 @@ class Input_Data:
 
         # Fixed expenses
         self.Annual_expenses = 0
-        self.Grid_sale_tax_rate = 0
+        self.Grid_sale_tax_rate = 2
         self.Grid_Tax = self.Grid_sale_tax_rate / 100
         self.Grid_Tax_amount = 0
-        self.Grid_escalation_rate = 0
+        self.Grid_escalation_rate = 2
         self.Grid_escalation = self.Grid_escalation_rate / 100
         self.Grid_credit = 0
+        self.NEM_fee = 0
 
         # Monthly fixed charge structure
         self.Monthly_fixed_charge_system = 1
 
         if self.Monthly_fixed_charge_system == 1:  # Flat
-            self.SC_flat = 10.58
+            self.SC_flat = 13.62
             self.Service_charge = np.ones(12) * self.SC_flat
         else:  # Tiered
-            self.SC_1 = 31.04  # tier 1 service charge
-            self.Limit_SC_1 = 800  # limit for tier 1
-            self.SC_2 = 41.79  # tier 2 service charge
-            self.Limit_SC_2 = 1500  # limit for tier 2
-            self.SC_3 = 60.79  # tier 3 service charge
-            self.Limit_SC_3 = 1500  # limit for tier 3
-            self.SC_4 = 60.79  # tier 4 service charge
+            self.SC_1 = 2.30  # tier 1 service charge
+            self.Limit_SC_1 = 350  # limit for tier 1
+            self.SC_2 = 7.9  # tier 2 service charge
+            self.Limit_SC_2 = 1050  # limit for tier 2
+            self.SC_3 = 22.70  # tier 3 service charge
+            self.Limit_SC_3 = 1501  # limit for tier 3
+            self.SC_4 = 22.70  # tier 4 service charge
             self.totalmonthlyload = np.zeros((12, 1))
             self.hourCount = 0
             for m in range(12):
@@ -338,7 +345,7 @@ class Input_Data:
 
         # Hourly charges
         if self.rateStructure == 1:  # Flat rate
-            self.flatPrice = 0.35601
+            self.flatPrice = 0.181008
             from calcFlatRate import calcFlatRate
             self.Cbuy = calcFlatRate(self.flatPrice)
 
@@ -368,32 +375,32 @@ class Input_Data:
 
         elif self.rateStructure == 6:  # Monthly tiered rate
             self.monthlyTieredPrices = np.array([
-                [0.36, 0.45, 0.45],
-                [0.36, 0.45, 0.45],
-                [0.36, 0.45, 0.45],
-                [0.36, 0.45, 0.45],
-                [0.36, 0.45, 0.45],
-                [0.36, 0.45, 0.45],
-                [0.36, 0.45, 0.45],
-                [0.36, 0.45, 0.45],
-                [0.36, 0.45, 0.45],
-                [0.36, 0.45, 0.45],
-                [0.36, 0.45, 0.45],
-                [0.36, 0.45, 0.45]
+                [0.45245, 0.56969, 0.56969],
+                [0.45245, 0.56969, 0.56969],
+                [0.45245, 0.56969, 0.56969],
+                [0.45245, 0.56969, 0.56969],
+                [0.45245, 0.56969, 0.56969],
+                [0.45245, 0.56969, 0.56969],
+                [0.45245, 0.56969, 0.56969],
+                [0.45245, 0.56969, 0.56969],
+                [0.45245, 0.56969, 0.56969],
+                [0.45245, 0.56969, 0.56969],
+                [0.45245, 0.56969, 0.56969],
+                [0.45245, 0.56969, 0.56969]
             ])
             self.monthlyTierLimits = np.array([
-                [399.9, 999999, 999999],
-                [361.2, 999999, 999999],
-                [399.9, 999999, 999999],
-                [387, 999999, 999999],
-                [399.9, 999999, 999999],
-                [213, 999999, 999999],
-                [220.1, 999999, 999999],
-                [220.1, 999999, 999999],
-                [213, 999999, 999999],
-                [399.9, 999999, 999999],
-                [387, 999999, 999999],
-                [399.9, 999999, 999999]
+                [343, 999999, 999999],
+                [343, 999999, 999999],
+                [343, 999999, 999999],
+                [343, 999999, 999999],
+                [343, 999999, 999999],
+                [234, 999999, 999999],
+                [234, 999999, 999999],
+                [234, 999999, 999999],
+                [234, 999999, 999999],
+                [234, 999999, 999999],
+                [343, 999999, 999999],
+                [343, 999999, 999999]
             ])
             from calcMonthlyTieredRate import calcMonthlyTieredRate
             self.Cbuy = calcMonthlyTieredRate(self.monthlyTieredPrices, self.monthlyTierLimits, self.Eload)
@@ -409,13 +416,20 @@ class Input_Data:
             from calcTouRate import calcTouRate
             self.Cbuy = calcTouRate(self.year, self.onPrice, self.midPrice, self.offPrice, self.onHours, self.midHours, self.season, self.daysInMonth, self.holidays)
 
-        #Saving the Cbuy values
-        Cbuy_df = pd.DataFrame(self.Cbuy, columns=['Column_Name'])
-        Cbuy_df.index = Cbuy_df.index + 1
-        Cbuy_df = Cbuy_df.reset_index(drop=True)
-        Cbuy_df.to_excel('Cbuy.xlsx', header=False, index=False)
 
-        self.Csell = 0.0563
+        # Sell to the Grid
+        self.sellStructure = 2
+
+        if self.sellStructure == 1:
+            self.Csell = np.full(8760, 0.05238)
+
+        elif self.sellStructure == 2:
+            self.monthlysellprices = np.array([0.07054, 0.08169, 0.08452, 0.08748, 0.08788, 0.08510, 0.08158, 0.07903, 0.07683, 0.07203, 0.05783, 0.05878])
+            from calcMonthlyRate import calcMonthlyRate
+            self.Csell = calcMonthlyRate(self.monthlysellprices, self.daysInMonth)
+
+        elif self.sellStructure == 3:
+            self.Csell = self.Cbuy
 
         ## Emissions produced by Grid generators (g/kW)
         self.E_CO2 = 1.43
