@@ -8,7 +8,10 @@ def calcSeasonalRate(seasonalPrices, season, daysInMonth):
         hoursStart = hCount
         hoursEnd = hoursStart + (24 * daysInMonth[m])
         hoursRange = np.array(range(hoursStart, hoursEnd))
-        Cbuy[hoursRange] = seasonalPrices[season[m]]
+        if season[m] == 1:
+            Cbuy[hoursRange] = seasonalPrices[season[m]-1]
+        else:
+            Cbuy[hoursRange] = seasonalPrices[season[m] + 1]
         hCount = hoursEnd
 
     return Cbuy
