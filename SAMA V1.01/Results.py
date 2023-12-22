@@ -304,6 +304,8 @@ def Gen_Results(X):
     if (np.isnan(RE)):
         RE = 0
 
+    # Total grid earning in $
+    Sold_electricity = ((np.sum(Psell * Csell)) / ((1 + ir) ** np.arange(1, n + 1))) * (Grid > 0)
 
     # Avoided costs calc
     P_served_other_than_grid = Eload - Pbuy
@@ -338,11 +340,12 @@ def Gen_Results(X):
     print('Total Grid avoidable cost = $', round(np.sum(Grid_avoidable_cost), 2))
     print('Total Grid unavoidable cost = $', round(np.sum(Grid_unavoidable_cost), 2))
     print('Total avoided costs by hybrid energy system = $', round(np.sum(avoided_costs), 2))
+    print('Total grid earning = $', round(np.sum(Sold_electricity), 2))
     print('LCOE  =', round(LCOE, 2), '$/kWh')
     print('LCOE without incentives =', round(LCOE_without_incentives, 2), '$/kWh')
     print('LCOE for only Grid connected system =', round(LCOE_Grid, 2), '$/kWh')
-    print('Grid avoidable cost =', round(Grid_avoidable_cost_perkWh, 2), '$/kWh')
-    print('Grid unavoidable cost =', round(Grid_unavoidable_cost_perkWh, 2), '$/kWh')
+    print('Grid avoidable cost per kWh =', round(Grid_avoidable_cost_perkWh, 2), '$/kWh')
+    print('Grid unavoidable cost per kWh =', round(Grid_unavoidable_cost_perkWh, 2), '$/kWh')
     print('Solar Cost per kWh =', round(Solar_Cost_perkWh, 2), '$/kWh')
     print('Operating Cost  = $', round(Operating_Cost, 2))
     print('Initial Cost  = $', round(I_Cost, 2))
