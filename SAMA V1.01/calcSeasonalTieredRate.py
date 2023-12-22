@@ -10,13 +10,20 @@ def calcSeasonalTieredRate(seasonalTieredPrices, seasonalTierMax, Eload, season)
         monthlyLoad = 0
         for h in range(24 * daysInMonth[m]):
             monthlyLoad += Eload[hCount]
-
-            if monthlyLoad < seasonalTierMax[season[m], 0]:
-                Cbuy[hCount] = seasonalTieredPrices[season[m], 0]
-            elif monthlyLoad < seasonalTierMax[season[m], 1]:
-                Cbuy[hCount] = seasonalTieredPrices[season[m], 1]
+            if season[m] == 1: # Summer
+                if monthlyLoad < seasonalTierMax[season[m]-1, 0]:
+                    Cbuy[hCount] = seasonalTieredPrices[season[m]-1, 0]
+                elif monthlyLoad < seasonalTierMax[season[m]-1, 1]:
+                    Cbuy[hCount] = seasonalTieredPrices[season[m]-1, 1]
+                else:
+                    Cbuy[hCount] = seasonalTieredPrices[season[m]-1, 2]
             else:
-                Cbuy[hCount] = seasonalTieredPrices[season[m], 2]
+                if monthlyLoad < seasonalTierMax[season[m]+1, 0]:
+                    Cbuy[hCount] = seasonalTieredPrices[season[m]+1, 0]
+                elif monthlyLoad < seasonalTierMax[season[m]+1, 1]:
+                    Cbuy[hCount] = seasonalTieredPrices[season[m]+1, 1]
+                else:
+                    Cbuy[hCount] = seasonalTieredPrices[season[m]+1, 2]
             hCount += 1
 
     return Cbuy
