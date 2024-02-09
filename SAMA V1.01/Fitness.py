@@ -125,8 +125,8 @@ def fitness(X):
     # PV Power Calculation
     #Tc = T + (((Tc_noct - 20) / 800) * G)  # Module Temprature
     # Module Temperature
-    Tc = (T + (Tc_noct - Ta_noct) * (G / G_noct) * (1 - ((n_PV * (1 - Tcof * Tref)) / gama))) / (1 + (Tc_noct - Ta_noct) * (G / G_noct) * ((Tcof * n_PV) / gama))
-    Ppv = fpv * Pn_PV * (G / Gref) * (1 + Tcof * (Tc - Tref))  # output power(kw)_hourly
+    Tc = (T + 273.15 + (Tc_noct - Ta_noct) * (G / G_noct) * (1 - ((n_PV * (1 - (Tcof / 100) * (Tref + 273.15))) / gama))) / (1 + (Tc_noct - Ta_noct) * (G / G_noct) * (((Tcof / 100) * n_PV) / gama))
+    Ppv = fpv * Pn_PV * (G / Gref) * (1 + (Tcof / 100) * (Tc - 273.15 - Tref))  # output power(kw)_hourly
 
     # Wind turbine Power Calculation
     v1 = Vw  # hourly wind speed
@@ -235,7 +235,7 @@ def fitness(X):
     if (np.isnan(RE)):
         RE = 0
 
-    Z = NPC + 1e6 * EM * LEM + 1e8 * (np.sum(Grid_Cost) < 0) * (NEM == 1) + 1e4 * (np.sum(Edump)) * (NEM == 1) + 1e6 * (Pn_PV >= DC_AC_ratio * (Cn_I + Pn_DG + Pbuy_max * (np.sum(Pbuy) > 0.1))) + 1e6 * (LPSP > LPSP_max) + 1e6 * (RE < RE_min) + 100 * (I_Cost > Budget) +\
+    Z = 1e2 * NPC + 1e6 * EM * LEM + 1e8 * (np.sum(Grid_Cost) < 0) * (NEM == 1) + 1e4 * (np.sum(Edump)) * (NEM == 1) + 1e6 * (Pn_PV >= DC_AC_ratio * (Cn_I + Pn_DG + Pbuy_max * (np.sum(Pbuy) > 0.1))) + 1e6 * (LPSP > LPSP_max) + 1e6 * (RE < RE_min) + 100 * (I_Cost > Budget) +\
         1e8 * np.maximum(0, LPSP - LPSP_max) + 1e8 * np.maximum(0, RE_min - RE) + 1e4 * np.maximum(0, I_Cost - Budget)
     return Z
 
