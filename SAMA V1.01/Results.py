@@ -128,8 +128,8 @@ def Gen_Results(X):
 
     # PV Power Calculation
     #Tc = T + (((Tc_noct - 20) / 800) * G)  # Module Temprature
-    Tc = (T + (Tc_noct - Ta_noct) * (G / G_noct) * (1 - ((n_PV * (1 - Tcof * Tref)) / gama))) / (1 + (Tc_noct - Ta_noct) * (G / G_noct) * ((Tcof * n_PV) / gama))
-    Ppv = fpv * Pn_PV * (G / Gref) * (1 + Tcof * (Tc - Tref))  # output power(kw)_hourly
+    Tc = (T + 273.15 + (Tc_noct - Ta_noct) * (G / G_noct) * (1 - ((n_PV * (1 - (Tcof / 100) * (Tref + 273.15))) / gama))) / (1 + (Tc_noct - Ta_noct) * (G / G_noct) * (((Tcof / 100) * n_PV) / gama))
+    Ppv = fpv * Pn_PV * (G / Gref) * (1 + (Tcof / 100) * (Tc - 273.15 - Tref))  # output power(kw)_hourly
 
     # Wind turbine Power Calculation
     v1 = Vw  # hourly wind speed
@@ -317,7 +317,7 @@ def Gen_Results(X):
 
 
     # Extracting data for plotting
-    data = {'Ppv': Ppv, 'Pdg': Pdg, 'Pch': Pch, 'Pdch': Pdch, 'SOC': Eb / Cn_B if (Cn_B != 0 and not np.isnan(Cn_B)) else 0, 'Pbuy':Pbuy, 'Psell':Psell, 'Eload':Eload , 'P_RE_served':P_RE_served, 'Csell':Csell, 'Cbuy':Cbuy, 'Pserved':P_served_other_than_grid}
+    data = {'Ppv': Ppv, 'Pdg': Pdg, 'Pch': Pch, 'Pdch': Pdch, 'SOC': Eb / Cn_B if (Cn_B != 0 and not np.isnan(Cn_B)) else 0, 'Pbuy':Pbuy, 'Psell':Psell, 'Eload':Eload , 'P_RE_served':P_RE_served, 'Csell':Csell, 'Cbuy':Cbuy, 'Pserved':P_served_other_than_grid, 'POA':G, 'Temperature':T, "Wind Speed":Vw}
     df = pd.DataFrame(data)
     df.to_csv('output/data/Outputforplotting.csv', index=False)
 
@@ -875,5 +875,3 @@ def Gen_Results(X):
         cbar_total.ax.set_title('Monthly average Sell earning to the Grid [$]', fontsize=32, rotation=270, x=3.5, y=0.225)
         fig.subplots_adjust(left=0.075, top=0.98, bottom=0.075)
         plt.savefig('output/figs/Daily-Monthly-Yearly average earning Sell to the Grid.png', dpi=300)
-
-
