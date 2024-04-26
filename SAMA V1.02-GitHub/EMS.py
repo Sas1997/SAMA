@@ -59,7 +59,7 @@ def EMS(Lead_acid, Li_ion, Ich_max_Li_ion, Idch_max_Li_ion, Cnom_Li, Vnom_Li_ion
     mar_gen = a * C_fuel
     # DG cost for cases
     for t in range(NT):
-        price_dg = ((cc_gen / Eload[t]) + mar_gen) if (Eload[t] != 0 and np.isnan(Eload[t])) else 0
+        price_dg = ((cc_gen / Eload[t]) + mar_gen) if (Eload[t] != 0 and np.isnan(Eload[t])) else np.inf
 
 
     # Define cases
