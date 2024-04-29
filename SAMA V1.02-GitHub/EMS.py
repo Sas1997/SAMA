@@ -39,7 +39,9 @@ def EMS(Lead_acid, Li_ion, Ich_max_Li_ion, Idch_max_Li_ion, Cnom_Li, Vnom_Li_ion
     Ebmin = SOC_min * Cn_B
     Eb[0] = SOC_initial * Cn_B
     dt = 1 #time-step
+    price_dg = np.zeros(NT)
 
+    
     if Grid == 0:
         Pbuy_max = 0
         Psell_max = 0
@@ -59,7 +61,7 @@ def EMS(Lead_acid, Li_ion, Ich_max_Li_ion, Idch_max_Li_ion, Cnom_Li, Vnom_Li_ion
     mar_gen = a * C_fuel
     # DG cost for cases
     for t in range(NT):
-        price_dg = ((cc_gen / Eload[t]) + mar_gen) if (Eload[t] != 0 and np.isnan(Eload[t])) else np.inf
+        price_dg[t] = ((cc_gen / Eload[t]) + mar_gen) if (Eload[t] != 0 and not np.isnan(Eload[t])) else np.inf
 
 
     # Define cases
