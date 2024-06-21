@@ -251,7 +251,7 @@ class Input_Data:
             self.Monthly_average_windspeed = np.array([14.1, 21, 12.2, 31, 12.2, 11.2, 12.1, 13, 21, 9.2, 12.3, 18.1])  # Define the monthly hourly averages for load here
 
             from dataextender import dataextender
-            self.Vw = dataextender(self.daysInMonth, self.Monthly_average_windspeed)
+            self.Vw = np.array(dataextender(self.daysInMonth, self.Monthly_average_windspeed))
 
         else: # Annual average Wind speed
 
