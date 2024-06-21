@@ -41,7 +41,6 @@ def EMS(Lead_acid, Li_ion, Ich_max_Li_ion, Idch_max_Li_ion, Cnom_Li, Vnom_Li_ion
     dt = 1 #time-step
     price_dg = np.zeros(NT)
 
-    
     if Grid == 0:
         Pbuy_max = 0
         Psell_max = 0
@@ -63,10 +62,9 @@ def EMS(Lead_acid, Li_ion, Ich_max_Li_ion, Idch_max_Li_ion, Cnom_Li, Vnom_Li_ion
     for t in range(NT):
         price_dg[t] = ((cc_gen / Eload[t]) + mar_gen) if (Eload[t] != 0 and not np.isnan(Eload[t])) else np.inf
 
-
     # Define cases
 
-    load_greater = np.logical_and(P_RE >= (Eload / n_I), (Eload <= Pinv_max))
+    load_greater = np.logical_and(P_RE >= (Eload / n_I), (True))
 
     case1 = np.logical_and(np.logical_not(load_greater),
                            np.logical_and(Cbuy <= price_dg, price_dg <= Cbw))  # Grid, DG , Bat : 1
@@ -97,7 +95,8 @@ def EMS(Lead_acid, Li_ion, Ich_max_Li_ion, Idch_max_Li_ion, Cnom_Li, Vnom_Li_ion
             Psell[t] = min(Psur_AC, Psell_max)
             Psell[t] = min(max(0, Pinv_max - Eload[t]), Psell[t])
 
-            Edump[t] = P_RE[t] - Pch[t] - (Eload[t] + Psell[t]) / n_I
+            Edump[t] = P_RE[t] * n_I - min(Pinv_max, Pch[t] * n_I + (Eload[t] + Psell[t]))
+            Ens[t] = max(0, Eload[t] - min(Pinv_max, (P_RE[t] - Pch[t]) * n_I - Psell[t]))
 
         else:
             Edef_AC = Eload[t] - min(Pinv_max, n_I * P_RE[t])
@@ -193,9 +192,9 @@ def EMS(Lead_acid, Li_ion, Ich_max_Li_ion, Idch_max_Li_ion, Cnom_Li, Vnom_Li_ion
                 Pch[t] = min(Eb_e, Pch[t] - Edef_DC)
                 Pch[t] = min(Pch[t], Pch_max[t])
 
-            Esur = Eload[t] + Psell[t] - Pbuy[t] - Pdg[t] - min(Pinv_max, (P_RE[t] + Pdch[t] - Pch[t]) * n_I)
-            Ens[t] = Esur * (Esur > 0)
-            Edump[t] = -Esur * (Esur < 0)
+            Esur = P_RE[t] * n_I + Pbuy[t] + Pdg[t] - min(Pinv_max, (Pch[t] - Pdch[t]) * n_I + (Eload[t] + Psell[t]))
+            Ens[t] = max(0, Eload[t] - Pbuy[t] - Pdg[t] - min(Pinv_max, (P_RE[t] + Pdch[t] - Pch[t]) * n_I - Psell[t]))
+            Edump[t] = Esur * (Esur > 0)
 
         Ech[t] = Pch[t] * dt
         Edch[t] = Pdch[t] * dt
