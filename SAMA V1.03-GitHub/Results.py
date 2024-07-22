@@ -128,11 +128,11 @@ def Gen_Results(X):
         X = X[0]
 
     NT = Eload.size  # time step numbers
-    Npv = 8.8*2#round(X[0], 1)  # PV number
+    Npv = round(X[0], 1)  # PV number
     Nwt = round(X[1], 2)  # WT number
     Nbat = round(X[2])  # Battery pack number
     N_DG = round(X[3], 1)  # number of Diesel Generator
-    Cn_I = 7.27#round(X[4], 2)  # Inverter Capacity
+    Cn_I = round(X[4], 2)  # Inverter Capacity
 
     Pn_PV = Npv * Ppv_r  # PV Total Capacity
     Pn_WT = Nwt * Pwt_r  # WT Total Capacity
@@ -313,14 +313,14 @@ def Gen_Results(X):
 
     Grid_Emissions = np.sum(Pbuy * (E_CO2 + E_SO2 + E_NOx)) / 1000  # total emissions (kg/year)
 
-    Grid_Cost = ((((Annual_expenses + np.sum(Service_charge) + np.sum(Pbuy * Cbuy) + Grid_Tax_amount * np.sum(Pbuy)) * (((1 + Grid_escalation) ** np.arange(1, n + 1)) / ((1 + ir) ** np.arange(1, n + 1)))) * (1 + Grid_Tax)) - ((np.sum(Psell * Csell) + Grid_credit) / ((1 + ir) ** np.arange(1, n + 1)))) * (Grid > 0)
-    Grid_Cost_onlyG = (((Annual_expenses + np.sum(Service_charge) + np.sum(Eload * Cbuy) + Grid_Tax_amount * np.sum(Eload)) * (((1 + Grid_escalation) ** np.arange(1, n + 1)) / ((1 + ir) ** np.arange(1, n + 1)))) * (1 + Grid_Tax)) - (Grid_credit / ((1 + ir) ** np.arange(1, n + 1)))
+    Grid_Cost = ((((Annual_expenses + np.sum(Service_charge) + np.sum(Pbuy * Cbuy) + Grid_Tax_amount * np.sum(Pbuy)) * (((1 + Grid_escalation) ** np.arange(1, n + 1)) / ((1 + ir) ** np.arange(1, n + 1)))) * (1 + Grid_Tax)) - ((np.sum(Psell * Csell) + Grid_credit) * (((1 + Grid_escalation) ** np.arange(1, n + 1)) / ((1 + ir) ** np.arange(1, n + 1))))) * (Grid > 0)
+    Grid_Cost_onlyG = (((Annual_expenses + np.sum(Service_charge) + np.sum(Eload * Cbuy) + Grid_Tax_amount * np.sum(Eload)) * (((1 + Grid_escalation) ** np.arange(1, n + 1)) / ((1 + ir) ** np.arange(1, n + 1)))) * (1 + Grid_Tax)) - ((Grid_credit) * (((1 + Grid_escalation) ** np.arange(1, n + 1)) / ((1 + ir) ** np.arange(1, n + 1))))
 
     Solar_Cost = (Solar_Cost_Initial + np.sum(Solar_Cost_replacement) + np.sum(Solar_Cost_MO) - np.sum(Salvage_Solar)) * (1 + System_Tax)
 
 
     Grid_avoidable_cost = ((np.sum(Eload * Cbuy) + Grid_Tax_amount * np.sum(Eload)) * (((1 + Grid_escalation) ** np.arange(1, n + 1)) / ((1 + ir) ** np.arange(1, n + 1)))) * (1 + Grid_Tax)
-    Grid_unavoidable_cost = (((Annual_expenses + np.sum(Service_charge)) * (((1 + Grid_escalation) ** np.arange(1, n + 1)) / ((1 + ir) ** np.arange(1, n + 1)))) * (1 + Grid_Tax)) - (Grid_credit / ((1 + ir) ** np.arange(1, n + 1)))
+    Grid_unavoidable_cost = (((Annual_expenses + np.sum(Service_charge)) * (((1 + Grid_escalation) ** np.arange(1, n + 1)) / ((1 + ir) ** np.arange(1, n + 1)))) * (1 + Grid_Tax)) - ((Grid_credit) * ((1 + Grid_escalation) ** np.arange(1, n + 1)) / ((1 + ir) ** np.arange(1, n + 1)))
 
 
     # Capital recovery factor
@@ -358,13 +358,15 @@ def Gen_Results(X):
     if (np.isnan(RE)):
         RE = 0
 
-    # Total grid earning in $
-    Sold_electricity = ((np.sum(Psell * Csell)) / ((1 + ir) ** np.arange(1, n + 1))) * (Grid > 0)
+    # Total grid costs and earning in $
+    Sold_electricity = ((np.sum(Psell * Csell)) * (((1 + Grid_escalation) ** np.arange(1, n + 1)) / ((1 + ir) ** np.arange(1, n + 1)))) * (Grid > 0)
+    Bought_electricity =((Annual_expenses + np.sum(Service_charge) + np.sum(Pbuy * Cbuy) + Grid_Tax_amount * np.sum(Pbuy)) * (((1 + Grid_escalation) ** np.arange(1, n + 1)) / ((1 + ir) ** np.arange(1, n + 1)))) * (Grid > 0)
+    Total_grid_credits = ((Grid_credit) * (((1 + Grid_escalation) ** np.arange(1, n + 1)) / ((1 + ir) ** np.arange(1, n + 1)))) * (Grid > 0)
 
     # Avoided costs calc
     P_served_other_than_grid = Eload - Pbuy
 
-    avoided_costs = (((np.sum(Eload_served * Cbuy) + Annual_expenses + np.sum(Service_charge) + Grid_Tax_amount * np.sum(Eload_served)) * (((1 + Grid_escalation) ** np.arange(1, n + 1)) / ((1 + ir) ** np.arange(1, n + 1)))) * (1 + Grid_Tax)) - ((Grid_credit) / ((1 + ir) ** np.arange(1, n + 1)))
+    avoided_costs = (((np.sum(Eload_served * Cbuy) + Annual_expenses + np.sum(Service_charge) + Grid_Tax_amount * np.sum(Eload_served)) * (((1 + Grid_escalation) ** np.arange(1, n + 1)) / ((1 + ir) ** np.arange(1, n + 1)))) * (1 + Grid_Tax)) - (((Grid_credit) * ((1 + Grid_escalation) ** np.arange(1, n + 1)) / ((1 + ir) ** np.arange(1, n + 1))))
 
 
     # Extracting data for plotting
@@ -378,7 +380,7 @@ def Gen_Results(X):
     print('Cpv  (kW) =', Pn_PV)
     if WT == 1:
         print('Cwt  (kW) =', Pn_WT)
-    print('Cbat (kWh) =', Cn_B)
+    print('Cbat (kWh) =', round(Cn_B, 4))
     print('Cdg  (kW) =', Pn_DG)
     print('Cinverter (kW) =', Cn_I)
 
@@ -393,6 +395,8 @@ def Gen_Results(X):
     print('Total avoided costs = $', round(np.sum(avoided_costs), 2))
     print('Total net avoided costs by hybrid energy system = $', round(np.sum(avoided_costs) - np.sum(Grid_Cost), 2))
     print('Total grid earning = $', round(np.sum(Sold_electricity), 2))
+    print('Total grid costs = $', round(np.sum(Bought_electricity), 2))
+    print('Total grid credits = $', round(np.sum(Total_grid_credits), 2))
     print('LCOE  =', round(LCOE, 2), '$/kWh')
     print('LCOE without incentives =', round(LCOE_without_incentives, 2), '$/kWh')
     print('LCOE for only Grid connected system =', round(LCOE_Grid, 2), '$/kWh')
@@ -475,14 +479,15 @@ def Gen_Results(X):
         print(f"The Payback Period is: {payback_period} years")
 
     # Calculate Total Revenues and Total Costs
-    total_revenues = sum(avoided_costs) + (sum(Salvage) * (1 + System_Tax)) - sum(Grid_Cost_neg)
+    total_revenues = sum(avoided_costs) + (sum(Salvage) * (1 + System_Tax)) + sum(Grid_Cost_neg)
     print(f"Total revenues is: {total_revenues:.2f}")
     total_costs = -(((-I_Cost + sum(MO_Cost) + sum(R_Cost) + sum(C_Fu)) * (1 + System_Tax)) + sum(Grid_Cost_pos))
-    print(f"Total costs is: {total_costs:.2f}")
+
 
     # Calculate Net Profit
     net_profit = total_revenues - total_costs
-
+    print(f"Total net profit is: {net_profit:.2f}")
+    print(f"Total costs is: {total_costs:.2f}")
     # Calculate ROI
     roi = (net_profit / total_costs) * 100
 
@@ -667,10 +672,10 @@ def Gen_Results(X):
             # Store handles for legends of the bars in the first loop iteration
             if idx == 0:
                 bar_legend_handles, _ = plt.gca().get_legend_handles_labels()
-
+            LG_lines = [7.5, 10, 12.5, 15, 17.5, 20]
             # Plot curves with different colors and names
             color_idx = idx % len(colors_curve)  # Ensure idx stays within the bounds of colors_curve
-            curve_labels.append(f'Total System Cost (GER =  {idx * 2}%)')
+            curve_labels.append(f'Total System Cost (GER =  {idx*2}%)')
             curve_handles.extend(plt.plot(years, cumulative_total_cost, linestyle='-', marker='o', linewidth=0.8, color=colors_curve[color_idx]))
 
         # Plot legends for bars outside of the loop
