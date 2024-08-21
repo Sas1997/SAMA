@@ -368,13 +368,13 @@ class Input_Data:
         self.RT_CH = ceil(self.n/self.L_CH) - 1    # Replacement time
 
         # Rated capacity
-        self.Ppv_r = 0.5  # PV module rated power (kW)
+        self.Ppv_r = 1  # PV module rated power (kW)
         self.Pwt_r = 1  # WT rated power (kW)
         if self.Lead_acid == 1:
             self.Cbt_r = (self.Vnom_leadacid * self.Cnom_Leadacid) / 1000  # Battery rated Capacity (kWh)
         if self.Li_ion == 1:
             self.Cbt_r = (self.Vnom_Li_ion * self.Cnom_Li) / 1000  # Battery rated Capacity (kWh)
-        self.Cdg_r = 0.5  # DG rated Capacity (kW)
+        self.Cdg_r = 1  # DG rated Capacity (kW)
 
 
         # Economic Parameters
