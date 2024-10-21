@@ -505,8 +505,13 @@ class Input_Data:
         self.Grid_Tax = self.Grid_sale_tax_rate / 100
 
         self.Grid_Tax_amount = 0.0016 # Grid tax in $/kWh if any
-
-        self.Grid_escalation_rate = 0 # Yearly escalation rate in grid electricity prices
+        
+        Grid_escalation_projection = 1
+        
+        if Grid_escalation_projection == 1:
+            self.Grid_escalation_rate = np.full(25, 5.7) # Yearly escalation flat rate in grid electricity prices
+        else:
+            self.Grid_escalation_rate = np.array([5.7, 5.7, 5.7, 5.7, 5.7, 5.7, 5.7, 5.7, 5.7, 5.7, 5.7, 5.7, 5.7, 5.7, 5.7, 5.7, 5.7, 5.7, 5.7, 5.7, 5.7, 5.7, 5.7, 5.7, 5.7])  # Yearly escalation rate in grid electricity prices
 
         self.Grid_escalation = self.Grid_escalation_rate / 100
 
