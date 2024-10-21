@@ -313,14 +313,20 @@ def Gen_Results(X):
 
     Grid_Emissions = np.sum(Pbuy * (E_CO2 + E_SO2 + E_NOx)) / 1000  # total emissions (kg/year)
 
-    Grid_Cost = ((((Annual_expenses + np.sum(Service_charge) + np.sum(Pbuy * Cbuy) + Grid_Tax_amount * np.sum(Pbuy)) * (((1 + Grid_escalation) ** np.arange(1, n + 1)) / ((1 + ir) ** np.arange(1, n + 1)))) * (1 + Grid_Tax)) - ((np.sum(Psell * Csell) + Grid_credit) * (((1 + Grid_escalation) ** np.arange(1, n + 1)) / ((1 + ir) ** np.arange(1, n + 1))))) * (Grid > 0)
-    Grid_Cost_onlyG = (((Annual_expenses + np.sum(Service_charge) + np.sum(Eload * Cbuy) + Grid_Tax_amount * np.sum(Eload)) * (((1 + Grid_escalation) ** np.arange(1, n + 1)) / ((1 + ir) ** np.arange(1, n + 1)))) * (1 + Grid_Tax)) - ((Grid_credit) * (((1 + Grid_escalation) ** np.arange(1, n + 1)) / ((1 + ir) ** np.arange(1, n + 1))))
+    cumulative_escalation = np.cumprod(1 + Grid_escalation)
+
+    Grid_Cost = (((Annual_expenses + np.sum(Service_charge) + np.sum(Pbuy * Cbuy) + Grid_Tax_amount * np.sum(Pbuy)) * (cumulative_escalation / ((1 + ir) ** np.arange(1, n + 1)))) * (1 + Grid_Tax) - ((np.sum(Psell * Csell) + Grid_credit) * (cumulative_escalation / ((1 + ir) ** np.arange(1, n + 1))))) * (Grid > 0)
+
+    Grid_Cost_onlyG = (((Annual_expenses + np.sum(Service_charge) + np.sum(Eload * Cbuy) + Grid_Tax_amount * np.sum(Eload)) * (cumulative_escalation / ((1 + ir) ** np.arange(1, n + 1)))) * (1 + Grid_Tax) - (Grid_credit * (cumulative_escalation / ((1 + ir) ** np.arange(1, n + 1)))))
 
     Solar_Cost = (Solar_Cost_Initial + np.sum(Solar_Cost_replacement) + np.sum(Solar_Cost_MO) - np.sum(Salvage_Solar)) * (1 + System_Tax)
 
 
-    Grid_avoidable_cost = ((np.sum(Eload * Cbuy) + Grid_Tax_amount * np.sum(Eload)) * (((1 + Grid_escalation) ** np.arange(1, n + 1)) / ((1 + ir) ** np.arange(1, n + 1)))) * (1 + Grid_Tax)
-    Grid_unavoidable_cost = (((Annual_expenses + np.sum(Service_charge)) * (((1 + Grid_escalation) ** np.arange(1, n + 1)) / ((1 + ir) ** np.arange(1, n + 1)))) * (1 + Grid_Tax)) - ((Grid_credit) * ((1 + Grid_escalation) ** np.arange(1, n + 1)) / ((1 + ir) ** np.arange(1, n + 1)))
+    # Compute Grid Avoidable Cost
+    Grid_avoidable_cost = ((np.sum(Eload * Cbuy) + Grid_Tax_amount * np.sum(Eload)) * (cumulative_escalation / ((1 + ir) ** np.arange(1, n + 1)))) * (1 + Grid_Tax)
+
+    # Compute Grid Unavoidable Cost
+    Grid_unavoidable_cost = (((Annual_expenses + np.sum(Service_charge)) * (cumulative_escalation / ((1 + ir) ** np.arange(1, n + 1)))) * (1 + Grid_Tax) - (Grid_credit * (cumulative_escalation / ((1 + ir) ** np.arange(1, n + 1)))))
 
 
     # Capital recovery factor
@@ -359,14 +365,19 @@ def Gen_Results(X):
         RE = 0
 
     # Total grid costs and earning in $
-    Sold_electricity = ((np.sum(Psell * Csell)) * (((1 + Grid_escalation) ** np.arange(1, n + 1)) / ((1 + ir) ** np.arange(1, n + 1)))) * (Grid > 0)
-    Bought_electricity =((Annual_expenses + np.sum(Service_charge) + np.sum(Pbuy * Cbuy) + Grid_Tax_amount * np.sum(Pbuy)) * (((1 + Grid_escalation) ** np.arange(1, n + 1)) / ((1 + ir) ** np.arange(1, n + 1)))) * (Grid > 0)
-    Total_grid_credits = ((Grid_credit) * (((1 + Grid_escalation) ** np.arange(1, n + 1)) / ((1 + ir) ** np.arange(1, n + 1)))) * (Grid > 0)
+    # Compute Sold Electricity
+    Sold_electricity = (np.sum(Psell * Csell) * (cumulative_escalation / ((1 + ir) ** np.arange(1, n + 1)))) * (Grid > 0)
+
+    # Compute Bought Electricity
+    Bought_electricity = ((Annual_expenses + np.sum(Service_charge) + np.sum(Pbuy * Cbuy) + Grid_Tax_amount * np.sum(Pbuy)) * (cumulative_escalation / ((1 + ir) ** np.arange(1, n + 1)))) * (Grid > 0)
+
+    # Compute Total Grid Credits
+    Total_grid_credits = (Grid_credit * (cumulative_escalation / ((1 + ir) ** np.arange(1, n + 1)))) * (Grid > 0)
 
     # Avoided costs calc
     P_served_other_than_grid = Eload - Pbuy
 
-    avoided_costs = (((np.sum(Eload_served * Cbuy) + Annual_expenses + np.sum(Service_charge) + Grid_Tax_amount * np.sum(Eload_served)) * (((1 + Grid_escalation) ** np.arange(1, n + 1)) / ((1 + ir) ** np.arange(1, n + 1)))) * (1 + Grid_Tax)) - (((Grid_credit) * ((1 + Grid_escalation) ** np.arange(1, n + 1)) / ((1 + ir) ** np.arange(1, n + 1))))
+    avoided_costs = ((np.sum(Eload_served * Cbuy) + Annual_expenses + np.sum(Service_charge) + Grid_Tax_amount * np.sum(Eload_served)) * (cumulative_escalation / ((1 + ir) ** np.arange(1, n + 1))) * (1 + Grid_Tax)) - (Grid_credit * (cumulative_escalation / ((1 + ir) ** np.arange(1, n + 1))))
 
 
     # Extracting data for plotting
