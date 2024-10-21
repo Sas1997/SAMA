@@ -220,8 +220,10 @@ def fitness(X):
     # Emissions produced by Disesl generator (g)
     DG_Emissions = np.sum(q * (CO2 + NOx + SO2)) / 1000  # total emissions (kg/year)
     Grid_Emissions = np.sum(Pbuy * (E_CO2 + E_SO2 + E_NOx)) / 1000  # total emissions (kg/year)
+    
+    cumulative_escalation = np.cumprod(1 + Grid_escalation)
 
-    Grid_Cost = ((((Annual_expenses + np.sum(Service_charge) + np.sum(Pbuy * Cbuy) + Grid_Tax_amount * np.sum(Pbuy)) * (((1 + Grid_escalation) ** np.arange(1, n + 1)) / ((1 + ir) ** np.arange(1, n + 1)))) * (1 + Grid_Tax)) - ((np.sum(Psell * Csell) + Grid_credit) * (((1 + Grid_escalation) ** np.arange(1, n + 1)) / ((1 + ir) ** np.arange(1, n + 1))))) * (Grid > 0)
+    Grid_Cost = (((Annual_expenses + np.sum(Service_charge) + np.sum(Pbuy * Cbuy) + Grid_Tax_amount * np.sum(Pbuy)) * (cumulative_escalation / ((1 + ir) ** np.arange(1, n + 1)))) * (1 + Grid_Tax) - ((np.sum(Psell * Csell) + Grid_credit) * (cumulative_escalation / ((1 + ir) ** np.arange(1, n + 1))))) * (Grid > 0)
 
     Grid_Cost_ADJ = (Annual_expenses + np.sum(Service_charge) + np.sum(Pbuy * Cbuy) + Grid_Tax_amount * np.sum(Pbuy)) - (np.sum(Psell * Csell) + Grid_credit)
 
