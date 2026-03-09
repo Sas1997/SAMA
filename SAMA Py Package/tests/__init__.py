@@ -1,1 +1,0 @@
-"""SAMA test suite."""
