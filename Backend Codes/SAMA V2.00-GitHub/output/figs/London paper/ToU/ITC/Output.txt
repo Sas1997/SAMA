@@ -1,0 +1,49 @@
+System Size 
+Cpv  (kW) = 11.56
+Cbat (kWh) = 0
+Cdg  (kW) = 0
+Cinverter (kW) = 10.22
+ 
+Result: 
+NPC  = $ 30079.64
+NPC without incentives = $ 40149.13
+Total Solar Cost = $ 30079.64
+NPC for only Grid connected system = $ 28080.34
+Total Grid avoidable cost = $ 22358.53
+Total Grid unavoidable cost = $ 5721.81
+Total avoided costs by hybrid energy system = $ 28080.34
+Total grid earning = $ 16814.86
+LCOE  = 0.09 $/kWh
+LCOE without incentives = 0.12 $/kWh
+LCOE for only Grid connected system = 0.16 $/kWh
+Grid avoidable cost per kWh = 0.13 $/kWh
+Grid unavoidable cost per kWh = 0.03 $/kWh
+Solar Cost per kWh = 0.11 $/kWh
+Operating Cost  = $ 365.43
+Initial Cost  = $ 23495.47
+Initial Cost without incentives= $ 33564.96
+Total incentives received= $ 10069.49
+Total operation and maintenance cost  = $ 6584.17
+Total Money paid to the Grid= $ 0.0
+Total Money paid by the user= $ 30079.64
+ 
+PV Power  = 14627.064629862849 kWh
+DG Power  = 0.0 kWh
+Battery Energy In  = 0.0 kWh
+Battery Energy Out  = 0.0 kWh
+RE  = 72.86 %
+LPSP  = 0.0 %
+Annual Load = 9500.0 kWh
+Annual Served Load = 9500.0 kWh
+Annual Capacity Shortage = 1.8784973576657649e-13 kWh
+Excess Electricity = 0.30517463410871093 kWh
+Annual power bought from Grid=  5230.712671313146 kWh
+Annual Power sold to Grid=  9772.389541347373 kWh
+Grid Emissions   = 9.572204188503056 (kg/year)
+Annual fuel consumed by DG   = 0.0 (Liter/year)
+DG Emissions   = 0.0 (kg/year)
+LEM  = 0.0010076004408950585 kg/kWh
+The projected investment is a loss
+The IRR of the project is: -0.72%
+No payback period within the project's lifetime
+50.3125 Total execution time [Sec]
