@@ -26,19 +26,19 @@ pip install sama
 
 ## Quick Start
 
-### Step 1 — Configure your system
+### Step 1: Configure your system
 ```bash
 sama-config
 ```
 This launches an interactive wizard that guides you through all 
 parameters and saves a `sama_config_COMPLETE.yaml` file.
 
-### Step 2 — Run the optimization
+### Step 2: Run the optimization
 ```bash
 sama-run
 ```
 
-### Step 3 — View results
+### Step 3: View results
 Results are saved to `sama_outputs/` in your working directory.
 
 ## Python API
