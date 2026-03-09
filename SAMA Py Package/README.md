@@ -14,10 +14,10 @@ optimization algorithms.
 - Heat pump systems (Bosch, Goodman)
 
 ## Optimization Algorithms
-- **PSO** — Particle Swarm Optimization
-- **ADE** — Advanced Differential Evolution
-- **ABC** — Artificial Bee Colony
-- **GWO** — Grey Wolf Optimizer
+- **PSO**: Particle Swarm Optimization
+- **ADE**: Advanced Differential Evolution
+- **ABC**: Artificial Bee Colony
+- **GWO**: Grey Wolf Optimizer
 
 ## Installation
 ```bash
@@ -60,3 +60,4 @@ Python 3.9+ with numpy, pandas, scipy, numba, matplotlib.
 ## License
 
 GNU General Public License v3.0, see LICENSE file.
+
