@@ -1,4 +1,4 @@
-# SAMA — Hybrid Renewable Energy System Optimization
+# SAMA: Hybrid Renewable Energy System Optimization
 
 SAMA (Solar Alone Multi-objective Advisor) is a Python package for 
 optimal design of hybrid renewable energy systems using metaheuristic 
@@ -14,10 +14,10 @@ optimization algorithms.
 - Heat pump systems (Bosch, Goodman)
 
 ## Optimization Algorithms
-- **PSO** — Particle Swarm Optimization
-- **ADE** — Advanced Differential Evolution
-- **ABC** — Artificial Bee Colony
-- **GWO** — Grey Wolf Optimizer
+- **PSO**: Particle Swarm Optimization
+- **ADE**: Advanced Differential Evolution
+- **ABC**: Artificial Bee Colony
+- **GWO**: Grey Wolf Optimizer
 
 ## Installation
 ```bash
@@ -35,7 +35,7 @@ parameters and saves a `sama_config_COMPLETE.yaml` file.
 
 ### Step 2 — Run the optimization
 ```bash
-sama-run -c sama_config_COMPLETE.yaml
+sama-run
 ```
 
 ### Step 3 — View results
