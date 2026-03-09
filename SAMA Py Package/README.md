@@ -1,4 +1,4 @@
-# SAMA — Hybrid Renewable Energy System Optimization
+# SAMA: Hybrid Renewable Energy System Optimization
 
 SAMA (Solar Alone Multi-objective Advisor) is a Python package for 
 optimal design of hybrid renewable energy systems using metaheuristic 
@@ -26,19 +26,19 @@ pip install sama
 
 ## Quick Start
 
-### Step 1 — Configure your system
+### Step 1: Configure your system
 ```bash
 sama-config
 ```
 This launches an interactive wizard that guides you through all 
 parameters and saves a `sama_config_COMPLETE.yaml` file.
 
-### Step 2 — Run the optimization
+### Step 2: Run the optimization
 ```bash
 sama-run -c sama_config_COMPLETE.yaml
 ```
 
-### Step 3 — View results
+### Step 3: View results
 Results are saved to `sama_outputs/` in your working directory.
 
 ## Python API
@@ -58,4 +58,5 @@ swarm.optimize()
 Python 3.9+ with numpy, pandas, scipy, numba, matplotlib.
 
 ## License
-GNU General Public License v3.0 — see LICENSE file.
+
+GNU General Public License v3.0, see LICENSE file.
