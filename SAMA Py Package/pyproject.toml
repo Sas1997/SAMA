@@ -1,0 +1,107 @@
+# ==============================================================================
+# pyproject.toml — SAMA Package Configuration (PEP 517/518/621)
+# This is the single source of truth for all package metadata.
+# setup.py is kept only as a compatibility shim for older tools.
+# ==============================================================================
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+
+# ------------------------------------------------------------------------------
+# Core project metadata  (PEP 621)
+# ------------------------------------------------------------------------------
+[project]
+name = "sama"
+version = "2.0.0"
+description = "SAMA - Solar Alone Multi-objective Advisor for Hybrid Renewable Energy Systems"
+readme = "README.md"
+license = { file = "License" }
+authors = [
+    { name = "Seyyed Ali Sadat", email = "alisadat942@gmail.com" }
+]
+requires-python = ">=3.9"
+
+keywords = [
+    "renewable energy", "optimization", "microgrid", "hybrid energy",
+    "solar PV", "wind", "battery", "electric vehicle", "heat pump",
+    "HOMER", "energy storage", "photovoltaic", "diesel generator"
+]
+
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Education",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Physics",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+]
+
+# Realistic minimum versions — allows the widest compatible user base.
+# These are the oldest versions that support all features SAMA uses.
+# Note: your requirements.txt should pin the exact versions you develop with;
+#       these minimums are intentionally lower to not block installation.
+dependencies = [
+    "numpy>=1.24",
+    "pandas>=2.0",
+    "scipy>=1.10",
+    "numba>=0.57",
+    "matplotlib>=3.6",
+    "openpyxl>=3.0",
+    "seaborn>=0.12",
+    "numpy-financial>=1.0.0",
+    "questionary>=2.0",
+    "PyYAML>=6.0",
+]
+
+
+# ------------------------------------------------------------------------------
+# Entry points (console commands installed by pip)
+# ------------------------------------------------------------------------------
+[project.scripts]
+sama-config = "sama.cli.wizard:main"
+sama-run    = "sama.cli.runner:main"
+
+
+# ------------------------------------------------------------------------------
+# URLs shown on the PyPI project page
+# ------------------------------------------------------------------------------
+[project.urls]
+Homepage      = "https://github.com/Sas1997/SAMA"
+Repository    = "https://github.com/Sas1997/SAMA"
+Issues        = "https://github.com/Sas1997/SAMA/issues"
+Documentation = "https://github.com/Sas1997/SAMA#readme"
+
+
+# ------------------------------------------------------------------------------
+# Setuptools — package discovery and data files
+# ------------------------------------------------------------------------------
+[tool.setuptools.packages.find]
+# Auto-discovers all packages (folders with __init__.py) in the project root.
+# Equivalent to find_packages() in the old setup.py.
+where = ["."]
+
+[tool.setuptools.package-data]
+# Ensures data files inside the sama package are included in the wheel.
+# MANIFEST.in handles sdist (source distribution); this handles the wheel.
+sama = [
+    "content/*",
+    "content/**/*",
+    "cli/sama_Wizard.py",
+]
+
+
+# ------------------------------------------------------------------------------
+# pytest configuration
+# ------------------------------------------------------------------------------
+[tool.pytest.ini_options]
+testpaths    = ["tests"]
+python_files = ["test_*.py"]
+addopts      = "-v --tb=short"

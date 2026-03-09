@@ -1,0 +1,396 @@
+input_directory: C:\Users\alisa\Desktop\FAST\SAMA V2 Package\sama
+output_directory: C:\Users\alisa\Desktop\FAST\SAMA V2 Package\sama\sama_outputs
+optimization_algorithm: abc
+Cash_Flow_adv: 0
+VarMin:
+- 0.0
+- 0.0
+- 0.0
+- 0.0
+- 0.0
+VarMax:
+- 60.0
+- 60.0
+- 60.0
+- 20.0
+- 60.0
+MaxIt: 200
+nPop: 50
+Run_Time: 1
+maxTrials: 15
+modification_rate: 0.8
+initial_search_radius: 0.5
+final_search_radius: 0.1
+n: 25
+year: 2023
+holidays:
+- 1
+- 51
+- 97
+- 100
+- 142
+- 182
+- 219
+- 248
+- 273
+- 282
+- 315
+- 359
+- 360
+load_type: 1
+path_Eload: Eload.csv
+load_previous_year_type: 1
+Tload_type: 1
+path_house_load: house_load.xlsx
+G_type: 1
+azimuth: 180.0
+tilt: 33.0
+soiling: 5.0
+weather_url: METEO.csv
+T_type: 1
+WS_type: 1
+LPSP_max_rate: 0.0999
+LPSP_max: 0.000999
+RE_min_rate: 50.0
+RE_min: 0.5
+EM: 0
+PV: 1
+WT: 1
+DG: 1
+Bat: 1
+Grid: 1
+HP: 1
+EV: 1
+Lead_acid: 0
+Li_ion: 1
+NEM: 1
+cap_option: 1
+cap_size: 15.0
+NEM_fee: 0.0
+n_ir_rate: 2.75
+n_ir: 0.0275
+e_ir_rate: 2.0
+e_ir: 0.02
+ir: 0.007352941176470588
+Budget: 2000000.0
+Tax_rate: 0.0
+System_Tax: 0.0
+RE_incentives_rate: 30.0
+RE_incentives: 0.3
+Pricing_method: 2
+Fieldwork: 178.0
+Officework: 696.0
+Other: 586.0
+Permiting_and_Inspection: 0.0
+Electrical_BoS: 333.0
+Structrual_BoS: 237.0
+Supply_Chain_costs: 0.0
+Profit_costs: 0.0
+Sales_tax: 0.0
+Engineering_Costs: 2030.0
+C_PV: 338.0
+R_PV: 338.0
+C_I: 314.0
+R_I: 314.0
+MO_PV: 30.36
+MO_I: 0.0
+fpv: 0.9
+Tcof: -0.3
+Tref: 25.0
+Tc_noct: 45.0
+Ta_noct: 20.0
+G_noct: 800.0
+gama: 0.9
+n_PV: 0.2182
+Gref: 1000.0
+L_PV: 25
+RT_PV: 0
+n_I: 0.96
+DC_AC_ratio: 1.99
+L_I: 25
+RT_I: 0
+Ppv_r: 1.0
+C_WT: 1200.0
+R_WT: 1200.0
+MO_WT: 40.0
+L_WT: 20
+RT_WT: 1
+h_hub: 17.0
+h0: 43.6
+nw: 1.0
+v_cut_in: 2.5
+v_rated: 9.5
+v_cut_out: 25.0
+alfa_wind_turbine: 0.14
+Pwt_r: 1.0
+C_DG: 818.0
+R_DG: 818.0
+MO_DG: 0.016
+TL_DG: 24000
+C_fuel: 1.281
+C_fuel_adj_rate: 2.0
+C_fuel_adj: 0.02
+a: 0.4388
+b: 0.1097
+LR_DG: 0.25
+CO2: 2.29
+CO: 0.0
+NOx: 0.0
+SO2: 0.0
+Cdg_r: 5.5
+C_B: 1450.0
+R_B: 1450.0
+MO_B: 10.0
+SOC_min: 0.1
+SOC_max: 1.0
+SOC_initial: 0.5
+self_discharge_rate: 0.0
+L_B: 10
+RT_B: 2
+Cnom_Li: 167.0
+Ich_max_Li_ion: 167.0
+Idch_max_Li_ion: 500.0
+alfa_battery_Li_ion: 1.0
+Vnom_Li_ion: 6.0
+ef_bat_Li: 0.9
+Q_lifetime_Li: 3000.0
+Cbt_r: 1.002
+C_CH: 0.0
+R_CH: 0.0
+MO_CH: 0.0
+L_CH: 25
+RT_CH: 0
+HP_brand: Bosch
+C_HP: 109.5
+R_HP: 109.5
+MO_HP: 20.0
+L_HP: 5
+RT_HP: 4
+Php_r: 1000.0
+C_ev: 82.0
+SOCe_min: 0.03
+SOCe_max: 0.97
+C_ev_usable: 77.08
+SOCe_initial: 0.85
+Pev_max: 11.0
+Range_EV: 468.0
+Daily_trip: 68.0
+SOC_dep: 0.85
+SOC_arr: 0.7134188034188034
+n_e: 0.9
+self_discharge_rate_ev: 0.0
+L_EV_dis: 400000.0
+degradation_percent: 0.019
+step_km: 1000.0
+L_EV: 25
+RT_EV: 0
+Tin: 17
+Tout: 8
+treat_special_days_as_home: false
+Cost_EV: 0.0
+R_EVB: 27000.0
+MO_EV: 0.0
+compare_with_grid: 0
+Annual_expenses: 0.0
+Grid_sale_tax_rate: 13.0
+Grid_Tax: 0.13
+Grid_Tax_amount: 0.0353
+Grid_credit: 0.0
+Grid_escalation_projection: 1
+Grid_escalation_rate:
+- 2.0
+- 2.0
+- 2.0
+- 2.0
+- 2.0
+- 2.0
+- 2.0
+- 2.0
+- 2.0
+- 2.0
+- 2.0
+- 2.0
+- 2.0
+- 2.0
+- 2.0
+- 2.0
+- 2.0
+- 2.0
+- 2.0
+- 2.0
+- 2.0
+- 2.0
+- 2.0
+- 2.0
+- 2.0
+Grid_escalation:
+- 0.02
+- 0.02
+- 0.02
+- 0.02
+- 0.02
+- 0.02
+- 0.02
+- 0.02
+- 0.02
+- 0.02
+- 0.02
+- 0.02
+- 0.02
+- 0.02
+- 0.02
+- 0.02
+- 0.02
+- 0.02
+- 0.02
+- 0.02
+- 0.02
+- 0.02
+- 0.02
+- 0.02
+- 0.02
+Monthly_fixed_charge_system: 1
+SC_flat: 27.16
+rateStructure: 7
+onPrice:
+- 0.151
+- 0.113
+midPrice:
+- 0.102
+- 0.094
+offPrice:
+- 0.074
+- 0.074
+onHours:
+- - 11
+  - 12
+  - 13
+  - 14
+  - 15
+  - 16
+- - 17
+  - 18
+  - 19
+  - 20
+midHours:
+- - 7
+  - 8
+  - 9
+  - 10
+  - 17
+  - 18
+  - 19
+  - 20
+  - 21
+- - 7
+  - 8
+  - 9
+  - 10
+  - 11
+  - 12
+  - 13
+  - 14
+  - 15
+  - 16
+  - 21
+season:
+- 0
+- 0
+- 0
+- 0
+- 0
+- 1
+- 1
+- 1
+- 1
+- 0
+- 0
+- 0
+treat_special_days_as_offpeak: true
+sellStructure: 1
+Csell_flat: 0.1
+E_CO2: 0.0
+E_SO2: 0.0
+E_NOx: 0.0
+Pbuy_max: 50.0
+Psell_max: 50.0
+NG_energycontent: 10.81
+Furnace_eff: 0.94
+NG_unit: therms
+rateStructure_NG: 7
+ng7_base_rate: 2.41665
+ng7_excess_rate: 2.91799
+ng7_baseline_therms:
+- 52.08
+- 36.68
+- 40.61
+- 16.8
+- 17.36
+- 16.8
+- 17.36
+- 17.36
+- 16.8
+- 17.36
+- 39.3
+- 52.08
+Annual_expenses_NG: 0.0
+Grid_sale_tax_rate_NG: 13.0
+Grid_Tax_NG: 0.13
+Grid_Tax_amount_NG: 0.11
+Grid_credit_NG: 0.0
+Grid_escalation_projection_NG: 1
+Grid_escalation_rate_NG:
+- 2.0
+- 2.0
+- 2.0
+- 2.0
+- 2.0
+- 2.0
+- 2.0
+- 2.0
+- 2.0
+- 2.0
+- 2.0
+- 2.0
+- 2.0
+- 2.0
+- 2.0
+- 2.0
+- 2.0
+- 2.0
+- 2.0
+- 2.0
+- 2.0
+- 2.0
+- 2.0
+- 2.0
+- 2.0
+Grid_escalation_NG:
+- 0.02
+- 0.02
+- 0.02
+- 0.02
+- 0.02
+- 0.02
+- 0.02
+- 0.02
+- 0.02
+- 0.02
+- 0.02
+- 0.02
+- 0.02
+- 0.02
+- 0.02
+- 0.02
+- 0.02
+- 0.02
+- 0.02
+- 0.02
+- 0.02
+- 0.02
+- 0.02
+- 0.02
+- 0.02
+Monthly_fixed_charge_system_NG: 1
+SC_flat_NG: 18.59
+Service_charge_NG: 18.59
