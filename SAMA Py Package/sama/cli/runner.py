@@ -489,6 +489,22 @@ def main():
             if '⚠️' in line or 'failed' in line.lower() or 'error' in line.lower():
                 print(line)
 
+    # Regenerate Inputs.csv with updated values
+    import pandas as pd
+    os.makedirs('sama_inputs', exist_ok=True)
+    data = {
+        'Eload': indata.Eload,
+        'Eload_eh': indata.Eload_eh,
+        'Eload_hp': indata.Eload_hp if hasattr(indata, 'Eload_hp') and not isinstance(indata.Eload_hp,
+                                                                                      int) else [0] * 8760,
+        'G': indata.G,
+        'T': indata.T,
+        'Vw': indata.Vw,
+        'Cbuy': indata.Cbuy,
+        'EV_P': indata.EV_p,
+    }
+    pd.DataFrame(data).to_csv('sama_inputs/Inputs.csv', index=False)
+
     # ── Algorithm: CLI flag > config value > fallback ──────────────────────────
     algo = (args.algorithm or config.get('optimization_algorithm', 'ade')).lower()
 
