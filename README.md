@@ -15,7 +15,7 @@
 
 ---
 
-**SAMA** is a free, open-source Python platform for the design, sizing, and operation optimization of hybrid renewable energy microgrids. It performs location-specific techno-economic assessment using site-dependent load profiles, meteorological data, component degradation models, and utility billing structures — with no license fees and no black-box code.
+**SAMA** is a free, open-source Python platform for the design, sizing, and operation optimization of hybrid renewable energy microgrids. It performs location-specific techno-economic assessment using site-dependent load profiles, meteorological data, component degradation models, and utility billing structures, with no license fees and no black-box code.
 
 Developed by the **[FAST Research Group](https://github.com/Sas1997/SAMA)** at **Western University**, London, Ontario, Canada.
 
@@ -45,10 +45,10 @@ Developed by the **[FAST Research Group](https://github.com/Sas1997/SAMA)** at *
 
 Proprietary tools like HOMER Pro and HOMER Grid are closed-source and license-restricted. SAMA was built to remove that barrier:
 
-- **Free and open-source** — GPL-3.0, forever
-- **Transparent algorithms** — read, modify, and extend every line
-- **Validated** — cross-validated against HOMER Pro across multiple U.S. climate zones
-- **No cost barriers** — designed for researchers, students, and resource-constrained institutions worldwide
+- **Free and open-source**: GPL-3.0, forever
+- **Transparent algorithms**: read, modify, and extend every line
+- **Validated**: cross-validated against HOMER Pro across multiple U.S. climate zones
+- **No cost barriers**: designed for researchers, students, and resource-constrained institutions worldwide
 
 ---
 
@@ -116,18 +116,18 @@ pip install sama
 
 > **Note:** The PyPI distribution name is `SAMAbyRenXera`. Once installed, import and CLI commands use `sama`.
 
-**Step 1 — Configure your project:**
+**Step 1: Configure your project:**
 ```bash
 sama-config
 ```
 An interactive 18-section wizard guides you through all parameters and saves `sama_config_COMPLETE.yaml`.
 
-**Step 2 — Run the optimization:**
+**Step 2: Run the optimization:**
 ```bash
 sama-run
 ```
 
-**Step 3 — View results in `sama_outputs/`**
+**Step 3: View results in `sama_outputs/`**
 
 Additional run options:
 
@@ -140,7 +140,7 @@ sama-run --no-gui                 # headless / server mode
 
 ### Method 3: Windows .exe (Alpha)
 
-A point-and-click GUI for non-technical users. No Python installation required. Currently in alpha — contact the developers to request access.
+A point-and-click GUI for non-technical users. No Python installation required. Currently in alpha, contact the developers to request access.
 
 > https://github.com/Sas1997/SAMA
 
@@ -178,10 +178,10 @@ All four algorithms optimize the same 5-variable design space. Choose based on y
 
 | Algorithm | Key Behavior | Best For |
 |-----------|-------------|----------|
-| **PSO** — Particle Swarm Optimization | Velocity-based swarm convergence | Fast convergence |
-| **ADE** — Advanced Differential Evolution | Multi-strategy mutation with adaptive F and CR | Thorough exploration |
-| **ABC** — Artificial Bee Colony | Foraging phases with guided reinitialization | Balanced exploration |
-| **GWO** — Grey Wolf Optimizer | Pack hierarchy convergence; parallel variant available | Fast convergence, parallel runs |
+| **PSO**: Particle Swarm Optimization | Velocity-based swarm convergence | Fast convergence |
+| **ADE**: Advanced Differential Evolution | Multi-strategy mutation with adaptive F and CR | Thorough exploration |
+| **ABC**: Artificial Bee Colony | Foraging phases with guided reinitialization | Balanced exploration |
+| **GWO**: Grey Wolf Optimizer | Pack hierarchy convergence; parallel variant available | Fast convergence, parallel runs |
 
 For rigorous comparison, set `Run_Time > 1` to average across multiple independent runs.
 
@@ -213,7 +213,7 @@ sama_outputs/
 
 Full documentation is available in this repository:
 
-- **[SAMA_Documentation_v3_final.md](./Docs/SAMA_Documentation_v3_final.md)** — Complete user guide covering all parameters, algorithms, financial models, input formats, troubleshooting, and mathematical formulations
+- **[SAMA_Documentation_v3_final.md](./Docs/SAMA_Documentation_v3_final.md)**: Complete user guide covering all parameters, algorithms, financial models, input formats, troubleshooting, and mathematical formulations
 
 Key documentation sections:
 
@@ -272,7 +272,7 @@ SAMA is released under the **[GNU General Public License v3.0 (GPL-3.0)](./LICEN
 
 ## Contact
 
-**FAST Research Group — Western University, London, Ontario, Canada**
+**FAST Research Group, Western University, London, Ontario, Canada**
 
 - GitHub: https://github.com/Sas1997/SAMA
 - Issues and bug reports: [Open an issue](https://github.com/Sas1997/SAMA/issues)
