@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="Assets/SAMA_Logo_with_Typography.png" alt="SAMA Logo" width="420"/>
+  <img src="Assets/SAMA_Logo-with_Typography.png" alt="SAMA Logo" width="420"/>
 </p>
 
 <h2 align="center">Solar Alone Multi-Objective Advisor</h2>
