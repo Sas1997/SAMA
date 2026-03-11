@@ -224,9 +224,9 @@ Key documentation sections:
 | Energy management system | [Section 8](./Docs/SAMA_Documentation_v3_final.md#8-energy-management-system-ems) |
 | Component models | [Section 9](./Docs/SAMA_Documentation_v3_final.md#9-component-models) |
 | Financial model | [Section 10](./Docs/SAMA_Documentation_v3_final.md#10-financial-model) |
+| Troubleshooting | [Section 13](./Docs/SAMA_Documentation_v3_final.md#13-troubleshooting) |
 | Mathematical formulations | [Section 17](./Docs/SAMA_Documentation_v3_final.md#17-technical-framework-and-mathematical-formulation) |
 | Where to find input data | [Appendix A](./Docs/SAMA_Documentation_v3_final.md#appendix-a-where-to-find-input-data-for-sama) |
-| Troubleshooting | [Section 13](./Docs/SAMA_Documentation_v3_final.md#13-troubleshooting) |
 
 ---
 
