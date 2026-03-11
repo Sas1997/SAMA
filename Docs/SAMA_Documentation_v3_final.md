@@ -1139,7 +1139,7 @@ The default optimizer in SAMA is the Particle Swarm Optimizer (PSO), a bio-inspi
 
 $$V_i^{t+1} = W \cdot V_i^t + c_1 U_1^t \left(P_{b_1} - P_i^t\right) + c_2 U_2^t \left(g_b^t - P_i^t\right) \quad (1)$$
 
-$$P_i^{t+1} = P_i^t + v_i^{t+1} \tag{2}$$
+$$P_i^{t+1} = P_i^t + v_i^{t+1} \quad (2)$$
 
 In Eq. 1, $W$ is the inertia weight, $c_1$ is the cognitive (personal learning) constant, $c_2$ is the social (global learning) constant, $U_1$ and $U_2$ are random numbers drawn uniformly from $[0,1]$, $P_b$ is the particle's personal best position, and $g_b$ is the global best position of the swarm. Eq. 2 updates the particle position using the new velocity. Default PSO parameters in SAMA are $W = 1$, $c_1 = 2$, $c_2 = 2$, with an inertia weight damping ratio of 0.99 per iteration.
 
@@ -1147,13 +1147,13 @@ In Eq. 1, $W$ is the inertia weight, $c_1$ is the cognitive (personal learning) 
 
 The hourly power output of PV modules ($P_{PV}$ [kW]) and corresponding PV energy ($E_{PV}$ [kWh]) are functions of module temperature ($T_{Module}$ [°C]) and plane-of-array irradiance ($POA$ [W/m²]) [13][14][15]:
 
-$$P_{PV}\ [\text{kW}] = N_{PV} \times f_{PV} \times P_{PV}^{STC} \times \left(\frac{POA}{POA_{STC}}\right)\left[1 + \delta_{PV}\left(T_{Module} - T_{Ref}\right)\right]; \quad E_{PV} = P_{PV} \times t \tag{3}$$
+$$P_{PV}\ [\text{kW}] = N_{PV} \times f_{PV} \times P_{PV}^{STC} \times \left(\frac{POA}{POA_{STC}}\right)\left[1 + \delta_{PV}\left(T_{Module} - T_{Ref}\right)\right]; \quad E_{PV} = P_{PV} \times t \quad (3)$$
 
 Where $N_{PV}$ is the optimum number of PV modules, $f_{PV}$ is the PV derating factor (default 0.9), $P_{PV}^{STC}$ [kW] is the rated capacity at Standard Test Conditions (STC: 1000 W/m², 25 °C), $POA_{STC} = 1000$ W/m², $\delta_{PV}$ is the temperature coefficient at STC (default $-3.7 \times 10^{-3}$ /°C), and $T_{Ref} = 25$ °C.
 
 The module operating temperature $T_{Module}$ is calculated using the Nominal Operating Cell Temperature (NOCT) model [17]:
 
-$$T_{Module}\ [°C] = T_{Amb} + \left(\frac{T_{noct} - 20}{800}\right) \times POA \tag{4}$$
+$$T_{Module}\ [°C] = T_{Amb} + \left(\frac{T_{noct} - 20}{800}\right) \times POA \quad (4)$$
 
 Where $T_{noct}$ [°C] is the nominal operating cell temperature (default 45 °C) and $T_{Amb}$ [°C] is the ambient temperature from the meteorological dataset.
 
@@ -1161,31 +1161,31 @@ Where $T_{noct}$ [°C] is the nominal operating cell temperature (default 45 °C
 
 SAMA uses the Kinetic Battery Model (KiBaM) [18] to model energy storage. KiBaM represents the battery as two reservoirs (available and bound energy). The maximum chargeable power $P_{BT,ch}^{max,KiBaM}$ [kW] is given by [18]:
 
-$$P_{BT,ch}^{max,KiBaM} = \frac{kcQ_{Max} + kQ_1 e^{-kt} + Qkc\left(1 - e^{-kt}\right)}{1 - e^{-kt} + c(k\Delta t - 1 + e^{-kt})}; \quad E_{BT,ch}^{max,KiBaM} = P_{BT,ch}^{max,KiBaM} \times t \tag{5}$$
+$$P_{BT,ch}^{max,KiBaM} = \frac{kcQ_{Max} + kQ_1 e^{-kt} + Qkc\left(1 - e^{-kt}\right)}{1 - e^{-kt} + c(k\Delta t - 1 + e^{-kt})}; \quad E_{BT,ch}^{max,KiBaM} = P_{BT,ch}^{max,KiBaM} \times t \quad (5)$$
 
 Following HOMER Pro [23], SAMA also applies two additional charging limits based on the maximum charge rate ($\alpha$ [A/Ah]) and maximum current ($I_{max}$):
 
-$$P_{BT,ch}^{max,mcr} = \frac{(1 - e^{-\alpha t})(Q_{max} - Q)}{t}; \quad E_{BT,ch}^{max,mcr} = P_{BT,ch}^{max,mcr} \times t \tag{6}$$
+$$P_{BT,ch}^{max,mcr} = \frac{(1 - e^{-\alpha t})(Q_{max} - Q)}{t}; \quad E_{BT,ch}^{max,mcr} = P_{BT,ch}^{max,mcr} \times t \quad (6)$$
 
-$$P_{BT,ch}^{max,mcc} = \frac{N_{BT} I_{max} V_{nom}}{1000}; \quad E_{BT,ch}^{max,mcc} = P_{BT,ch}^{max,mcc} \times t \tag{7}$$
+$$P_{BT,ch}^{max,mcc} = \frac{N_{BT} I_{max} V_{nom}}{1000}; \quad E_{BT,ch}^{max,mcc} = P_{BT,ch}^{max,mcc} \times t \quad (7)$$
 
 The actual maximum charge power is the minimum of the three limits divided by round-trip efficiency:
 
-$$P_{BT,ch}^{max} = \frac{\min\left(P_{BT,ch}^{max,KiBaM},\ P_{BT,ch}^{max,mcr},\ P_{BT,ch}^{max,mcc}\right)}{\eta_{BT}}; \quad E_{BT,ch}^{max} = P_{BT,ch}^{max} \times t \tag{8}$$
+$$P_{BT,ch}^{max} = \frac{\min\left(P_{BT,ch}^{max,KiBaM},\ P_{BT,ch}^{max,mcr},\ P_{BT,ch}^{max,mcc}\right)}{\eta_{BT}}; \quad E_{BT,ch}^{max} = P_{BT,ch}^{max} \times t \quad (8)$$
 
 The battery wear cost ($Cost_{BT}^{Wear}$ [$/kWh]) represents the marginal cost of each kWh cycled through the battery [24][25][26]:
 
-$$Cost_{BT}^{Wear} = \frac{R_{BT} \times N_{BT}^{total}}{N_{bat} \times Q_{lifetime} \times \sqrt{\eta_{BT}}} \tag{10}$$
+$$Cost_{BT}^{Wear} = \frac{R_{BT} \times N_{BT}^{total}}{N_{bat} \times Q_{lifetime} \times \sqrt{\eta_{BT}}} \quad (9)$$
 
 Battery energy for the next time-step is updated as [A1]:
 
-$$E_{BT}(t+1) = (1 - \delta) \times E_{BT}(t) + \eta_{BT} \times E_{BT}^{ch}(t) - \frac{E_{BT}^{dch}(t)}{\eta_{BT}} \tag{37}$$
+$$E_{BT}(t+1) = (1 - \delta) \times E_{BT}(t) + \eta_{BT} \times E_{BT}^{ch}(t) - \frac{E_{BT}^{dch}(t)}{\eta_{BT}} \quad (10)$$
 
 ### 17.4 Backup (Diesel or Gasoline) Generator Model
 
 The total hourly operating cost of the DG is calculated from its fuel consumption using a linear fuel curve [26][27][28]:
 
-$$Cost_{DG} = b \times P_{DG}^{Nominal} \times Cost_{fuel} + \frac{R_{DG} \times P_{DG}^{Nominal}}{TL_{DG}} + MO_{DG} + a \times Cost_{fuel} \tag{11}$$
+$$Cost_{DG} = b \times P_{DG}^{Nominal} \times Cost_{fuel} + \frac{R_{DG} \times P_{DG}^{Nominal}}{TL_{DG}} + MO_{DG} + a \times Cost_{fuel} \quad (11)$$
 
 Where $a$ [L/hr/kW output] and $b$ [L/hr/kW rated] are the slope and intercept of the fuel consumption curve (defaults $a = 0.2730$, $b = 0.0330$).
 
@@ -1193,7 +1193,7 @@ Where $a$ [L/hr/kW output] and $b$ [L/hr/kW rated] are the slope and intercept o
 
 Hub-height wind speed is extrapolated from anemometer height $h_0$ to hub height $h_{hub}$ using the power-law wind shear model:
 
-$$V_{hub} = V_{anemometer} \times \left(\frac{h_{hub}}{h_0}\right)^{\alpha_{wind\_turbine}}$$
+$$V_{hub} = V_{anemometer} \times \left(\frac{h_{hub}}{h_0}\right)^{\alpha_{wind\_turbine}} \quad (12)$$
 
 Where $\alpha_{wind\_turbine}$ is the friction coefficient (default 0.14 for open terrain). Wind turbine output follows a piecewise power curve: zero below cut-in speed ($v_{cut\_in} = 2.5$ m/s), linear ramp from cut-in to rated speed ($v_{rated} = 9.5$ m/s), constant rated power from rated to cut-out speed ($v_{cut\_out} = 25$ m/s), and zero above cut-out.
 
@@ -1201,11 +1201,11 @@ Where $\alpha_{wind\_turbine}$ is the friction coefficient (default 0.14 for ope
 
 SAMA implements an advanced load-following dispatch strategy [29][30] that operates over all 8,760 hours of the year. When renewable generation ($E_{RE}$) exceeds load demand ($E_{load}$):
 
-$$E_{BT}^{ch}(t) = \min\left(E_{BT}^{empty},\ E_{RE}(t) - \frac{E_{load}(t)}{\eta_{inv}}\right) \tag{12}$$
+$$E_{BT}^{ch}(t) = \min\left(E_{BT}^{empty},\ E_{RE}(t) - \frac{E_{load}(t)}{\eta_{inv}}\right) \quad (13)$$
 
-$$E_{BT}^{empty} = \frac{E_{BT}^{max} - E_{BT}}{\eta_{BT}} \tag{13}$$
+$$E_{BT}^{empty} = \frac{E_{BT}^{max} - E_{BT}}{\eta_{BT}} \quad (14)$$
 
-$$E_{AC}^{sur} = \eta_{inv} \times \left(E_{RE}(t) - E_{BT}^{ch}(t)\right) - E_{load}(t) \tag{14}$$
+$$E_{AC}^{sur} = \eta_{inv} \times \left(E_{RE}(t) - E_{BT}^{ch}(t)\right) - E_{load}(t) \quad (15)$$
 
 When load exceeds renewable generation, SAMA selects the dispatch order among battery, DG, and grid based on marginal cost comparison. Six prioritization scenarios are defined based on the relative values of the grid buy price ($C_{buy}$), DG cost ($Cost_{DG}$), and battery wear cost ($Cost_{BT}^{Wear}$):
 
@@ -1220,37 +1220,37 @@ When load exceeds renewable generation, SAMA selects the dispatch order among ba
 
 The loss of power supply probability (LPSP) constraint tracks unmet energy across the year:
 
-$$LPSP = \frac{\sum_{t}^{8760} Ens(t)}{\sum_{t}^{8760} E_{load}(t)} \tag{53}$$
+$$LPSP = \frac{\sum_{t}^{8760} Ens(t)}{\sum_{t}^{8760} E_{load}(t)} \quad (16)$$
 
 The renewable fraction (RF) constraint:
 
-$$RF = 1 - \frac{\sum_{t}^{8760} E_{non\ renewable}(t)}{\sum_{t}^{8760} \left(E_{load}(t) - ENS(t)\right)} \tag{54}$$
+$$RF = 1 - \frac{\sum_{t}^{8760} E_{non\ renewable}(t)}{\sum_{t}^{8760} \left(E_{load}(t) - ENS(t)\right)} \quad (17)$$
 
 ### 17.7 Economic Model
 
 The real discount rate $i$ is derived from the nominal discount rate $i'$ and expected inflation rate $f$ [A1]:
 
-$$i = \frac{i' - f}{1 + f} \tag{38}$$
+$$i = \frac{i' - f}{1 + f} \quad (18)$$
 
 The Net Present Cost (NPC) [31]:
 
-$$NPC = C_I + \frac{C_R + C_{MO} + C_F - C_S + C_G}{(1+i)^n} \tag{39}$$
+$$NPC = C_I + \frac{C_R + C_{MO} + C_F - C_S + C_G}{(1+i)^n} \quad (19)$$
 
 The Capital Recovery Factor (CRF) [33]:
 
-$$CRF(i,N) = \frac{i(1+i)^n}{(1+i)^n - 1} \tag{46}$$
+$$CRF(i,N) = \frac{i(1+i)^n}{(1+i)^n - 1} \quad (20)$$
 
 The Levelized Cost of Energy (LCOE) [33]:
 
-$$LCOE = \frac{CRF \times NPC}{\sum_{0}^{8760}(E_{load} - Ens + P_{sell})} \tag{47}$$
+$$LCOE = \frac{CRF \times NPC}{\sum_{0}^{8760}(E_{load} - Ens + P_{sell})} \quad (21)$$
 
 When `EM = 1`, SAMA also minimizes Levelized Emission (LE) [34]:
 
-$$LE = \frac{\sum_{0}^{8760} Non\ Grid\ Emissions(t) + \sum_{0}^{8760} Grid_{Emissions}(t)}{\sum_{0}^{8760}\left(E_{load}(t) - Ens(t)\right)} \tag{49}$$
+$$LE = \frac{\sum_{0}^{8760} Non\ Grid\ Emissions(t) + \sum_{0}^{8760} Grid_{Emissions}(t)}{\sum_{0}^{8760}\left(E_{load}(t) - Ens(t)\right)} \quad (22)$$
 
 The multi-objective function combines NPC and LE, with penalties applied when constraints are violated [A1]:
 
-$$Z = NPC + EM \times LE + penalties \tag{55}$$
+$$Z = NPC + EM \times LE + penalties \quad (23)$$
 
 **Table 2.** Penalty conditions in SAMA optimization (from [A1]):
 
