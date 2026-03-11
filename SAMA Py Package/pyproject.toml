@@ -14,7 +14,7 @@ build-backend = "setuptools.build_meta"
 # ------------------------------------------------------------------------------
 [project]
 name = "SAMAbyRenXera"
-version = "2.0.1"
+version = "2.0.2"
 description = "SAMA - Solar Alone Multi-objective Advisor for Hybrid Renewable Energy Systems"
 readme = "README.md"
 license = { file = "License" }
