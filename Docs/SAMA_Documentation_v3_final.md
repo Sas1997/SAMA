@@ -1137,7 +1137,7 @@ This section presents the mathematical models and equations that underpin SAMA's
 
 The default optimizer in SAMA is the Particle Swarm Optimizer (PSO), a bio-inspired algorithm that moves a population of candidate solutions (particles) through the search space according to the following velocity and position update equations [A1]:
 
-$$V_i^{t+1} = W \cdot V_i^t + c_1 U_1^t \left(P_{b_1} - P_i^t\right) + c_2 U_2^t \left(g_b^t - P_i^t\right)$$
+$$V_i^{t+1} = W \cdot V_i^t + c_1 U_1^t \left(P_{b_1} - P_i^t\right) + c_2 U_2^t \left(g_b^t - P_i^t\right) \quad (1)$$
 
 $$P_i^{t+1} = P_i^t + v_i^{t+1} \tag{2}$$
 
