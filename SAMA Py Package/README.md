@@ -35,7 +35,7 @@ parameters and saves a `sama_config_COMPLETE.yaml` file.
 
 ### Step 2: Run the optimization
 ```bash
-sama-run -c sama_config_COMPLETE.yaml
+sama-run
 ```
 
 ### Step 3: View results
