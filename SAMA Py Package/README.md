@@ -1,11 +1,25 @@
 # SAMAPy: Solar Alone Multi-Objective Advisor Python
 
+<h1 align="center">
+  <img src="https://github.com/Sas1997/SAMA/raw/main/Assets/SAMA_Logo-with_Typography.png" width="400" alt="SAMAPy Logo"/>
+</h1>
+
+<h3 align="center">Solar Alone Multi-Objective Advisor - Python Package</h3>
+
+<p align="center">
+  <em>Free and open-source hybrid renewable energy system optimization</em><br>
+  <em>FAST Research Group, Western University, London, Ontario, Canada</em>
+</p>
+
 <p align="center">
   <img src="https://img.shields.io/pypi/v/samapy?color=blue&label=PyPI" alt="PyPI version"/>
   <img src="https://img.shields.io/pypi/pyversions/samapy" alt="Python versions"/>
   <img src="https://img.shields.io/badge/license-GPLv3-green" alt="License"/>
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey" alt="Platform"/>
+  <img src="https://img.shields.io/badge/DOI-10.1016%2Fj.enconman.2023.117686-orange" alt="DOI"/>
 </p>
+
+---
 
 **SAMAPy** is an open-source Python package for the optimal sizing and techno-economic analysis of hybrid renewable energy systems (HRES). Developed at the **FAST Research Group, Western University**, it combines physics-based energy simulation with state-of-the-art metaheuristic optimization to find the lowest-cost system configuration that satisfies reliability and renewable energy constraints.
 
