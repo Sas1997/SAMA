@@ -20,22 +20,22 @@
   - [1.2 Key Capabilities](#12-key-capabilities)
   - [1.3 Comparison to HOMER Pro](#13-comparison-to-homer-pro)
 - [2. Three Ways to Use SAMA](#2-three-ways-to-use-sama)
-- [3. Method 1 – Using the Raw Python Code](#3-method-1--using-the-raw-python-code)
+- [3. Method 1: Using the Raw Python Code](#3-method-1--using-the-raw-python-code)
   - [3.1 Prerequisites](#31-prerequisites)
   - [3.2 Downloading and Opening the Code](#32-downloading-and-opening-the-code)
   - [3.3 Configuring Parameters Directly in Input_Data.py](#33-configuring-parameters-directly-in-input_datapy)
   - [3.4 Running the Optimization](#34-running-the-optimization)
-- [4. Method 2 – Using the Python Package (pip install samapy)](#4-method-2--using-the-python-package-pip-install-samapy)
+- [4. Method 2: Using the Python Package (pip install samapy)](#4-method-2--using-the-python-package-pip-install-samapy)
   - [4.1 Installation](#41-installation)
-  - [4.2 Step 1 – Run the Configuration Wizard](#42-step-1--run-the-configuration-wizard)
-  - [4.3 Step 2 – Run the Optimization](#43-step-2--run-the-optimization)
-  - [4.4 Step 3 – View Results](#44-step-3--view-results)
+  - [4.2 Step 1: Run the Configuration Wizard](#42-step-1--run-the-configuration-wizard)
+  - [4.3 Step 2: Run the Optimization](#43-step-2--run-the-optimization)
+  - [4.4 Step 3: View Results](#44-step-3--view-results)
   - [4.5 Using the Python API](#45-using-the-python-api)
   - [4.6 Using Your Own Custom Data Files](#46-using-your-own-custom-data-files)
   - [4.7 Typical Workflow for a New Project Location](#47-typical-workflow-for-a-new-project-location)
   - [4.8 Understanding the Working Directory](#48-understanding-the-working-directory)
   - [4.9 What to Expect on the First Run](#49-what-to-expect-on-the-first-run)
-- [5. Method 3 – Windows .exe Application (Alpha)](#5-method-3--windows-exe-application-alpha)
+- [5. Method 3: Windows .exe Application (Alpha)](#5-method-3--windows-exe-application-alpha)
 - [6. The Configuration File (sama_config_COMPLETE.yaml)](#6-the-configuration-file-sama_config_completeyaml)
   - [6.1 File Structure Overview](#61-file-structure-overview)
   - [6.2 Key Parameter Reference](#62-key-parameter-reference)
@@ -67,7 +67,7 @@
   - [12.3 Plane-of-Array Irradiance CSV (Irradiance.csv)](#123-plane-of-array-irradiance-csv-irradiancecsv)
   - [12.4 house_load.xlsx (Thermal Load)](#124-house_loadxlsx-thermal-load)
 - [13. Troubleshooting](#13-troubleshooting)
-- [14. Quick Reference – Minimum Working Example](#14-quick-reference--minimum-working-example)
+- [14. Quick Reference: Minimum Working Example](#14-quick-reference--minimum-working-example)
 - [15. Package Module Structure](#15-package-module-structure)
 - [16. License and Citation](#16-license-and-citation)
   - [16.1 License](#161-license)
@@ -99,7 +99,7 @@ If you see a version number such as `Python 3.11.4`, Python is already installed
 ### 0.2 Installing Python on Windows
 
 1. Go to https://www.python.org/downloads/ and click **Download Python** (choose the latest 3.x version).
-2. Run the installer. On the first screen, **check the box that says "Add Python to PATH"** before clicking Install Now. This is the most important step — without it, Python commands will not work in the terminal.
+2. Run the installer. On the first screen, **check the box that says "Add Python to PATH"** before clicking Install Now. This is the most important step, without it, Python commands will not work in the terminal.
 3. Once installation is complete, close and reopen your Command Prompt and verify with:
 
 ```bash
@@ -193,7 +193,7 @@ SAMA can be used in three different ways depending on your background and needs:
 
 ---
 
-## 3. Method 1 – Using the Raw Python Code
+## 3. Method 1: Using the Raw Python Code
 
 This method gives you full access to all source files. You can directly edit `Input_Data.py` to set your parameters and run the optimizer scripts directly. This is the approach used in the `examples/` folder.
 
@@ -409,7 +409,7 @@ python examples/optimization_case.py
 
 ---
 
-## 4. Method 2 – Using the Python Package (pip install samapy)
+## 4. Method 2: Using the Python Package (pip install samapy)
 
 The SAMA pip package (SAMA Py Package) is available through the Python Package Index (PyPI). It provides two console commands, **`samapy-config`** and **`samapy-run`**, that guide you through configuration and run the optimization without editing any source files. This is the recommended approach for most users.
 
@@ -430,7 +430,7 @@ samapy-run --help
 
 > **Note:** Python 3.9 or higher is required. On Windows, ensure Python is in your PATH. All dependencies (`numpy`, `pandas`, `scipy`, `numba`, `matplotlib`, `openpyxl`, `seaborn`, `numpy-financial`, `questionary`, `PyYAML`) are installed automatically.
 
-### 4.2 Step 1 – Run the Configuration Wizard
+### 4.2 Step 1: Run the Configuration Wizard
 
 In your working directory (the folder where you want results to be saved), run:
 
@@ -463,7 +463,7 @@ The wizard launches an interactive terminal interface with **18 sections** that 
 
 When the wizard completes, it saves a file called `sama_config_COMPLETE.yaml` in your working directory. This YAML file contains all your parameters and can be edited manually or re-run through the wizard at any time.
 
-### 4.3 Step 2 – Run the Optimization
+### 4.3 Step 2: Run the Optimization
 
 With `sama_config_COMPLETE.yaml` in your working directory, run:
 
@@ -486,7 +486,7 @@ SAMA will automatically find the config file, load all parameters, and run the o
 
 The `optimization_algorithm` key in the YAML accepts: `pso`, `ade`, `abc`, or `gwo`.
 
-### 4.4 Step 3 – View Results
+### 4.4 Step 3: View Results
 
 Results are saved to the output directory specified in the config (default: `sama_outputs/` in your working directory). The folder is organized as:
 
@@ -602,10 +602,10 @@ You can also copy your custom files directly into the `samapy/content/` folder y
 
 The expected file names and formats are:
 
-- **`Eload.csv`** — Hourly electrical load profile. One column, 8,760 rows, no header. Values in kW.
-- **`METEO.csv`** — SAM NSRDB weather file for your location. Two header rows followed by 8,760 hourly data rows. Must include columns: GHI, DNI, DHI, Temperature, Wind Speed, Pressure. Download from https://nsrdb.nrel.gov/
-- **`house_load.xlsx`** — Building thermal load. Excel file with heating load (Hload) in column 2 and cooling load (Cload) in column 3, 8,760 rows each, in kW.
-- **`Irradiance.csv`** — Only needed when `G_type = 2` (manual plane-of-array irradiance). One column, 8,760 rows, no header. Values in W/m².
+- **`Eload.csv`**, Hourly electrical load profile. One column, 8,760 rows, no header. Values in kW.
+- **`METEO.csv`**, SAM NSRDB weather file for your location. Two header rows followed by 8,760 hourly data rows. Must include columns: GHI, DNI, DHI, Temperature, Wind Speed, Pressure. Download from https://nsrdb.nrel.gov/
+- **`house_load.xlsx`**, Building thermal load. Excel file with heating load (Hload) in column 2 and cooling load (Cload) in column 3, 8,760 rows each, in kW.
+- **`Irradiance.csv`**, Only needed when `G_type = 2` (manual plane-of-array irradiance). One column, 8,760 rows, no header. Values in W/m².
 
 If a file is not present in the local `samapy/content/` folder, SAMA automatically falls back to the bundled default. You only need to provide files you want to customize.
 
@@ -633,7 +633,7 @@ For a typical run with `MaxIt=200` and `nPop=50`, expect the optimization itself
 
 ---
 
-## 5. Method 3 – Windows .exe Application (Alpha)
+## 5. Method 3: Windows .exe Application (Alpha)
 
 A Windows executable (`.exe`) version of SAMA is currently in the alpha development phase and is available on request from the developers. This version provides a graphical user interface (GUI) that does not require Python to be installed on the user's computer. It is intended for non-technical users who prefer a point-and-click experience.
 
@@ -1006,7 +1006,7 @@ To use your own weather or load data, either replace these files in place or spe
 
 ---
 
-## 14. Quick Reference – Minimum Working Example
+## 14. Quick Reference: Minimum Working Example
 
 The following is the minimum set of steps to run SAMA with a fresh pip installation using default bundled data:
 
@@ -1639,11 +1639,11 @@ AdvancedDifferentialEvolution().optimize()
 ```
 
 **Heat pump figures generated:**
-- `hp_ambient_conditions.png` — hourly ambient temperature and pressure conditions
-- `hp_heating_performance.png` — heating power and COP over the year
-- `hp_cooling_performance.png` — cooling power and COP over the year
-- `hp_cop_vs_temp.png` — COP as a function of ambient temperature
-- `hp_monthly_summary.png` — monthly heat pump energy and COP summary
+- `hp_ambient_conditions.png`, hourly ambient temperature and pressure conditions
+- `hp_heating_performance.png`, heating power and COP over the year
+- `hp_cooling_performance.png`, cooling power and COP over the year
+- `hp_cop_vs_temp.png`, COP as a function of ambient temperature
+- `hp_monthly_summary.png`, monthly heat pump energy and COP summary
 
 ---
 
@@ -1687,9 +1687,9 @@ GreyWolfOptimizer().optimize()
 ```
 
 **EV figures generated:**
-- `EV Energy.png` — annual EV SOC and charge/discharge profile
-- `EV Sp Results 1.png` — 48-hour detail (EV arbitrage against peak prices)
-- `EV Sp Results 2.png` — 48-hour detail for a winter weekend
+- `EV Energy.png`, annual EV SOC and charge/discharge profile
+- `EV Sp Results 1.png`, 48-hour detail (EV arbitrage against peak prices)
+- `EV Sp Results 2.png`, 48-hour detail for a winter weekend
 
 ---
 
@@ -1702,7 +1702,7 @@ GreyWolfOptimizer().optimize()
 Example 5: YAML-Driven Workflow
 ==================================
 Load a wizard-generated config, override specific parameters,
-and launch optimization — recommended for production use.
+and launch optimization, recommended for production use.
 """
 
 from samapy.cli.config_loader import load_config, apply_config
@@ -1902,7 +1902,7 @@ The table below compares the 25-year costs with and without the hybrid energy sy
 | **25-Year Total (Nominal)** | **$127,048.51** | **$48,730.60** | **$78,317.92 (61.6%)** |
 | 25-Year Total (Present Value) | $114,800.92 | $44,032.92 | $70,768.00 |
 
-**Monthly bill comparison — Year 1 (Present Value):**
+**Monthly bill comparison, Year 1 (Present Value):**
 
 | Month | Without HES | With HES | Total Savings | % Saved |
 |-------|-------------|----------|---------------|---------|
@@ -1958,7 +1958,7 @@ All figures are saved to `samapy_outputs/figs/`. Below are the actual sample out
 
 ---
 
-#### Electricity Cost Comparison — Annual
+#### Electricity Cost Comparison, Annual
 
 ![Annual electricity cost comparison](https://raw.githubusercontent.com/Sas1997/SAMA/main/Docs/SAMA%20results%20example%20outputs/electricity_comparison_annual.png)
 
@@ -1966,7 +1966,7 @@ All figures are saved to `samapy_outputs/figs/`. Below are the actual sample out
 
 ---
 
-#### Electricity Cost Comparison — Monthly
+#### Electricity Cost Comparison, Monthly
 
 ![Monthly electricity cost comparison](https://raw.githubusercontent.com/Sas1997/SAMA/main/Docs/SAMA%20results%20example%20outputs/electricity_comparison_monthly.png)
 
@@ -1986,7 +1986,7 @@ All figures are saved to `samapy_outputs/figs/`. Below are the actual sample out
 
 ![Average cost of grid-only system](https://raw.githubusercontent.com/Sas1997/SAMA/main/Docs/SAMA%20results%20example%20outputs/Daily-Monthly-Yearly%20average%20cost%20of%20only%20grid-connected%20system.png)
 
-*Same timescales for the baseline grid-only scenario — for direct comparison with the HES.*
+*Same timescales for the baseline grid-only scenario, for direct comparison with the HES.*
 
 ---
 
@@ -2014,15 +2014,15 @@ All figures are saved to `samapy_outputs/figs/`. Below are the actual sample out
 
 ---
 
-#### Heat Pump — Ambient Conditions
+#### Heat Pump, Ambient Conditions
 
 ![Heat pump ambient conditions](https://raw.githubusercontent.com/Sas1997/SAMA/main/Docs/SAMA%20results%20example%20outputs/hp_ambient_conditions.png)
 
-*Hourly ambient temperature and pressure at the site — the conditions driving heat pump performance. (HP = 1 only)*
+*Hourly ambient temperature and pressure at the site, the conditions driving heat pump performance. (HP = 1 only)*
 
 ---
 
-#### Heat Pump — Heating Performance
+#### Heat Pump, Heating Performance
 
 ![Heat pump heating performance](https://raw.githubusercontent.com/Sas1997/SAMA/main/Docs/SAMA%20results%20example%20outputs/hp_heating_performance.png)
 
@@ -2030,7 +2030,7 @@ All figures are saved to `samapy_outputs/figs/`. Below are the actual sample out
 
 ---
 
-#### Heat Pump — Cooling Performance
+#### Heat Pump, Cooling Performance
 
 ![Heat pump cooling performance](https://raw.githubusercontent.com/Sas1997/SAMA/main/Docs/SAMA%20results%20example%20outputs/hp_cooling_performance.png)
 
@@ -2038,7 +2038,7 @@ All figures are saved to `samapy_outputs/figs/`. Below are the actual sample out
 
 ---
 
-#### Heat Pump — COP vs. Temperature
+#### Heat Pump, COP vs. Temperature
 
 ![Heat pump COP vs temperature](https://raw.githubusercontent.com/Sas1997/SAMA/main/Docs/SAMA%20results%20example%20outputs/hp_cop_vs_temp.png)
 
@@ -2046,7 +2046,7 @@ All figures are saved to `samapy_outputs/figs/`. Below are the actual sample out
 
 ---
 
-#### Heat Pump — Monthly Summary
+#### Heat Pump, Monthly Summary
 
 ![Heat pump monthly summary](https://raw.githubusercontent.com/Sas1997/SAMA/main/Docs/SAMA%20results%20example%20outputs/hp_monthly_summary.png)
 
