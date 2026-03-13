@@ -295,7 +295,7 @@ Set `load_type` to choose how the electrical load is provided:
 | `T_type` (temperature) | From NSRDB via SAM API (uses METEO.csv) | User CSV file | Monthly averages (12-value array) | Annual average (single value) |
 | `WS_type` (wind speed) | From NSRDB via SAM API (uses METEO.csv) | User CSV file | Monthly averages (12-value array) | Annual average (single value) |
 
-The default `weather_url` points to the bundled `METEO.csv`, which contains sample data for London, Ontario from the National Solar Radiation Database. Key PV geometry parameters:
+The default `weather_url` points to the bundled `METEO.csv`, which contains sample data for Boston, MA from the National Solar Radiation Database. Key PV geometry parameters:
 
 ```python
 azimuth = 180   # degrees (180 = south-facing)
@@ -596,7 +596,7 @@ When searching for the package on the PyPI website, look for `samapy`. When writ
 
 ### 4.6 Using Your Own Custom Data Files
 
-SAMA ships with bundled default data files for London, Ontario (weather, electrical load, and heat pump data). When you run `samapy-config` and provide your own file paths, the wizard automatically copies those files into the local `samapy/content/` folder in your working directory. SAMA reads from this local folder instead of the bundled defaults.
+SAMA ships with bundled default data files for Boston, MA (weather, electrical load, and heat pump data). When you run `samapy-config` and provide your own file paths, the wizard automatically copies those files into the local `samapy/content/` folder in your working directory. SAMA reads from this local folder instead of the bundled defaults.
 
 You can also copy your custom files directly into the `samapy/content/` folder yourself, and SAMA will use them automatically when you run `samapy-run`. The `samapy/content/` folder is created in your working directory the first time you run `samapy-config` or `samapy-run`.
 
@@ -943,9 +943,9 @@ The following data files are bundled with the SAMA package in the `samapy/conten
 
 | File | Description |
 |------|-------------|
-| `Eload.csv` | Sample hourly electrical load profile (8,760 rows, kW) for a representative building in London, Ontario |
+| `Eload.csv` | Sample hourly electrical load profile (8,760 rows, kW) for a representative building in Boston, MA |
 | `Eload_daily.csv` | Sample daily electrical load profile (24 rows) for generic load scaling |
-| `METEO.csv` | SAM NSRDB meteorological data for London, Ontario. Columns include GHI, DNI, DHI, temperature, wind speed, and pressure |
+| `METEO.csv` | SAM NSRDB meteorological data for Boston, MA. Columns include GHI, DNI, DHI, temperature, wind speed, and pressure |
 | `Irradiance.csv` | Sample hourly plane-of-array (POA) irradiance CSV (8,760 rows, W/m²) for manual `G_type=2` input |
 | `Temperature.csv` | Sample hourly ambient temperature CSV (8,760 rows, °C) for manual `T_type=2` input |
 | `WSPEED.csv` | Sample hourly wind speed CSV (8,760 rows, m/s) for manual `WS_type=2` input |
@@ -953,7 +953,7 @@ The following data files are bundled with the SAMA package in the `samapy/conten
 | `Data.csv` | General component reference data |
 | `Generic_load_JulyP.csv` | Normalized generic hourly load profile with July peak; used when `load_type = 5/8/9/10` |
 | `Generic_load_JanuaryP.csv` | Normalized generic hourly load profile with January peak; used when `load_type = 5/8/9/10` |
-| `house_load.xlsx` | Sample building heating (Hload) and cooling (Cload) thermal load (8,760 rows, kW each) for London, Ontario |
+| `house_load.xlsx` | Sample building heating (Hload) and cooling (Cload) thermal load (8,760 rows, kW each) for Boston, MA |
 | `HP_Bosch/` | Bosch heat pump manufacturer performance data files (6 Excel files and weather data) |
 | `HP_Goodman/` | Goodman heat pump manufacturer performance data files (8 Excel files and weather data) |
 
@@ -1113,7 +1113,7 @@ SAMA is released under the **GNU General Public License v3.0 (GPL-3.0)**. You ar
 
 | Author | Affiliation | ORCID |
 |--------|-------------|-------|
-| Seyyed Ali Sadat | Free Appropriate Sustainability Technology (FAST) Research Group, Western University, London, Ontario, Canada | 0000-0001-9690-4239 |
+| Seyyed Ali Sadat | Free Appropriate Sustainability Technology (FAST) Research Group, Western University, Boston, MA, Canada | 0000-0001-9690-4239 |
 
 ### 16.3 Citing SAMAPy
 
@@ -1429,13 +1429,13 @@ print(f"Grid sales     : {df['Psell'].sum():.0f} kWh")
 
 ## 18. Sample Optimization Output
 
-This section shows the complete terminal output and generated figures from a real SAMAPy run using the ADE optimizer with a PV + grid + Bosch heat pump + EV configuration for a London, Ontario residential property.
+This section shows the complete terminal output and generated figures from a real SAMAPy run using the ADE optimizer with a PV + grid + Bosch heat pump + EV configuration for a Boston, MA residential property.
 
 ### 18.1 Configuration Used
 
 - **Components:** Solar PV, Grid (ULO tariff), Bosch heat pump (48,000 BTU), EV
 - **Algorithm:** ADE, MaxIt = 200, nPop = 50
-- **Location:** London, Ontario (TMY 2021)
+- **Location:** Boston, MA (TMY 2021)
 - **Project lifetime:** 25 years
 
 ### 18.2 Optimizer Convergence
@@ -1973,7 +1973,7 @@ This appendix provides practical guidance on where to obtain real-world data for
 
 ### A.3 Weather and Meteorological Data (`METEO.csv`)
 
-The bundled `METEO.csv` is for London, Ontario. For any other location, download a new file containing GHI, DNI, DHI, Temperature, Wind Speed, and Pressure columns with two header rows followed by 8,760 hourly rows.
+The bundled `METEO.csv` is for Boston, MA. For any other location, download a new file containing GHI, DNI, DHI, Temperature, Wind Speed, and Pressure columns with two header rows followed by 8,760 hourly rows.
 
 - **Primary source:** National Solar Radiation Database (NSRDB) at [nsrdb.nrel.gov](https://nsrdb.nrel.gov). Provides free hourly weather data for the U.S., Canada, and many other countries. Select the SAM/CSV export format.
 - **Alternative:** NASA POWER at [power.larc.nasa.gov](https://power.larc.nasa.gov) provides global coverage for any coordinates.
