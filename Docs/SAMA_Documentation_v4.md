@@ -1435,7 +1435,7 @@ This section shows the complete terminal output and generated figures from a rea
 
 - **Components:** Solar PV, Grid (ULO tariff), Bosch heat pump (48,000 BTU), EV
 - **Algorithm:** ADE, MaxIt = 200, nPop = 50
-- **Location:** Boston, MA (TMY 2021)
+- **Location:** San Francisco, CA (TMY 2024)
 - **Project lifetime:** 25 years
 
 ### 18.2 Optimizer Convergence
