@@ -1,0 +1,42 @@
+#!/usr/bin/env python3
+"""
+SAMAPy Configuration Wizard - Unix/Linux/Mac
+Run: ./samapy-config or samapy-config
+"""
+import subprocess
+import sys
+from pathlib import Path
+
+def main():
+    print("""
+╔═══════════════════════════════════════════════════════════════════════════╗
+║              SAMAPy HYBRID CONFIGURATION WIZARD                             ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+""")
+
+    # Get current directory (where samapy-config is run from)
+    current_dir = Path.cwd()
+
+    # Look for wizards in samapy/cli/ subfolder
+    cli_dir = current_dir / 'samapy' / 'cli'
+
+    # Path to master wizard
+    master_wizard = cli_dir / 'samapy_Wizard.py'
+
+    if not master_wizard.exists():
+        print(f"❌ Error: samapy_Wizard.py not found!")
+        print(f"\nExpected location: {master_wizard}")
+        print(f"\nMake sure these files are in: {cli_dir}")
+        sys.exit(1)
+
+    # Launch master wizard
+    try:
+        subprocess.run([sys.executable, str(master_wizard)])
+    except KeyboardInterrupt:
+        print("\n\n❌ Cancelled by user.")
+    except Exception as e:
+        print(f"\n❌ Error: {e}")
+        sys.exit(1)
+
+if __name__ == '__main__':
+    main()

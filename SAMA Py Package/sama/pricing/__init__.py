@@ -1,1 +1,0 @@
-"""Electricity pricing and bill calculation modules."""

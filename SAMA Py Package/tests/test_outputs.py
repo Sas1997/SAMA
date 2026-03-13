@@ -8,12 +8,12 @@ import os
 import shutil
 
 # Clean up any existing test outputs
-if os.path.exists('test_sama_outputs'):
-    shutil.rmtree('test_sama_outputs')
+if os.path.exists('test_samapy_outputs'):
+    shutil.rmtree('test_samapy_outputs')
 
 try:
     import numpy as np
-    from sama.results.Results import Gen_Results
+    from samapy.results.Results import Gen_Results
 
     # Create minimal test input
     # [Npv, Nwt, Nbat, N_DG, Cn_I]
@@ -22,15 +22,15 @@ try:
     print("\nRunning Gen_Results with test data...")
     print("(This may take 30-60 seconds...)")
 
-    output_path = Gen_Results(X_test, output_dir='test_sama_outputs')
+    output_path = Gen_Results(X_test, output_dir='test_samapy_outputs')
 
     # Check if directories were created
-    if os.path.exists('test_sama_outputs'):
-        print(f"\n✓ Output directory created: {os.path.abspath('test_sama_outputs')}")
+    if os.path.exists('test_samapy_outputs'):
+        print(f"\n✓ Output directory created: {os.path.abspath('test_samapy_outputs')}")
 
         # List subdirectories
-        for root, dirs, files in os.walk('test_sama_outputs'):
-            level = root.replace('test_sama_outputs', '').count(os.sep)
+        for root, dirs, files in os.walk('test_samapy_outputs'):
+            level = root.replace('test_samapy_outputs', '').count(os.sep)
             indent = ' ' * 2 * level
             print(f'{indent}{os.path.basename(root)}/')
             subindent = ' ' * 2 * (level + 1)

@@ -2,8 +2,8 @@
 # The wheel (.whl) is controlled by package_data in pyproject.toml.
 # Both must be consistent so pip install works whether from sdist or wheel.
 
-# --- Package data files (inside sama/) ---
-recursive-include sama/content *
+# --- Package data files (inside samapy/) ---
+recursive-include samapy/content *
 
 # --- Top-level project files ---
 include README.md

@@ -1,1 +1,1 @@
-"""SAMA test suite."""
+"""SAMAPy test suite."""

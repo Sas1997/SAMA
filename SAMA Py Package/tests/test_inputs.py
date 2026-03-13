@@ -5,7 +5,7 @@ print("TEST 2: Testing Input Data Loading")
 print("="*60)
 
 try:
-    from sama.core.Input_Data import InData
+    from samapy.core.Input_Data import InData
 
     # Check if data loaded
     print(f"\n✓ Load data shape: {InData.Eload.shape}")

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-SAMA OPTIMIZATION - COMPLETE WITH ALL ELECTRICITY & NATURAL GAS RATES
+SAMAPy OPTIMIZATION - COMPLETE WITH ALL ELECTRICITY & NATURAL GAS RATES
 ======================================================================
 ALL parameters, ALL 8 electricity rate structures, ALL 6 NG rate structures
 """
@@ -446,12 +446,12 @@ class Config:
 
 
 def copy_files_to_content(config):
-    """Copy data files to sama/sama/content/"""
+    """Copy data files to samapy/samapy/content/"""
     print("\n" + "=" * 80)
     print("STEP 1: COPYING DATA FILES")
     print("=" * 80)
 
-    from sama import get_content_path
+    from samapy import get_content_path
 
     eload_dest = get_content_path('Eload.csv')
     eload_src = Path(config.Eload_csv_path)
@@ -490,18 +490,18 @@ def apply_all_parameters(config, csv_total):
     print("=" * 80)
 
     # Clear modules
-    modules_to_clear = [k for k in list(sys.modules.keys()) if k.startswith('sama.')]
+    modules_to_clear = [k for k in list(sys.modules.keys()) if k.startswith('samapy.')]
     for mod in modules_to_clear:
         del sys.modules[mod]
 
     # Set environment variable to skip HP in Input_Data.py
-    os.environ['SAMA_SKIP_HP_CALC'] = '1'
+    os.environ['SAMAPy_SKIP_HP_CALC'] = '1'
 
-    from sama.core.Input_Data import InData
+    from samapy.core.Input_Data import InData
 
     # Clean up
-    if 'SAMA_SKIP_HP_CALC' in os.environ:
-        del os.environ['SAMA_SKIP_HP_CALC']
+    if 'SAMAPy_SKIP_HP_CALC' in os.environ:
+        del os.environ['SAMAPy_SKIP_HP_CALC']
 
     print("\n✓ InData imported")
 
@@ -575,7 +575,7 @@ def apply_all_parameters(config, csv_total):
 
     InData.Pricing_method = config.Pricing_method
     if config.Pricing_method == 1:
-        from sama.utilities.top_down import top_down_pricing
+        from samapy.utilities.top_down import top_down_pricing
         InData.Engineering_Costs, InData.C_PV, InData.R_PV, InData.C_I, InData.R_I = \
             top_down_pricing(config.Total_PV_price)
     else:
@@ -685,7 +685,7 @@ def apply_all_parameters(config, csv_total):
     InData.R_EVB = config.R_EVB
     InData.MO_EV = config.MO_EV
 
-    from sama.utilities.Ev_Battery_Throughput import calculate_ev_battery_throughput
+    from samapy.utilities.Ev_Battery_Throughput import calculate_ev_battery_throughput
     _, InData.Q_lifetime_ev = calculate_ev_battery_throughput(
         InData.C_ev_usable, config.degradation_percent, config.L_EV_dis,
         config.Range_EV, config.step_km
@@ -693,7 +693,7 @@ def apply_all_parameters(config, csv_total):
     InData.RT_EV = ceil(config.n / config.L_EV) - 1
 
     if config.EV == 1:
-        from sama.utilities.EV_Presence import determine_EV_presence
+        from samapy.utilities.EV_Presence import determine_EV_presence
         InData.EVp = determine_EV_presence(
             config.year, config.Tout, config.Tin,
             config.holidays, config.treat_special_days_as_home
@@ -749,7 +749,7 @@ def apply_all_parameters(config, csv_total):
         InData.SC_3 = config.SC_3
         InData.Limit_SC_3 = config.Limit_SC_3
         InData.SC_4 = config.SC_4
-        from sama.pricing.service_charge import service_charge
+        from samapy.pricing.service_charge import service_charge
         InData.Service_charge = service_charge(
             InData.daysInMonth, InData.Eload_Previous,
             config.Limit_SC_1, config.SC_1,
@@ -760,27 +760,27 @@ def apply_all_parameters(config, csv_total):
     # Hourly rates
     if config.rateStructure == 1:  # Flat
         InData.flatPrice = config.flatPrice
-        from sama.pricing.calcFlatRate import calcFlatRate
+        from samapy.pricing.calcFlatRate import calcFlatRate
         InData.Cbuy = calcFlatRate(config.flatPrice)
         print(f"  Flat: ${config.flatPrice}/kWh")
 
     elif config.rateStructure == 2:  # Seasonal
         InData.seasonalPrices = config.seasonalPrices
         InData.season = config.season
-        from sama.pricing.calcSeasonalRate import calcSeasonalRate
+        from samapy.pricing.calcSeasonalRate import calcSeasonalRate
         InData.Cbuy = calcSeasonalRate(config.seasonalPrices, config.season, InData.daysInMonth)
         print(f"  Seasonal: Summer=${config.seasonalPrices[0]}, Winter=${config.seasonalPrices[1]}")
 
     elif config.rateStructure == 3:  # Monthly
         InData.monthlyPrices = config.monthlyPrices
-        from sama.pricing.calcMonthlyRate import calcMonthlyRate
+        from samapy.pricing.calcMonthlyRate import calcMonthlyRate
         InData.Cbuy = calcMonthlyRate(config.monthlyPrices, InData.daysInMonth)
         print(f"  Monthly: 12 different rates")
 
     elif config.rateStructure == 4:  # Tiered
         InData.tieredPrices = config.tieredPrices
         InData.tierMax = config.tierMax
-        from sama.pricing.calcTieredRate import calcTieredRate
+        from samapy.pricing.calcTieredRate import calcTieredRate
         InData.Cbuy = calcTieredRate(config.tieredPrices, config.tierMax, InData.Eload, InData.daysInMonth)
         print(f"  Tiered: {len(config.tieredPrices)} tiers")
 
@@ -788,7 +788,7 @@ def apply_all_parameters(config, csv_total):
         InData.seasonalTieredPrices = config.seasonalTieredPrices
         InData.seasonalTierMax = config.seasonalTierMax
         InData.season = config.season_tiered
-        from sama.pricing.calcSeasonalTieredRate import calcSeasonalTieredRate
+        from samapy.pricing.calcSeasonalTieredRate import calcSeasonalTieredRate
         InData.Cbuy = calcSeasonalTieredRate(
             config.seasonalTieredPrices, config.seasonalTierMax, InData.Eload, config.season_tiered
         )
@@ -797,7 +797,7 @@ def apply_all_parameters(config, csv_total):
     elif config.rateStructure == 6:  # Monthly Tiered
         InData.monthlyTieredPrices = config.monthlyTieredPrices
         InData.monthlyTierLimits = config.monthlyTierLimits
-        from sama.pricing.calcMonthlyTieredRate import calcMonthlyTieredRate
+        from samapy.pricing.calcMonthlyTieredRate import calcMonthlyTieredRate
         InData.Cbuy = calcMonthlyTieredRate(config.monthlyTieredPrices, config.monthlyTierLimits, InData.Eload)
         print(f"  Monthly Tiered: 12 months x {config.monthlyTieredPrices.shape[1]} tiers")
 
@@ -809,7 +809,7 @@ def apply_all_parameters(config, csv_total):
         InData.midHours = config.midHours
         InData.season = config.season
         InData.treat_special_days_as_offpeak = config.treat_special_days_as_offpeak
-        from sama.pricing.calcTouRate import calcTouRate
+        from samapy.pricing.calcTouRate import calcTouRate
         InData.Cbuy = calcTouRate(
             config.year, config.onPrice, config.midPrice, config.offPrice,
             config.onHours, config.midHours, config.season, InData.daysInMonth,
@@ -827,7 +827,7 @@ def apply_all_parameters(config, csv_total):
         InData.ultraLowHours = config.ultraLowHours
         InData.season = config.season_UL
         InData.treat_special_days_as_offpeak = config.treat_special_days_as_offpeak_UL
-        from sama.pricing.calcULTouRate import calcULTouRate
+        from samapy.pricing.calcULTouRate import calcULTouRate
         InData.Cbuy = calcULTouRate(
             config.year, config.onPrice_UL, config.midPrice_UL, config.offPrice_UL, config.ultraLowPrice,
             config.onHours_UL, config.midHours_UL, config.ultraLowHours, config.season_UL,
@@ -842,7 +842,7 @@ def apply_all_parameters(config, csv_total):
         InData.Csell = np.full(8760, config.C_sell_flat)
     elif config.sellStructure == 2:
         InData.monthlysellprices = config.monthlysellprices
-        from sama.pricing.calcMonthlyRate import calcMonthlyRate
+        from samapy.pricing.calcMonthlyRate import calcMonthlyRate
         InData.Csell = calcMonthlyRate(config.monthlysellprices, InData.daysInMonth)
     elif config.sellStructure == 3:
         InData.Csell = InData.Cbuy
@@ -886,27 +886,27 @@ def apply_all_parameters(config, csv_total):
     # NG hourly rates
     if config.rateStructure_NG == 1:  # Flat
         InData.flatPrice_NG = config.flatPrice_NG
-        from sama.pricing.calcFlatRate import calcFlatRate
+        from samapy.pricing.calcFlatRate import calcFlatRate
         InData.Cbuy_NG = calcFlatRate(config.flatPrice_NG)
         print(f"  NG Flat: ${config.flatPrice_NG:.4f}/kWh")
 
     elif config.rateStructure_NG == 2:  # Seasonal
         InData.seasonalPrices_NG = config.seasonalPrices_NG
         InData.season_NG = config.season_NG
-        from sama.pricing.calcSeasonalRate import calcSeasonalRate
+        from samapy.pricing.calcSeasonalRate import calcSeasonalRate
         InData.Cbuy_NG = calcSeasonalRate(config.seasonalPrices_NG, config.season_NG, InData.daysInMonth)
         print(f"  NG Seasonal")
 
     elif config.rateStructure_NG == 3:  # Monthly
         InData.monthlyPrices_NG = config.monthlyPrices_NG
-        from sama.pricing.calcMonthlyRate import calcMonthlyRate
+        from samapy.pricing.calcMonthlyRate import calcMonthlyRate
         InData.Cbuy_NG = calcMonthlyRate(config.monthlyPrices_NG, InData.daysInMonth)
         print(f"  NG Monthly")
 
     elif config.rateStructure_NG == 4:  # Tiered
         InData.tieredPrices_NG = config.tieredPrices_NG
         InData.tierMax_NG = config.tierMax_NG
-        from sama.pricing.calcTieredRate import calcTieredRate
+        from samapy.pricing.calcTieredRate import calcTieredRate
         InData.Cbuy_NG = calcTieredRate(config.tieredPrices_NG, config.tierMax_NG, InData.Tload, InData.daysInMonth)
         print(f"  NG Tiered")
 
@@ -914,7 +914,7 @@ def apply_all_parameters(config, csv_total):
         InData.seasonalTieredPrices_NG = config.seasonalTieredPrices_NG
         InData.seasonalTierMax_NG = config.seasonalTierMax_NG
         InData.season_NG = config.season_tiered_NG
-        from sama.pricing.calcSeasonalTieredRate import calcSeasonalTieredRate
+        from samapy.pricing.calcSeasonalTieredRate import calcSeasonalTieredRate
         InData.Cbuy_NG = calcSeasonalTieredRate(
             config.seasonalTieredPrices_NG, config.seasonalTierMax_NG, InData.Tload, config.season_tiered_NG
         )
@@ -923,7 +923,7 @@ def apply_all_parameters(config, csv_total):
     elif config.rateStructure_NG == 6:  # Monthly Tiered
         InData.monthlyTieredPrices_NG = config.monthlyTieredPrices_NG
         InData.monthlyTierLimits_NG = config.monthlyTierLimits_NG
-        from sama.pricing.calcMonthlyTieredRate import calcMonthlyTieredRate
+        from samapy.pricing.calcMonthlyTieredRate import calcMonthlyTieredRate
         InData.Cbuy_NG = calcMonthlyTieredRate(config.monthlyTieredPrices_NG, config.monthlyTierLimits_NG, InData.Tload)
         print(f"  NG Monthly Tiered")
 
@@ -943,7 +943,7 @@ def apply_all_parameters(config, csv_total):
 def run_optimization(config):
     """Main optimization"""
     print("\n" + "=" * 80)
-    print("SAMA OPTIMIZATION - COMPLETE VERSION")
+    print("SAMAPy OPTIMIZATION - COMPLETE VERSION")
     print("=" * 80)
 
     csv_total = copy_files_to_content(config)
@@ -980,12 +980,12 @@ def run_optimization(config):
         print(f"\n🔧 Calculating HP load with {config.HP_brand}...")
 
         if config.HP_brand == 'Goodman':
-            from sama.models.BB_HP_Goodman import Heat_Pump_Model
+            from samapy.models.BB_HP_Goodman import Heat_Pump_Model
             InData.Eload_hp, _, _, _, _, _, _ = Heat_Pump_Model(
                 InData.T, InData.P / 10, InData.Hload, InData.Cload
             )
         elif config.HP_brand == 'Bosch':
-            from sama.models.BB_HP_Bosch import Heat_Pump_Model
+            from samapy.models.BB_HP_Bosch import Heat_Pump_Model
             InData.Eload_hp, _, _, _, _, _, _ = Heat_Pump_Model(
                 InData.T, InData.P / 10, InData.Hload, InData.Cload
             )
@@ -1001,7 +1001,7 @@ def run_optimization(config):
         print(f"   ✓ HP load: {np.sum(InData.Eload_hp):.0f} kWh/year")
 
     start = datetime.now()
-    from sama.optimizers.swarm import Swarm
+    from samapy.optimizers.swarm import Swarm
     optimizer = Swarm()
     optimizer.optimize()
     duration = (datetime.now() - start).total_seconds() / 60

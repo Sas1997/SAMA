@@ -17,8 +17,8 @@ if response.lower() != 'yes':
     exit()
 
 try:
-    from sama.optimizers.swarm import Swarm
-    from sama.core.Input_Data import InData
+    from samapy.optimizers.swarm import Swarm
+    from samapy.core.Input_Data import InData
 
     print(f"\nOptimization settings:")
     print(f"  - Max iterations: {InData.MaxIt}")
@@ -51,8 +51,8 @@ try:
     print("="*60)
     print(f"\nTotal execution time: {elapsed_time:.2f} seconds ({elapsed_time/60:.2f} minutes)")
     print("\nResults saved to:")
-    print("  - sama_inputs/")
-    print("  - sama_outputs/")
+    print("  - samapy_inputs/")
+    print("  - samapy_outputs/")
 
 except Exception as e:
     print(f"\n✗ OPTIMIZATION FAILED: {e}")

@@ -1,5 +1,5 @@
 # ==============================================================================
-# pyproject.toml — SAMA Package Configuration (PEP 517/518/621)
+# pyproject.toml, SAMA Package Configuration (PEP 517/518/621)
 # This is the single source of truth for all package metadata.
 # setup.py is kept only as a compatibility shim for older tools.
 # ==============================================================================
@@ -13,9 +13,9 @@ build-backend = "setuptools.build_meta"
 # Core project metadata  (PEP 621)
 # ------------------------------------------------------------------------------
 [project]
-name = "SAMAbyRenXera"
-version = "2.0.2"
-description = "SAMA - Solar Alone Multi-objective Advisor for Hybrid Renewable Energy Systems"
+name = "samapy"
+version = "1.0.0"
+description = "SAMAPy - Solar Alone Multi-objective Advisor for Hybrid Renewable Energy Systems Python Package"
 readme = "README.md"
 license = { file = "License" }
 authors = [
@@ -44,8 +44,8 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 
-# Realistic minimum versions — allows the widest compatible user base.
-# These are the oldest versions that support all features SAMA uses.
+# Realistic minimum versions, allows the widest compatible user base.
+# These are the oldest versions that support all features SAMAPy uses.
 # Note: your requirements.txt should pin the exact versions you develop with;
 #       these minimums are intentionally lower to not block installation.
 dependencies = [
@@ -66,8 +66,8 @@ dependencies = [
 # Entry points (console commands installed by pip)
 # ------------------------------------------------------------------------------
 [project.scripts]
-sama-config = "sama.cli.wizard:main"
-sama-run    = "sama.cli.runner:main"
+samapy-config = "samapy.cli.wizard:main"
+samapy-run    = "samapy.cli.runner:main"
 
 
 # ------------------------------------------------------------------------------
@@ -77,11 +77,12 @@ sama-run    = "sama.cli.runner:main"
 Homepage      = "https://github.com/Sas1997/SAMA"
 Repository    = "https://github.com/Sas1997/SAMA"
 Issues        = "https://github.com/Sas1997/SAMA/issues"
-Documentation = "https://github.com/Sas1997/SAMA#readme"
+Readme = "https://github.com/Sas1997/SAMA#readme"
+Full Documentation = "https://github.com/Sas1997/SAMA/blob/main/Docs/SAMA_Documentation.md"
 
 
 # ------------------------------------------------------------------------------
-# Setuptools — package discovery and data files
+# Setuptools: package discovery and data files
 # ------------------------------------------------------------------------------
 [tool.setuptools.packages.find]
 # Auto-discovers all packages (folders with __init__.py) in the project root.
@@ -89,12 +90,12 @@ Documentation = "https://github.com/Sas1997/SAMA#readme"
 where = ["."]
 
 [tool.setuptools.package-data]
-# Ensures data files inside the sama package are included in the wheel.
+# Ensures data files inside the samapy package are included in the wheel.
 # MANIFEST.in handles sdist (source distribution); this handles the wheel.
-sama = [
+samapy = [
     "content/*",
     "content/**/*",
-    "cli/sama_Wizard.py",
+    "cli/samapy_Wizard.py",
 ]
 
 

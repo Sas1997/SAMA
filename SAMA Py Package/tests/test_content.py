@@ -5,7 +5,7 @@ print("TEST 3: Testing Content File Access")
 print("="*60)
 
 try:
-    from sama import get_content_path
+    from samapy import get_content_path
     import os
 
     # List of files that should be in content folder

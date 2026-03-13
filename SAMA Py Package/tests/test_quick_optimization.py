@@ -15,8 +15,8 @@ if os.path.exists('quick_test_outputs'):
     shutil.rmtree('quick_test_outputs')
 
 try:
-    from sama.optimizers.swarm import Swarm
-    from sama.core.Input_Data import InData
+    from samapy.optimizers.swarm import Swarm
+    from samapy.core.Input_Data import InData
 
     # Temporarily reduce iterations for quick test
     original_MaxIt = InData.MaxIt
@@ -55,8 +55,8 @@ try:
     print("✓ QUICK OPTIMIZATION TEST PASSED!")
     print("="*60)
     print("\nCheck the output folders for results:")
-    print("  - sama_inputs/")
-    print("  - sama_outputs/")
+    print("  - samapy_inputs/")
+    print("  - samapy_outputs/")
 
 except Exception as e:
     print(f"\n✗ OPTIMIZATION TEST FAILED: {e}")
