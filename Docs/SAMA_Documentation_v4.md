@@ -1282,7 +1282,7 @@ AdvancedDifferentialEvolution().optimize()
 
 ---
 
-### Example 4: Electric Vehicle with V2G
+### Example 4: Electric Vehicle with V2X
 
 **Scenario:** Grid-tied PV + battery + EV with vehicle-to-grid (V2G) arbitrage. The EV charges during ultra-low overnight rate periods and discharges during peak-price hours.
 
