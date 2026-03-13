@@ -1,7 +1,7 @@
 # SAMA
 ## Solar Alone Multi-Objective Advisor
 
-**Comprehensive User Documentation | v2**
+**Comprehensive User Documentation | v4**
 
 *Free Appropriate Sustainability Technology (FAST) Research Group | Western University, London, Ontario, Canada*
 
