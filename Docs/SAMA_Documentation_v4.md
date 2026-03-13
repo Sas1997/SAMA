@@ -72,7 +72,7 @@
 - [16. License and Citation](#16-license-and-citation)
   - [16.1 License](#161-license)
   - [16.2 Authors](#162-authors)
-  - [16.3 Citing SAMAPy](#163-citing-samapy)
+  - [16.3 Citing SAMA](#163-citing-samapy)
 - [20. Examples](#20-examples)
 - [21. Sample Optimization Output](#21-sample-optimization-output)
 - [17. Technical Framework and Mathematical Formulation](#17-technical-framework-and-mathematical-formulation)
@@ -142,9 +142,9 @@ python -m ensurepip --upgrade
 
 ## 1. Overview
 
-SAMAPy (Solar Alone Multi-Objective Advisor Python Package) is an open-source Python platform for the design, sizing, and operation optimization of hybrid renewable energy microgrids. It performs location-specific techno-economic assessment using site-dependent electrical and thermal load profiles, meteorological data, component degradation models, and utility-specific billing structures.
+SAMA (Solar Alone Multi-Objective Advisor) is an open-source Python platform for the design, sizing, and operation optimization of hybrid renewable energy microgrids. It performs location-specific techno-economic assessment using site-dependent electrical and thermal load profiles, meteorological data, component degradation models, and utility-specific billing structures.
 
-Unlike proprietary tools such as HOMER Pro and HOMER Grid, which are now closed-source and license-restricted, SAMAPy provides **transparent optimization algorithms**, **fully extensible architecture**, and **no cost barriers** for researchers, practitioners, and resource-constrained institutions.
+Unlike proprietary tools such as HOMER Pro and HOMER Grid, which are now closed-source and license-restricted, SAMA provides **transparent optimization algorithms**, **fully extensible architecture**, and **no cost barriers** for researchers, practitioners, and resource-constrained institutions.
 
 ### 1.1 What SAMA Optimizes
 
