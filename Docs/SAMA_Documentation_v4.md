@@ -73,11 +73,11 @@
   - [16.1 License](#161-license)
   - [16.2 Authors](#162-authors)
   - [16.3 Citing SAMA](#163-citing-samapy)
-- [20. Examples](#20-examples)
-- [21. Sample Optimization Output](#21-sample-optimization-output)
-- [17. Technical Framework and Mathematical Formulation](#17-technical-framework-and-mathematical-formulation)
-- [18. References](#18-references)
-- [19. SAMA Publications and Further Reading](#19-sama-publications-and-further-reading)
+- [17. Examples](#17-examples)
+- [18. Sample Optimization Output](#18-sample-optimization-output)
+- [19. Technical Framework and Mathematical Formulation](#19-technical-framework-and-mathematical-formulation)
+- [20. References](#20-references)
+- [21. SAMA Publications and Further Reading](#21-sama-publications-and-further-reading)
 - [Appendix A: Where to Find Input Data for SAMA](#appendix-a-where-to-find-input-data-for-sama)
 
 ---
@@ -1137,372 +1137,7 @@ If you use SAMA in academic work, please cite the primary published paper [A1]. 
 
 ---
 
-## 17. Technical Framework and Mathematical Formulation
-
-This section presents the mathematical models and equations that underpin SAMA's simulation and optimization engine. The framework described here is drawn from the original SAMA technical documentation [A1] and peer-reviewed literature. All equation numbers correspond to the formulations implemented in the source code.
-
-### 17.1 Particle Swarm Optimization Algorithm
-
-The default optimizer in SAMA is the Particle Swarm Optimizer (PSO), a bio-inspired algorithm that moves a population of candidate solutions (particles) through the search space according to the following velocity and position update equations [A1]:
-
-$$V_i^{t+1} = W \cdot V_i^t + c_1 U_1^t \left(P_{b_1} - P_i^t\right) + c_2 U_2^t \left(g_b^t - P_i^t\right) \quad (1)$$
-
-$$P_i^{t+1} = P_i^t + v_i^{t+1} \quad (2)$$
-
-In Eq. 1, $W$ is the inertia weight, $c_1$ is the cognitive (personal learning) constant, $c_2$ is the social (global learning) constant, $U_1$ and $U_2$ are random numbers drawn uniformly from $[0,1]$, $P_b$ is the particle's personal best position, and $g_b$ is the global best position of the swarm. Eq. 2 updates the particle position using the new velocity. Default PSO parameters in SAMA are $W = 1$, $c_1 = 2$, $c_2 = 2$, with an inertia weight damping ratio of 0.99 per iteration.
-
-### 17.2 Solar PV Power Output Model
-
-The hourly power output of PV modules ($P_{PV}$ [kW]) and corresponding PV energy ($E_{PV}$ [kWh]) are functions of module temperature ($T_{Module}$ [°C]) and plane-of-array irradiance ($POA$ [W/m²]) [13][14][15]:
-
-$$P_{PV}\ [\text{kW}] = N_{PV} \times f_{PV} \times P_{PV}^{STC} \times \left(\frac{POA}{POA_{STC}}\right)\left[1 + \delta_{PV}\left(T_{Module} - T_{Ref}\right)\right]; \quad E_{PV} = P_{PV} \times t \quad (3)$$
-
-Where $N_{PV}$ is the optimum number of PV modules, $f_{PV}$ is the PV derating factor (default 0.9), $P_{PV}^{STC}$ [kW] is the rated capacity at Standard Test Conditions (STC: 1000 W/m², 25 °C), $POA_{STC} = 1000$ W/m², $\delta_{PV}$ is the temperature coefficient at STC (default $-3.7 \times 10^{-3}$ /°C), and $T_{Ref} = 25$ °C.
-
-The module operating temperature $T_{Module}$ is calculated using the Nominal Operating Cell Temperature (NOCT) model [17]:
-
-$$T_{Module}\ [°C] = T_{Amb} + \left(\frac{T_{noct} - 20}{800}\right) \times POA \quad (4)$$
-
-Where $T_{noct}$ [°C] is the nominal operating cell temperature (default 45 °C) and $T_{Amb}$ [°C] is the ambient temperature from the meteorological dataset.
-
-### 17.3 Battery Storage Model (KiBaM)
-
-SAMA uses the Kinetic Battery Model (KiBaM) [18] to model energy storage. KiBaM represents the battery as two reservoirs (available and bound energy). The maximum chargeable power $P_{BT,ch}^{max,KiBaM}$ [kW] is given by [18]:
-
-$$P_{BT,ch}^{max,KiBaM} = \frac{kcQ_{Max} + kQ_1 e^{-kt} + Qkc\left(1 - e^{-kt}\right)}{1 - e^{-kt} + c(k\Delta t - 1 + e^{-kt})}; \quad E_{BT,ch}^{max,KiBaM} = P_{BT,ch}^{max,KiBaM} \times t \quad (5)$$
-
-Following HOMER Pro [23], SAMA also applies two additional charging limits based on the maximum charge rate ($\alpha$ [A/Ah]) and maximum current ($I_{max}$):
-
-$$P_{BT,ch}^{max,mcr} = \frac{(1 - e^{-\alpha t})(Q_{max} - Q)}{t}; \quad E_{BT,ch}^{max,mcr} = P_{BT,ch}^{max,mcr} \times t \quad (6)$$
-
-$$P_{BT,ch}^{max,mcc} = \frac{N_{BT} I_{max} V_{nom}}{1000}; \quad E_{BT,ch}^{max,mcc} = P_{BT,ch}^{max,mcc} \times t \quad (7)$$
-
-The actual maximum charge power is the minimum of the three limits divided by round-trip efficiency:
-
-$$P_{BT,ch}^{max} = \frac{\min\left(P_{BT,ch}^{max,KiBaM},\ P_{BT,ch}^{max,mcr},\ P_{BT,ch}^{max,mcc}\right)}{\eta_{BT}}; \quad E_{BT,ch}^{max} = P_{BT,ch}^{max} \times t \quad (8)$$
-
-The battery wear cost ($Cost_{BT}^{Wear}$ [$/kWh]) represents the marginal cost of each kWh cycled through the battery [24][25][26]:
-
-$$Cost_{BT}^{Wear} = \frac{R_{BT} \times N_{BT}^{total}}{N_{bat} \times Q_{lifetime} \times \sqrt{\eta_{BT}}} \quad (9)$$
-
-Battery energy for the next time-step is updated as [A1]:
-
-$$E_{BT}(t+1) = (1 - \delta) \times E_{BT}(t) + \eta_{BT} \times E_{BT}^{ch}(t) - \frac{E_{BT}^{dch}(t)}{\eta_{BT}} \quad (10)$$
-
-### 17.4 Backup (Diesel or Gasoline) Generator Model
-
-The total hourly operating cost of the DG is calculated from its fuel consumption using a linear fuel curve [26][27][28]:
-
-$$Cost_{DG} = b \times P_{DG}^{Nominal} \times Cost_{fuel} + \frac{R_{DG} \times P_{DG}^{Nominal}}{TL_{DG}} + MO_{DG} + a \times Cost_{fuel} \quad (11)$$
-
-Where $a$ [L/hr/kW output] and $b$ [L/hr/kW rated] are the slope and intercept of the fuel consumption curve (defaults $a = 0.2730$, $b = 0.0330$).
-
-### 17.5 Wind Turbine Model
-
-Hub-height wind speed is extrapolated from anemometer height $h_0$ to hub height $h_{hub}$ using the power-law wind shear model:
-
-$$V_{hub} = V_{anemometer} \times \left(\frac{h_{hub}}{h_0}\right)^{\alpha_{wind\_turbine}} \quad (12)$$
-
-Where $\alpha_{wind\_turbine}$ is the friction coefficient (default 0.14 for open terrain). Wind turbine output follows a piecewise power curve: zero below cut-in speed ($v_{cut\_in} = 2.5$ m/s), linear ramp from cut-in to rated speed ($v_{rated} = 9.5$ m/s), constant rated power from rated to cut-out speed ($v_{cut\_out} = 25$ m/s), and zero above cut-out.
-
-### 17.6 Energy Management Strategy (EMS)
-
-SAMA implements an advanced load-following dispatch strategy [29][30] that operates over all 8,760 hours of the year. When renewable generation ($E_{RE}$) exceeds load demand ($E_{load}$):
-
-$$E_{BT}^{ch}(t) = \min\left(E_{BT}^{empty},\ E_{RE}(t) - \frac{E_{load}(t)}{\eta_{inv}}\right) \quad (13)$$
-
-$$E_{BT}^{empty} = \frac{E_{BT}^{max} - E_{BT}}{\eta_{BT}} \quad (14)$$
-
-$$E_{AC}^{sur} = \eta_{inv} \times \left(E_{RE}(t) - E_{BT}^{ch}(t)\right) - E_{load}(t) \quad (15)$$
-
-When load exceeds renewable generation, SAMA selects the dispatch order among battery, DG, and grid based on marginal cost comparison. Six prioritization scenarios are defined based on the relative values of the grid buy price ($C_{buy}$), DG cost ($Cost_{DG}$), and battery wear cost ($Cost_{BT}^{Wear}$):
-
-| Scenario | Order | Condition |
-|:--------:|-------|-----------|
-| 1 | Grid → DG → Battery | $C_{buy} \leq Cost_{DG}$ and $Cost_{DG} \leq Cost_{BT}^{Wear}$ |
-| 2 | Grid → Battery → DG | $C_{buy} \leq Cost_{BT}^{Wear}$ and $Cost_{BT}^{Wear} < Cost_{DG}$ |
-| 3 | DG → Grid → Battery | $Cost_{DG} < C_{buy}$ and $C_{buy} \leq Cost_{BT}^{Wear}$ |
-| 4 | DG → Battery → Grid | $Cost_{DG} < Cost_{BT}^{Wear}$ and $Cost_{BT}^{Wear} < C_{buy}$ |
-| 5 | Battery → DG → Grid | $Cost_{BT}^{Wear} < Cost_{DG}$ and $Cost_{DG} < C_{buy}$ |
-| 6 | Battery → Grid → DG | All remaining cases |
-
-The loss of power supply probability (LPSP) constraint tracks unmet energy across the year:
-
-$$LPSP = \frac{\sum_{t}^{8760} Ens(t)}{\sum_{t}^{8760} E_{load}(t)} \quad (16)$$
-
-The renewable fraction (RF) constraint:
-
-$$RF = 1 - \frac{\sum_{t}^{8760} E_{non\ renewable}(t)}{\sum_{t}^{8760} \left(E_{load}(t) - ENS(t)\right)} \quad (17)$$
-
-### 17.7 Economic Model
-
-The real discount rate $i$ is derived from the nominal discount rate $i'$ and expected inflation rate $f$ [A1]:
-
-$$i = \frac{i' - f}{1 + f} \quad (18)$$
-
-The Net Present Cost (NPC) [31]:
-
-$$NPC = C_I + \frac{C_R + C_{MO} + C_F - C_S + C_G}{(1+i)^n} \quad (19)$$
-
-The Capital Recovery Factor (CRF) [33]:
-
-$$CRF(i,N) = \frac{i(1+i)^n}{(1+i)^n - 1} \quad (20)$$
-
-The Levelized Cost of Energy (LCOE) [33]:
-
-$$LCOE = \frac{CRF \times NPC}{\sum_{0}^{8760}(E_{load} - Ens + P_{sell})} \quad (21)$$
-
-When `EM = 1`, SAMA also minimizes Levelized Emission (LE) [34]:
-
-$$LE = \frac{\sum_{0}^{8760} Non\ Grid\ Emissions(t) + \sum_{0}^{8760} Grid_{Emissions}(t)}{\sum_{0}^{8760}\left(E_{load}(t) - Ens(t)\right)} \quad (22)$$
-
-The multi-objective function combines NPC and LE, with penalties applied when constraints are violated [A1]:
-
-$$Z = NPC + EM \times LE + penalties \quad (23)$$
-
-**Table 2.** Penalty conditions in SAMA optimization (from [A1]):
-
-| Penalty Condition | Reason |
-|-------------------|--------|
-| DC to AC ratio > 1.99 × (P_Inv + P_DG + P_buy_max) | DC to AC ratio must not exceed 2 for a feasible inverter design |
-| LPSP > LPSP_max | System does not supply sufficient power to meet reliability constraint |
-| RF < RE_min | Renewable fraction is below the user-specified minimum |
-| I_Cost > Budget | Initial capital cost exceeds the user-specified budget limit |
-
-### 17.8 Validation Against HOMER Pro
-
-SAMA results have been cross-validated against HOMER Pro across two geographically distinct U.S. locations: Sacramento, California and New Bern, North Carolina [A1]. Validation used identical input data (same load profiles from OpenEI [2], meteorological data from NSRDB [1], and equivalent pricing). The PSO optimizer was run with `MaxIt = 101` and `nPop = 100`, repeated 10 times to assess convergence.
-
-Convergence was achieved by iteration 70 on the first run and as early as iteration 20 on subsequent runs. Final system configurations, LCOE, NPC, energy distribution, and battery state-of-charge profiles from SAMA showed close agreement with HOMER Pro across all tested system types (PV+Grid, PV+BT+Grid, PV+BT+DG+Grid, PV+BT+DG, PV+BT).
-
-For the off-grid PV+DG+Battery configuration in Sacramento, the optimizer found that maintaining a grid connection (LCOE = $0.0838/kWh) is significantly more economical than full grid defection ($0.3674/kWh). Similar conclusions apply to New Bern. This capability makes SAMA particularly useful for grid-defection analysis [A2].
-
----
-
-## 18. References
-
-[1] National Solar Radiation Database (NSRDB). "Solar Resource Maps and Data." https://nsrdb.nrel.gov (accessed Nov. 07, 2022).
-
-[2] Open Energy Data Initiative (OEDI), OpenEI. https://data.openei.org/ (accessed Apr. 14, 2023).
-
-[3] V. Ramasamy et al., "US Solar Photovoltaic System and Energy Storage Cost Benchmarks, With Minimum Sustainable Price Analysis: Q1 2022," National Renewable Energy Lab. (NREL), Golden, CO (United States), 2022.
-
-[4] Westinghouse. "iGen2200 Inverter Generator." https://westinghouseoutdoorpower.com (accessed Jan. 12, 2023).
-
-[5] A.L. Bukar, C.W. Tan, L.K. Yiew, R. Ayop, and W.-S. Tan, "A rule-based energy management scheme for long-term optimal capacity planning of grid-independent microgrid optimized by multi-objective grasshopper optimization algorithm," *Energy Convers. Manag.*, vol. 221, p. 113161, Oct. 2020.
-
-[6] J. Hirvonen and K. Siren, "A novel fully electrified solar heating system with a high renewable fraction - Optimal designs for a high latitude community," *Renew. Energy*, vol. 127, pp. 298-309, Nov. 2018.
-
-[7] C.P. Cameron, W.E. Boyson, and D.M. Riley, "Comparison of PV system performance-model predictions with measured PV system performance," in *2008 33rd IEEE PVSC*, May 2008, pp. 1-6.
-
-[8] G. Blaesser and E. Rossi, "Extrapolation of outdoor measurements of PV array I-V characteristics to standard test conditions," *Sol. Cells*, vol. 25, no. 2, pp. 91-96, Nov. 1988.
-
-[9] V. Sun, A. Asanakham, T. Deethayat, and T. Kiatsiriroat, "Evaluation of nominal operating cell temperature (NOCT) of glazed photovoltaic thermal module," *Case Stud. Therm. Eng.*, vol. 28, p. 101361, Dec. 2021.
-
-[10] L. Dunn, M. Gostein, and K. Emery, "Comparison of pyranometers vs. PV reference cells for evaluation of PV array performance," in *2012 38th IEEE PVSC*, Jun. 2012, pp. 002899-002904.
-
-[11] M.R. Elkadeem et al., "Feasibility analysis and optimization of an energy-water-heat nexus supplied by an autonomous hybrid renewable power generation system," *Desalination*, vol. 504, p. 114952, May 2021.
-
-[12] A.F. Guven, N. Yorukeren, and M.M. Samy, "Design optimization of a stand-alone green energy system of university campus based on Jaya-Harmony Search and Ant Colony Optimization algorithms approaches," *Energy*, vol. 253, p. 124089, Aug. 2022.
-
-[13] A. Seifi et al., "An optimal programming among renewable energy resources and storage devices for responsive load integration," *J. Energy Storage*, vol. 27, p. 101126, Feb. 2020.
-
-[14] S.A. Sadat, B. Hoex, and J.M. Pearce, "A Review of the Effects of Haze on Solar Photovoltaic Performance," *Renew. Sustain. Energy Rev.*, vol. 167, p. 112796, Oct. 2022. https://doi.org/10.1016/j.rser.2022.112796
-
-[15] A.H. Mondal and M. Denich, "Hybrid systems for decentralized power generation in Bangladesh," *Energy Sustain. Dev.*, vol. 14, no. 1, pp. 48-55, Mar. 2010.
-
-[16] A. Maleki and F. Pourfayaz, "Optimal sizing of autonomous hybrid photovoltaic/wind/battery power system with LPSP technology," *Sol. Energy*, vol. 115, pp. 471-483, May 2015.
-
-[17] H. Lan et al., "Optimal sizing of hybrid PV/diesel/battery in ship power system," *Appl. Energy*, vol. 158, pp. 26-34, Nov. 2015.
-
-[18] J.F. Manwell and J.G. McGowan, "Lead acid battery storage model for hybrid energy systems," *Sol. Energy*, vol. 50, no. 5, pp. 399-405, May 1993.
-
-[19] G.P. Fenner et al., "Comprehensive Model for Real Battery Simulation Responsive to Variable Load," *Energies*, vol. 14, no. 11, 2021.
-
-[20] L.M. Rodrigues et al., "A Temperature-Dependent Battery Model for Wireless Sensor Networks," *Sensors*, vol. 17, no. 2, 2017.
-
-[21] Y. Zhao et al., "An iterative learning approach to identify fractional order KiBaM model," *IEEE/CAA J. Autom. Sin.*, vol. 4, no. 2, pp. 322-331, 2017.
-
-[22] L.M. Rodrigues et al., "An analytical model to estimate the state of charge and lifetime for batteries with energy harvesting capabilities," *Int. J. Energy Res.*, vol. 44, no. 7, pp. 5243-5258, 2020.
-
-[23] HOMER Energy. "How HOMER Calculates the Maximum Battery Charge Power." https://www.homerenergy.com/products/pro/docs/latest/ (accessed Nov. 07, 2022).
-
-[24] F.H. Jufri et al., "Optimal Battery Energy Storage Dispatch Strategy for Small-Scale Isolated Hybrid Renewable Energy System," *Energies*, vol. 14, no. 11, 2021.
-
-[25] M. Ashari, C.V. Nayar, and W.W.L. Keerthipala, "Optimum operation strategy and economic analysis of a photovoltaic-diesel-battery-mains hybrid UPS," *Renew. Energy*, vol. 22, no. 1, pp. 247-254, Jan. 2001.
-
-[26] T. Lambert, P. Gilman, and P. Lilienthal, "Micropower system modeling with HOMER," *Integr. Altern. Sources Energy*, vol. 1, no. 1, pp. 379-385, 2006.
-
-[27] H. Suryoatmojo, A.A. Elbaset, and T. Hiyama, "Economic and reliability evaluation of wind-Diesel-Battery system for isolated island considering CO2 emission," *IEEJ Trans. Power Energy*, vol. 129, no. 8, pp. 1000-1008, 2009.
-
-[28] A. Yahiaoui et al., "Grey wolf optimizer for optimal design of hybrid renewable energy system PV-Diesel Generator-Battery," *Sol. Energy*, vol. 158, pp. 941-951, Dec. 2017.
-
-[29] C.D. Barley, "Modeling and optimization of dispatch strategies for remote hybrid power systems," Ph.D. dissertation, Colorado State University, 1996.
-
-[30] C.D. Barley and C.B. Winn, "Optimal dispatch strategy in remote hybrid power systems," *Sol. Energy*, vol. 58, no. 4, pp. 165-179, Oct. 1996.
-
-[31] H. Song et al., "A novel hybrid energy system for hydrogen production and storage in a depleted oil reservoir," *Int. J. Hydrog. Energy*, vol. 46, no. 34, pp. 18020-18031, May 2021.
-
-[32] HOMER Energy. "Salvage Value." https://www.homerenergy.com/products/pro/docs/3.11/salvage_value.html (accessed Jun. 05, 2023).
-
-[33] D.P. Clarke, Y.M. Al-Abdeli, and G. Kothapalli, "Multi-objective optimisation of renewable hybrid energy systems with desalination," *Energy*, vol. 88, pp. 457-468, Aug. 2015.
-
-[34] A. Parlikar et al., "The carbon footprint of island grids with lithium-ion battery systems: An analysis based on levelized emissions of energy supply," *Renew. Sustain. Energy Rev.*, vol. 149, p. 111353, Oct. 2021.
-
----
-
-## 19. SAMA Publications and Further Reading
-
-The following peer-reviewed publications describe SAMA's development, validation, and application across a range of techno-economic energy studies. Users who wish to cite SAMA in academic work should reference these papers.
-
-[A1] Sadat, S.A., Takahashi, J. and Pearce, J.M., 2023. A Free and open-source microgrid optimization tool: SAMA the solar alone Multi-Objective Advisor. *Energy Conversion and Management*, 298, p.117686. https://doi.org/10.1016/j.enconman.2023.117686
-
-[A2] Sadat, S.A. and Pearce, J.M., 2024. The threat of economic grid defection in the US with solar photovoltaic, battery and generator hybrid systems. *Solar Energy*, 282, p.112910. https://doi.org/10.1016/j.solener.2024.112910
-
-[A3] Sadat, S.A. and Pearce, J.M., 2025. Techno-economic evaluation of electricity pricing structures on photovoltaic and photovoltaic-battery hybrid systems in Canada. *Renewable Energy*, 242, p.122456. https://doi.org/10.1016/j.renene.2025.122456
-
-[A4] Sadat, S.A., Mittal, K. and Pearce, J.M., 2025. Using investments in solar photovoltaics as inflation hedges. *Energies*, 18(4), p.890. https://doi.org/10.3390/en18040890
-
-[A5] Groza, J.M., Sadat, S.A., Hayibo, K.S. and Pearce, J.M., 2024. Using a ledger to facilitate autonomous peer-to-peer virtual net metering of solar photovoltaic distributed generation. *Solar Energy Advances*, 4, p.100064. https://doi.org/10.1016/j.seja.2024.100064
-
-[A6] Sadat, S.A., Lemieux, J.E.B., and Pearce, J.M., 2026. Shifting Subsidies: Implications of Redirecting Alberta's Oil and Gas Government Support to Solar Power. *Energies*, 19(4), 972. https://doi.org/10.3390/en19040972
-
-[A7] Sadat, S.A., Hoex, B. and Pearce, J.M., 2022. A review of the effects of haze on solar photovoltaic performance. *Renewable and Sustainable Energy Reviews*, 167, p.112796. https://doi.org/10.1016/j.rser.2022.112796
-
-For the most up-to-date list of SAMA publications and to request preprints or reprints, visit the FAST Research Group GitHub at https://github.com/Sas1997/SAMA or contact the corresponding author directly.
-
----
-
-## Appendix A: Where to Find Input Data for SAMA
-
-This appendix provides practical guidance on where to obtain real-world data for each major input category in SAMA.
-
-### A.1 Financial and Economic Parameters
-
-**Nominal Discount Rate:** Check the Federal Reserve primary credit rate at [federalreserve.gov](https://federalreserve.gov) or financial data sites such as YCharts for U.S. projects. For non-U.S. projects, use your local central bank rate. Typical values are 2 to 5%. Input as a percentage (e.g., `4` for 4%).
-
-**Expected Inflation Rate:** For U.S. projects, refer to the Bureau of Labor Statistics CPI reports at [bls.gov](https://bls.gov), or check Federal Reserve projections at [federalreserve.gov](https://federalreserve.gov). For other countries, use national statistics agencies. Input as a percentage.
-
-**RE Incentives / Federal Tax Credit:** In the United States, the Investment Tax Credit (ITC) provides a 30% credit for solar under the Inflation Reduction Act. Check the Database of State Incentives for Renewables and Efficiency (DSIRE) at [dsireusa.org](https://dsireusa.org) for current federal and state programs.
-
-### A.2 System Constraints
-
-**LPSP:** Set to 0% for critical loads (medical, emergency). For non-critical off-grid applications, 1 to 5% is typical.
-
-**Minimum Renewable Energy Fraction:** Align with local Renewable Portfolio Standards (RPS) or your project sustainability target. DSIRE at [dsireusa.org](https://dsireusa.org) lists U.S. state RPS requirements.
-
-**Net Metering Cap (kW):** Check your utility net metering policy at [dsireusa.org](https://dsireusa.org). Common U.S. residential caps range from 10 to 100 kW.
-
-**Rooftop Area Limit:** Measure usable roof area using Google Earth, satellite imagery, or a professional site survey. Subtract areas for chimneys, vents, setbacks (typically 3 feet from roof edges), and shading. As of 2025, high-efficiency monocrystalline panels require approximately 7 to 9 m² per kW installed including spacing.
-
-### A.3 Weather and Meteorological Data (`METEO.csv`)
-
-The bundled `METEO.csv` is for London, Ontario. For any other location, download a new file containing GHI, DNI, DHI, Temperature, Wind Speed, and Pressure columns with two header rows followed by 8,760 hourly rows.
-
-- **Primary source:** National Solar Radiation Database (NSRDB) at [nsrdb.nrel.gov](https://nsrdb.nrel.gov). Provides free hourly weather data for the U.S., Canada, and many other countries. Select the SAM/CSV export format.
-- **Alternative:** NASA POWER at [power.larc.nasa.gov](https://power.larc.nasa.gov) provides global coverage for any coordinates.
-- **POA irradiance** (for `G_type = 2`): Use PVWatts at [pvwatts.nrel.gov](https://pvwatts.nrel.gov) or SAM at [sam.nrel.gov](https://sam.nrel.gov).
-
-> **Tip:** When downloading from NSRDB, select the **Typical Meteorological Year (TMY)** dataset rather than a single calendar year. TMY data is specifically designed for long-term energy system analysis.
-
-### A.4 Electrical Load Data (`Eload.csv`)
-
-`Eload.csv` requires one column of 8,760 hourly load values in kW with no header. Options to replace the bundled file:
-
-- **Smart meter data:** Most utilities provide 15-minute or hourly interval data through their customer portal (Green Button data in North America).
-- **From bills:** Use SAMA load modes 3–8 to let SAMA generate a synthetic 8,760-hour profile from your monthly kWh totals.
-- **Open databases:** OpenEI at [openei.org](https://openei.org) provides representative commercial and residential load profiles by building type and U.S. climate zone.
-
-### A.5 Thermal Load Data (`house_load.xlsx`) for Heat Pump
-
-`house_load.xlsx` must have hourly heating load (`Hload`) in column 2 and cooling load (`Cload`) in column 3, 8,760 rows each, in kW. Options:
-
-- **EnergyPlus:** Free DOE building simulation software at [energyplus.net](https://energyplus.net). Build a model with local weather and export hourly heating/cooling loads. Most accurate approach.
-- **RETScreen:** Free software from Natural Resources Canada at [nrcan.gc.ca](https://nrcan.gc.ca).
-- **Manual entry:** In `samapy-config`, set `Tload_type` to 2 or higher and enter monthly average loads.
-
-### A.6 Solar PV Parameters
-
-- **Module efficiency and temperature coefficient:** From the manufacturer datasheet. Use EnergySage ([energysage.com](https://energysage.com)) or the California Energy Commission (CEC) equipment list. Leading 2025 monocrystalline modules range from 20 to 25% efficiency.
-- **Capital and O&M costs:** NREL cost benchmark reports at [nrel.gov](https://nrel.gov). NREL reports residential PV system costs of USD 2,500 to 3,500 per kW installed and O&M of USD 20 to 40 per kW per year for 2025.
-- **Azimuth and tilt:** For the Northern Hemisphere, south-facing (180°) at a tilt equal to your site latitude maximizes annual yield. Use PVWatts ([pvwatts.nrel.gov](https://pvwatts.nrel.gov)) to optimize for your specific location.
-
-### A.7 Wind Turbine Parameters
-
-- **Wind speed data:** Included in the `METEO.csv` from NSRDB.
-- **Turbine specs:** From the manufacturer datasheet. Typical small turbine values: cut-in 2.5–3.5 m/s, rated speed 9–13 m/s, cut-out 25 m/s.
-- **Friction coefficient:** Use 0.14 for open flat terrain, 0.20 for suburban, 0.30 for forested or urban.
-- **Capital costs:** NREL Distributed Wind Market Report at [nrel.gov/wind](https://nrel.gov/wind). Small residential turbines cost approximately USD 4,000 to 8,000 per kW installed in 2025.
-
-### A.8 Battery Storage Parameters
-
-- **Capital cost:** NREL Annual Technology Baseline at [nrel.gov](https://nrel.gov). Li-ion installed costs average USD 200 to 400 per kWh in the U.S. for 2025.
-- **Round-trip efficiency and SOC limits:** From manufacturer datasheet. Li-ion: 90–95% round-trip efficiency. Lead-acid: 70–85%.
-- **Lifetime throughput:** From manufacturer cycle life tables. NREL and PNNL publish battery degradation models for Li-ion.
-
-### A.9 Diesel Generator Parameters
-
-- **Fuel cost per liter:** U.S. EIA weekly petroleum reports at [eia.gov/petroleum](https://eia.gov/petroleum), GasBuddy at [gasbuddy.com](https://gasbuddy.com), or GlobalPetrolPrices at [globalpetrolprices.com](https://globalpetrolprices.com).
-- **Fuel curve coefficients (a and b):** From the manufacturer fuel consumption data sheet. Typical: $a$ = 0.24–0.44 L/hr per kW output, $b$ = 0.01–0.11 L/hr per kW rated.
-- **CO₂ emissions:** U.S. EIA default is 2.68 kg CO₂ per liter of diesel.
-
-### A.10 Heat Pump Parameters
-
-SAMA includes built-in performance models for Bosch and Goodman brand heat pumps. Select the brand that most closely matches your planned installation.
-
-- **Rated capacity:** Determined by Manual J heating/cooling load calculations per ACCA standards. The required capacity is typically 15 to 30 BTU/hr per square foot depending on climate.
-- **Capital cost:** EnergySage, Angi, and Home Depot provide current quotes. For 2025, mini-split systems cost approximately USD 3,000 to 8,000 installed for a 12,000 BTU unit. Federal IRA rebates (up to USD 2,000) and state incentives at [dsireusa.org](https://dsireusa.org) can reduce effective cost.
-
-### A.11 Electric Vehicle Parameters
-
-- **Battery capacity, range, and charging specs:** [EV-Database.org](https://ev-database.org), [InsideEVs](https://insideevs.com), or the U.S. EPA at [fueleconomy.gov](https://fueleconomy.gov).
-- **Battery replacement cost:** Recurrent Auto ([recurrentauto.com](https://recurrentauto.com)) tracks real-world EV battery health and replacement cost estimates. As of 2025, battery costs are approximately USD 100 to 150 per kWh.
-- **Daily trip distance:** From your own odometer records or U.S. DOT National Household Travel Survey (NHTS) at [nhts.ornl.gov](https://nhts.ornl.gov). U.S. average daily vehicle travel is approximately 50 to 65 km.
-
-### A.12 Grid and Utility Rate Parameters
-
-> **Grid rate parameters have the largest impact on SAMA economic results. Always use your actual utility tariff rather than national averages.**
-
-- **Electricity rate schedule:** Download from your utility website or OpenEI Utility Rate Database at [openei.org/apps/USURDB](https://openei.org/apps/USURDB).
-- **Current electricity prices:** From your most recent utility bill. U.S. EIA publishes monthly state average prices at [eia.gov/electricity](https://eia.gov/electricity).
-- **Electricity price escalation:** Review historical rate filings on your state Public Utility Commission (PUC) website. U.S. average is 2 to 3% per year historically.
-- **Net metering policy:** DSIRE at [dsireusa.org](https://dsireusa.org) for state rules.
-- **Natural gas rates:** From your gas utility bill or U.S. EIA natural gas reports at [eia.gov/naturalgas](https://eia.gov/naturalgas).
-
-> **Tip:** For TOU or ULO rate structures, contact your utility customer service or visit their website for the exact on-peak, mid-peak, and off-peak hour windows. These vary significantly by utility and season.
-
-### A.13 Summary of Recommended Data Sources
-
-| Input Category | Recommended Data Source |
-|----------------|------------------------|
-| Weather (`METEO.csv`) | NSRDB ([nsrdb.nrel.gov](https://nsrdb.nrel.gov)), NASA POWER ([power.larc.nasa.gov](https://power.larc.nasa.gov)) |
-| POA Irradiance (`Irradiance.csv`) | PVWatts ([pvwatts.nrel.gov](https://pvwatts.nrel.gov)), SAM ([sam.nrel.gov](https://sam.nrel.gov)) |
-| Electrical load (`Eload.csv`) | Utility smart meter / Green Button data, OpenEI load profiles |
-| Thermal load (`house_load.xlsx`) | EnergyPlus ([energyplus.net](https://energyplus.net)), RETScreen ([nrcan.gc.ca](https://nrcan.gc.ca)) |
-| PV module specs and costs | Manufacturer datasheet, EnergySage, NREL cost benchmarks |
-| PV incentives | DSIRE ([dsireusa.org](https://dsireusa.org)), IRS ITC documentation |
-| Wind turbine specs and costs | Manufacturer datasheet, NREL Distributed Wind Market Report |
-| Battery costs | NREL Annual Technology Baseline, SEIA reports, EnergySage |
-| Battery specs | Manufacturer datasheet, Battery University ([batteryuniversity.com](https://batteryuniversity.com)) |
-| Diesel fuel cost | EIA weekly petroleum ([eia.gov](https://eia.gov)), GasBuddy, GlobalPetrolPrices |
-| Diesel emissions factors | U.S. EPA emission factors, The Climate Registry ([theclimateregistry.org](https://theclimateregistry.org)) |
-| Heat pump costs | EnergySage, Angi, DSIRE for IRA rebates |
-| EV specs and battery cost | [EV-Database.org](https://ev-database.org), InsideEVs, [fueleconomy.gov](https://fueleconomy.gov), Recurrent Auto |
-| Electricity rates | Your utility bill, OpenEI USURDB ([openei.org](https://openei.org)), EIA |
-| Net metering policy | DSIRE ([dsireusa.org](https://dsireusa.org)), utility interconnection agreement |
-| Discount rate | Federal Reserve ([federalreserve.gov](https://federalreserve.gov)), local central bank |
-| Inflation rate | BLS CPI ([bls.gov](https://bls.gov)), Federal Reserve projections |
-| Natural gas rates | Gas utility bill, EIA natural gas ([eia.gov/naturalgas](https://eia.gov/naturalgas)) |
-
----
-
-*SAMAPy is developed and maintained by the Free Appropriate Sustainability Technology (FAST) Research Group at Western University, London, Ontario, Canada.*
-
-*Repository: https://github.com/Sas1997/SAMA | PyPI: https://pypi.org/project/samapy | License: GPL-3.0*
-
----
-
-## 20. Examples
+## 17. Examples
 
 This section walks through five complete, self-contained examples covering the most common SAMAPy use cases. Each example can be run as a standalone Python script from your working directory, provided SAMAPy is installed and the relevant input files are available.
 
@@ -1792,18 +1427,18 @@ print(f"Grid sales     : {df['Psell'].sum():.0f} kWh")
 
 ---
 
-## 21. Sample Optimization Output
+## 18. Sample Optimization Output
 
 This section shows the complete terminal output and generated figures from a real SAMAPy run using the ADE optimizer with a PV + grid + Bosch heat pump + EV configuration for a London, Ontario residential property.
 
-### 21.1 Configuration Used
+### 18.1 Configuration Used
 
 - **Components:** Solar PV, Grid (ULO tariff), Bosch heat pump (48,000 BTU), EV
 - **Algorithm:** ADE, MaxIt = 200, nPop = 50
 - **Location:** London, Ontario (TMY 2021)
 - **Project lifetime:** 25 years
 
-### 21.2 Optimizer Convergence
+### 18.2 Optimizer Convergence
 
 The following shows the ADE convergence as printed to the terminal during a run:
 
@@ -1827,7 +1462,7 @@ Run 0, Iteration 200, Best Cost =        0.764, Mean Cost =                  0.7
 
 The sharp drop from iteration 30 to 40 is characteristic of ADE finding the feasible region (solutions satisfying LPSP, RE, and budget constraints). Once all particles converge to feasible space, the mean cost collapses to match the best cost.
 
-### 21.3 System Size Results
+### 18.3 System Size Results
 
 ```
 -------------------System Size--------------------
@@ -1839,7 +1474,7 @@ Cinverter (kW)  = 9.77
 Selected heat pump: Bosch 1×48000 BTU  (capacity: 48,000 BTU/hr)
 ```
 
-### 21.4 Economic Results
+### 18.4 Economic Results
 
 ```
 *****************Economic Results*****************
@@ -1870,7 +1505,7 @@ The Payback Period                   = 4 years
 The ROI of the project               = 469.52%
 ```
 
-### 21.5 Technical Results
+### 18.5 Technical Results
 
 ```
 ================Technical Results=================
@@ -1888,7 +1523,7 @@ Annual grid purchased  = 11,018.2 kWh
 Annual grid sold       = 3,853.3 kWh
 ```
 
-### 21.6 Scenario Comparison: With vs Without Hybrid Energy System
+### 18.6 Scenario Comparison: With vs Without Hybrid Energy System
 
 The table below compares the 25-year costs with and without the hybrid energy system (HES):
 
@@ -1920,7 +1555,7 @@ The table below compares the 25-year costs with and without the hybrid energy sy
 | December | $433.89 | $238.25 | $195.63 | 45.1% |
 | **Total** | **$3,937.56** | **$1,510.29** | **$2,427.27** | **61.6%** |
 
-### 21.7 Output Figures
+### 18.7 Output Figures
 
 All figures are saved to `samapy_outputs/figs/`. Below are the actual sample outputs from this example run.
 
@@ -2076,6 +1711,364 @@ All figures are saved to `samapy_outputs/figs/`. Below are the actual sample out
 
 *48-hour detailed EV power flow for a representative winter weekend. (EV = 1 only)*
 
+---
+
+## 19. Technical Framework and Mathematical Formulation
+
+This section presents the mathematical models and equations that underpin SAMA's simulation and optimization engine. The framework described here is drawn from the original SAMA technical documentation [A1] and peer-reviewed literature. All equation numbers correspond to the formulations implemented in the source code.
+
+### 19.1 Particle Swarm Optimization Algorithm
+
+The default optimizer in SAMA is the Particle Swarm Optimizer (PSO), a bio-inspired algorithm that moves a population of candidate solutions (particles) through the search space according to the following velocity and position update equations [A1]:
+
+$$V_i^{t+1} = W \cdot V_i^t + c_1 U_1^t \left(P_{b_1} - P_i^t\right) + c_2 U_2^t \left(g_b^t - P_i^t\right) \quad (1)$$
+
+$$P_i^{t+1} = P_i^t + v_i^{t+1} \quad (2)$$
+
+In Eq. 1, $W$ is the inertia weight, $c_1$ is the cognitive (personal learning) constant, $c_2$ is the social (global learning) constant, $U_1$ and $U_2$ are random numbers drawn uniformly from $[0,1]$, $P_b$ is the particle's personal best position, and $g_b$ is the global best position of the swarm. Eq. 2 updates the particle position using the new velocity. Default PSO parameters in SAMA are $W = 1$, $c_1 = 2$, $c_2 = 2$, with an inertia weight damping ratio of 0.99 per iteration.
+
+### 19.2 Solar PV Power Output Model
+
+The hourly power output of PV modules ($P_{PV}$ [kW]) and corresponding PV energy ($E_{PV}$ [kWh]) are functions of module temperature ($T_{Module}$ [°C]) and plane-of-array irradiance ($POA$ [W/m²]) [13][14][15]:
+
+$$P_{PV}\ [\text{kW}] = N_{PV} \times f_{PV} \times P_{PV}^{STC} \times \left(\frac{POA}{POA_{STC}}\right)\left[1 + \delta_{PV}\left(T_{Module} - T_{Ref}\right)\right]; \quad E_{PV} = P_{PV} \times t \quad (3)$$
+
+Where $N_{PV}$ is the optimum number of PV modules, $f_{PV}$ is the PV derating factor (default 0.9), $P_{PV}^{STC}$ [kW] is the rated capacity at Standard Test Conditions (STC: 1000 W/m², 25 °C), $POA_{STC} = 1000$ W/m², $\delta_{PV}$ is the temperature coefficient at STC (default $-3.7 \times 10^{-3}$ /°C), and $T_{Ref} = 25$ °C.
+
+The module operating temperature $T_{Module}$ is calculated using the Nominal Operating Cell Temperature (NOCT) model [17]:
+
+$$T_{Module}\ [°C] = T_{Amb} + \left(\frac{T_{noct} - 20}{800}\right) \times POA \quad (4)$$
+
+Where $T_{noct}$ [°C] is the nominal operating cell temperature (default 45 °C) and $T_{Amb}$ [°C] is the ambient temperature from the meteorological dataset.
+
+### 19.3 Battery Storage Model (KiBaM)
+
+SAMA uses the Kinetic Battery Model (KiBaM) [18] to model energy storage. KiBaM represents the battery as two reservoirs (available and bound energy). The maximum chargeable power $P_{BT,ch}^{max,KiBaM}$ [kW] is given by [18]:
+
+$$P_{BT,ch}^{max,KiBaM} = \frac{kcQ_{Max} + kQ_1 e^{-kt} + Qkc\left(1 - e^{-kt}\right)}{1 - e^{-kt} + c(k\Delta t - 1 + e^{-kt})}; \quad E_{BT,ch}^{max,KiBaM} = P_{BT,ch}^{max,KiBaM} \times t \quad (5)$$
+
+Following HOMER Pro [23], SAMA also applies two additional charging limits based on the maximum charge rate ($\alpha$ [A/Ah]) and maximum current ($I_{max}$):
+
+$$P_{BT,ch}^{max,mcr} = \frac{(1 - e^{-\alpha t})(Q_{max} - Q)}{t}; \quad E_{BT,ch}^{max,mcr} = P_{BT,ch}^{max,mcr} \times t \quad (6)$$
+
+$$P_{BT,ch}^{max,mcc} = \frac{N_{BT} I_{max} V_{nom}}{1000}; \quad E_{BT,ch}^{max,mcc} = P_{BT,ch}^{max,mcc} \times t \quad (7)$$
+
+The actual maximum charge power is the minimum of the three limits divided by round-trip efficiency:
+
+$$P_{BT,ch}^{max} = \frac{\min\left(P_{BT,ch}^{max,KiBaM},\ P_{BT,ch}^{max,mcr},\ P_{BT,ch}^{max,mcc}\right)}{\eta_{BT}}; \quad E_{BT,ch}^{max} = P_{BT,ch}^{max} \times t \quad (8)$$
+
+The battery wear cost ($Cost_{BT}^{Wear}$ [$/kWh]) represents the marginal cost of each kWh cycled through the battery [24][25][26]:
+
+$$Cost_{BT}^{Wear} = \frac{R_{BT} \times N_{BT}^{total}}{N_{bat} \times Q_{lifetime} \times \sqrt{\eta_{BT}}} \quad (9)$$
+
+Battery energy for the next time-step is updated as [A1]:
+
+$$E_{BT}(t+1) = (1 - \delta) \times E_{BT}(t) + \eta_{BT} \times E_{BT}^{ch}(t) - \frac{E_{BT}^{dch}(t)}{\eta_{BT}} \quad (10)$$
+
+### 19.4 Backup (Diesel or Gasoline) Generator Model
+
+The total hourly operating cost of the DG is calculated from its fuel consumption using a linear fuel curve [26][27][28]:
+
+$$Cost_{DG} = b \times P_{DG}^{Nominal} \times Cost_{fuel} + \frac{R_{DG} \times P_{DG}^{Nominal}}{TL_{DG}} + MO_{DG} + a \times Cost_{fuel} \quad (11)$$
+
+Where $a$ [L/hr/kW output] and $b$ [L/hr/kW rated] are the slope and intercept of the fuel consumption curve (defaults $a = 0.2730$, $b = 0.0330$).
+
+### 19.5 Wind Turbine Model
+
+Hub-height wind speed is extrapolated from anemometer height $h_0$ to hub height $h_{hub}$ using the power-law wind shear model:
+
+$$V_{hub} = V_{anemometer} \times \left(\frac{h_{hub}}{h_0}\right)^{\alpha_{wind\_turbine}} \quad (12)$$
+
+Where $\alpha_{wind\_turbine}$ is the friction coefficient (default 0.14 for open terrain). Wind turbine output follows a piecewise power curve: zero below cut-in speed ($v_{cut\_in} = 2.5$ m/s), linear ramp from cut-in to rated speed ($v_{rated} = 9.5$ m/s), constant rated power from rated to cut-out speed ($v_{cut\_out} = 25$ m/s), and zero above cut-out.
+
+### 19.6 Energy Management Strategy (EMS)
+
+SAMA implements an advanced load-following dispatch strategy [29][30] that operates over all 8,760 hours of the year. When renewable generation ($E_{RE}$) exceeds load demand ($E_{load}$):
+
+$$E_{BT}^{ch}(t) = \min\left(E_{BT}^{empty},\ E_{RE}(t) - \frac{E_{load}(t)}{\eta_{inv}}\right) \quad (13)$$
+
+$$E_{BT}^{empty} = \frac{E_{BT}^{max} - E_{BT}}{\eta_{BT}} \quad (14)$$
+
+$$E_{AC}^{sur} = \eta_{inv} \times \left(E_{RE}(t) - E_{BT}^{ch}(t)\right) - E_{load}(t) \quad (15)$$
+
+When load exceeds renewable generation, SAMA selects the dispatch order among battery, DG, and grid based on marginal cost comparison. Six prioritization scenarios are defined based on the relative values of the grid buy price ($C_{buy}$), DG cost ($Cost_{DG}$), and battery wear cost ($Cost_{BT}^{Wear}$):
+
+| Scenario | Order | Condition |
+|:--------:|-------|-----------|
+| 1 | Grid → DG → Battery | $C_{buy} \leq Cost_{DG}$ and $Cost_{DG} \leq Cost_{BT}^{Wear}$ |
+| 2 | Grid → Battery → DG | $C_{buy} \leq Cost_{BT}^{Wear}$ and $Cost_{BT}^{Wear} < Cost_{DG}$ |
+| 3 | DG → Grid → Battery | $Cost_{DG} < C_{buy}$ and $C_{buy} \leq Cost_{BT}^{Wear}$ |
+| 4 | DG → Battery → Grid | $Cost_{DG} < Cost_{BT}^{Wear}$ and $Cost_{BT}^{Wear} < C_{buy}$ |
+| 5 | Battery → DG → Grid | $Cost_{BT}^{Wear} < Cost_{DG}$ and $Cost_{DG} < C_{buy}$ |
+| 6 | Battery → Grid → DG | All remaining cases |
+
+The loss of power supply probability (LPSP) constraint tracks unmet energy across the year:
+
+$$LPSP = \frac{\sum_{t}^{8760} Ens(t)}{\sum_{t}^{8760} E_{load}(t)} \quad (16)$$
+
+The renewable fraction (RF) constraint:
+
+$$RF = 1 - \frac{\sum_{t}^{8760} E_{non\ renewable}(t)}{\sum_{t}^{8760} \left(E_{load}(t) - ENS(t)\right)} \quad (17)$$
+
+### 19.7 Economic Model
+
+The real discount rate $i$ is derived from the nominal discount rate $i'$ and expected inflation rate $f$ [A1]:
+
+$$i = \frac{i' - f}{1 + f} \quad (18)$$
+
+The Net Present Cost (NPC) [31]:
+
+$$NPC = C_I + \frac{C_R + C_{MO} + C_F - C_S + C_G}{(1+i)^n} \quad (19)$$
+
+The Capital Recovery Factor (CRF) [33]:
+
+$$CRF(i,N) = \frac{i(1+i)^n}{(1+i)^n - 1} \quad (20)$$
+
+The Levelized Cost of Energy (LCOE) [33]:
+
+$$LCOE = \frac{CRF \times NPC}{\sum_{0}^{8760}(E_{load} - Ens + P_{sell})} \quad (21)$$
+
+When `EM = 1`, SAMA also minimizes Levelized Emission (LE) [34]:
+
+$$LE = \frac{\sum_{0}^{8760} Non\ Grid\ Emissions(t) + \sum_{0}^{8760} Grid_{Emissions}(t)}{\sum_{0}^{8760}\left(E_{load}(t) - Ens(t)\right)} \quad (22)$$
+
+The multi-objective function combines NPC and LE, with penalties applied when constraints are violated [A1]:
+
+$$Z = NPC + EM \times LE + penalties \quad (23)$$
+
+**Table 2.** Penalty conditions in SAMA optimization (from [A1]):
+
+| Penalty Condition | Reason |
+|-------------------|--------|
+| DC to AC ratio > 1.99 × (P_Inv + P_DG + P_buy_max) | DC to AC ratio must not exceed 2 for a feasible inverter design |
+| LPSP > LPSP_max | System does not supply sufficient power to meet reliability constraint |
+| RF < RE_min | Renewable fraction is below the user-specified minimum |
+| I_Cost > Budget | Initial capital cost exceeds the user-specified budget limit |
+
+### 19.8 Validation Against HOMER Pro
+
+SAMA results have been cross-validated against HOMER Pro across two geographically distinct U.S. locations: Sacramento, California and New Bern, North Carolina [A1]. Validation used identical input data (same load profiles from OpenEI [2], meteorological data from NSRDB [1], and equivalent pricing). The PSO optimizer was run with `MaxIt = 101` and `nPop = 100`, repeated 10 times to assess convergence.
+
+Convergence was achieved by iteration 70 on the first run and as early as iteration 20 on subsequent runs. Final system configurations, LCOE, NPC, energy distribution, and battery state-of-charge profiles from SAMA showed close agreement with HOMER Pro across all tested system types (PV+Grid, PV+BT+Grid, PV+BT+DG+Grid, PV+BT+DG, PV+BT).
+
+For the off-grid PV+DG+Battery configuration in Sacramento, the optimizer found that maintaining a grid connection (LCOE = $0.0838/kWh) is significantly more economical than full grid defection ($0.3674/kWh). Similar conclusions apply to New Bern. This capability makes SAMA particularly useful for grid-defection analysis [A2].
+
+---
+
+## 20. References
+
+[1] National Solar Radiation Database (NSRDB). "Solar Resource Maps and Data." https://nsrdb.nrel.gov (accessed Nov. 07, 2022).
+
+[2] Open Energy Data Initiative (OEDI), OpenEI. https://data.openei.org/ (accessed Apr. 14, 2023).
+
+[3] V. Ramasamy et al., "US Solar Photovoltaic System and Energy Storage Cost Benchmarks, With Minimum Sustainable Price Analysis: Q1 2022," National Renewable Energy Lab. (NREL), Golden, CO (United States), 2022.
+
+[4] Westinghouse. "iGen2200 Inverter Generator." https://westinghouseoutdoorpower.com (accessed Jan. 12, 2023).
+
+[5] A.L. Bukar, C.W. Tan, L.K. Yiew, R. Ayop, and W.-S. Tan, "A rule-based energy management scheme for long-term optimal capacity planning of grid-independent microgrid optimized by multi-objective grasshopper optimization algorithm," *Energy Convers. Manag.*, vol. 221, p. 113161, Oct. 2020.
+
+[6] J. Hirvonen and K. Siren, "A novel fully electrified solar heating system with a high renewable fraction - Optimal designs for a high latitude community," *Renew. Energy*, vol. 127, pp. 298-309, Nov. 2018.
+
+[7] C.P. Cameron, W.E. Boyson, and D.M. Riley, "Comparison of PV system performance-model predictions with measured PV system performance," in *2008 33rd IEEE PVSC*, May 2008, pp. 1-6.
+
+[8] G. Blaesser and E. Rossi, "Extrapolation of outdoor measurements of PV array I-V characteristics to standard test conditions," *Sol. Cells*, vol. 25, no. 2, pp. 91-96, Nov. 1988.
+
+[9] V. Sun, A. Asanakham, T. Deethayat, and T. Kiatsiriroat, "Evaluation of nominal operating cell temperature (NOCT) of glazed photovoltaic thermal module," *Case Stud. Therm. Eng.*, vol. 28, p. 101361, Dec. 2021.
+
+[10] L. Dunn, M. Gostein, and K. Emery, "Comparison of pyranometers vs. PV reference cells for evaluation of PV array performance," in *2012 38th IEEE PVSC*, Jun. 2012, pp. 002899-002904.
+
+[11] M.R. Elkadeem et al., "Feasibility analysis and optimization of an energy-water-heat nexus supplied by an autonomous hybrid renewable power generation system," *Desalination*, vol. 504, p. 114952, May 2021.
+
+[12] A.F. Guven, N. Yorukeren, and M.M. Samy, "Design optimization of a stand-alone green energy system of university campus based on Jaya-Harmony Search and Ant Colony Optimization algorithms approaches," *Energy*, vol. 253, p. 124089, Aug. 2022.
+
+[13] A. Seifi et al., "An optimal programming among renewable energy resources and storage devices for responsive load integration," *J. Energy Storage*, vol. 27, p. 101126, Feb. 2020.
+
+[14] S.A. Sadat, B. Hoex, and J.M. Pearce, "A Review of the Effects of Haze on Solar Photovoltaic Performance," *Renew. Sustain. Energy Rev.*, vol. 167, p. 112796, Oct. 2022. https://doi.org/10.1016/j.rser.2022.112796
+
+[15] A.H. Mondal and M. Denich, "Hybrid systems for decentralized power generation in Bangladesh," *Energy Sustain. Dev.*, vol. 14, no. 1, pp. 48-55, Mar. 2010.
+
+[16] A. Maleki and F. Pourfayaz, "Optimal sizing of autonomous hybrid photovoltaic/wind/battery power system with LPSP technology," *Sol. Energy*, vol. 115, pp. 471-483, May 2015.
+
+[17] H. Lan et al., "Optimal sizing of hybrid PV/diesel/battery in ship power system," *Appl. Energy*, vol. 158, pp. 26-34, Nov. 2015.
+
+[18] J.F. Manwell and J.G. McGowan, "Lead acid battery storage model for hybrid energy systems," *Sol. Energy*, vol. 50, no. 5, pp. 399-405, May 1993.
+
+[19] G.P. Fenner et al., "Comprehensive Model for Real Battery Simulation Responsive to Variable Load," *Energies*, vol. 14, no. 11, 2021.
+
+[20] L.M. Rodrigues et al., "A Temperature-Dependent Battery Model for Wireless Sensor Networks," *Sensors*, vol. 17, no. 2, 2017.
+
+[21] Y. Zhao et al., "An iterative learning approach to identify fractional order KiBaM model," *IEEE/CAA J. Autom. Sin.*, vol. 4, no. 2, pp. 322-331, 2017.
+
+[22] L.M. Rodrigues et al., "An analytical model to estimate the state of charge and lifetime for batteries with energy harvesting capabilities," *Int. J. Energy Res.*, vol. 44, no. 7, pp. 5243-5258, 2020.
+
+[23] HOMER Energy. "How HOMER Calculates the Maximum Battery Charge Power." https://www.homerenergy.com/products/pro/docs/latest/ (accessed Nov. 07, 2022).
+
+[24] F.H. Jufri et al., "Optimal Battery Energy Storage Dispatch Strategy for Small-Scale Isolated Hybrid Renewable Energy System," *Energies*, vol. 14, no. 11, 2021.
+
+[25] M. Ashari, C.V. Nayar, and W.W.L. Keerthipala, "Optimum operation strategy and economic analysis of a photovoltaic-diesel-battery-mains hybrid UPS," *Renew. Energy*, vol. 22, no. 1, pp. 247-254, Jan. 2001.
+
+[26] T. Lambert, P. Gilman, and P. Lilienthal, "Micropower system modeling with HOMER," *Integr. Altern. Sources Energy*, vol. 1, no. 1, pp. 379-385, 2006.
+
+[27] H. Suryoatmojo, A.A. Elbaset, and T. Hiyama, "Economic and reliability evaluation of wind-Diesel-Battery system for isolated island considering CO2 emission," *IEEJ Trans. Power Energy*, vol. 129, no. 8, pp. 1000-1008, 2009.
+
+[28] A. Yahiaoui et al., "Grey wolf optimizer for optimal design of hybrid renewable energy system PV-Diesel Generator-Battery," *Sol. Energy*, vol. 158, pp. 941-951, Dec. 2017.
+
+[29] C.D. Barley, "Modeling and optimization of dispatch strategies for remote hybrid power systems," Ph.D. dissertation, Colorado State University, 1996.
+
+[30] C.D. Barley and C.B. Winn, "Optimal dispatch strategy in remote hybrid power systems," *Sol. Energy*, vol. 58, no. 4, pp. 165-179, Oct. 1996.
+
+[31] H. Song et al., "A novel hybrid energy system for hydrogen production and storage in a depleted oil reservoir," *Int. J. Hydrog. Energy*, vol. 46, no. 34, pp. 18020-18031, May 2021.
+
+[32] HOMER Energy. "Salvage Value." https://www.homerenergy.com/products/pro/docs/3.11/salvage_value.html (accessed Jun. 05, 2023).
+
+[33] D.P. Clarke, Y.M. Al-Abdeli, and G. Kothapalli, "Multi-objective optimisation of renewable hybrid energy systems with desalination," *Energy*, vol. 88, pp. 457-468, Aug. 2015.
+
+[34] A. Parlikar et al., "The carbon footprint of island grids with lithium-ion battery systems: An analysis based on levelized emissions of energy supply," *Renew. Sustain. Energy Rev.*, vol. 149, p. 111353, Oct. 2021.
+
+---
+
+## 19. SAMA Publications and Further Reading
+
+The following peer-reviewed publications describe SAMA's development, validation, and application across a range of techno-economic energy studies. Users who wish to cite SAMA in academic work should reference these papers.
+
+[A1] Sadat, S.A., Takahashi, J. and Pearce, J.M., 2023. A Free and open-source microgrid optimization tool: SAMA the solar alone Multi-Objective Advisor. *Energy Conversion and Management*, 298, p.117686. https://doi.org/10.1016/j.enconman.2023.117686
+
+[A2] Sadat, S.A. and Pearce, J.M., 2024. The threat of economic grid defection in the US with solar photovoltaic, battery and generator hybrid systems. *Solar Energy*, 282, p.112910. https://doi.org/10.1016/j.solener.2024.112910
+
+[A3] Sadat, S.A. and Pearce, J.M., 2025. Techno-economic evaluation of electricity pricing structures on photovoltaic and photovoltaic-battery hybrid systems in Canada. *Renewable Energy*, 242, p.122456. https://doi.org/10.1016/j.renene.2025.122456
+
+[A4] Sadat, S.A., Mittal, K. and Pearce, J.M., 2025. Using investments in solar photovoltaics as inflation hedges. *Energies*, 18(4), p.890. https://doi.org/10.3390/en18040890
+
+[A5] Groza, J.M., Sadat, S.A., Hayibo, K.S. and Pearce, J.M., 2024. Using a ledger to facilitate autonomous peer-to-peer virtual net metering of solar photovoltaic distributed generation. *Solar Energy Advances*, 4, p.100064. https://doi.org/10.1016/j.seja.2024.100064
+
+[A6] Sadat, S.A., Lemieux, J.E.B., and Pearce, J.M., 2026. Shifting Subsidies: Implications of Redirecting Alberta's Oil and Gas Government Support to Solar Power. *Energies*, 19(4), 972. https://doi.org/10.3390/en19040972
+
+[A7] Sadat, S.A., Hoex, B. and Pearce, J.M., 2022. A review of the effects of haze on solar photovoltaic performance. *Renewable and Sustainable Energy Reviews*, 167, p.112796. https://doi.org/10.1016/j.rser.2022.112796
+
+For the most up-to-date list of SAMA publications and to request preprints or reprints, visit the FAST Research Group GitHub at https://github.com/Sas1997/SAMA or contact the corresponding author directly.
+
+---
+
+## Appendix A: Where to Find Input Data for SAMA
+
+This appendix provides practical guidance on where to obtain real-world data for each major input category in SAMA.
+
+### A.1 Financial and Economic Parameters
+
+**Nominal Discount Rate:** Check the Federal Reserve primary credit rate at [federalreserve.gov](https://federalreserve.gov) or financial data sites such as YCharts for U.S. projects. For non-U.S. projects, use your local central bank rate. Typical values are 2 to 5%. Input as a percentage (e.g., `4` for 4%).
+
+**Expected Inflation Rate:** For U.S. projects, refer to the Bureau of Labor Statistics CPI reports at [bls.gov](https://bls.gov), or check Federal Reserve projections at [federalreserve.gov](https://federalreserve.gov). For other countries, use national statistics agencies. Input as a percentage.
+
+**RE Incentives / Federal Tax Credit:** In the United States, the Investment Tax Credit (ITC) provides a 30% credit for solar under the Inflation Reduction Act. Check the Database of State Incentives for Renewables and Efficiency (DSIRE) at [dsireusa.org](https://dsireusa.org) for current federal and state programs.
+
+### A.2 System Constraints
+
+**LPSP:** Set to 0% for critical loads (medical, emergency). For non-critical off-grid applications, 1 to 5% is typical.
+
+**Minimum Renewable Energy Fraction:** Align with local Renewable Portfolio Standards (RPS) or your project sustainability target. DSIRE at [dsireusa.org](https://dsireusa.org) lists U.S. state RPS requirements.
+
+**Net Metering Cap (kW):** Check your utility net metering policy at [dsireusa.org](https://dsireusa.org). Common U.S. residential caps range from 10 to 100 kW.
+
+**Rooftop Area Limit:** Measure usable roof area using Google Earth, satellite imagery, or a professional site survey. Subtract areas for chimneys, vents, setbacks (typically 3 feet from roof edges), and shading. As of 2025, high-efficiency monocrystalline panels require approximately 7 to 9 m² per kW installed including spacing.
+
+### A.3 Weather and Meteorological Data (`METEO.csv`)
+
+The bundled `METEO.csv` is for London, Ontario. For any other location, download a new file containing GHI, DNI, DHI, Temperature, Wind Speed, and Pressure columns with two header rows followed by 8,760 hourly rows.
+
+- **Primary source:** National Solar Radiation Database (NSRDB) at [nsrdb.nrel.gov](https://nsrdb.nrel.gov). Provides free hourly weather data for the U.S., Canada, and many other countries. Select the SAM/CSV export format.
+- **Alternative:** NASA POWER at [power.larc.nasa.gov](https://power.larc.nasa.gov) provides global coverage for any coordinates.
+- **POA irradiance** (for `G_type = 2`): Use PVWatts at [pvwatts.nrel.gov](https://pvwatts.nrel.gov) or SAM at [sam.nrel.gov](https://sam.nrel.gov).
+
+> **Tip:** When downloading from NSRDB, select the **Typical Meteorological Year (TMY)** dataset rather than a single calendar year. TMY data is specifically designed for long-term energy system analysis.
+
+### A.4 Electrical Load Data (`Eload.csv`)
+
+`Eload.csv` requires one column of 8,760 hourly load values in kW with no header. Options to replace the bundled file:
+
+- **Smart meter data:** Most utilities provide 15-minute or hourly interval data through their customer portal (Green Button data in North America).
+- **From bills:** Use SAMA load modes 3–8 to let SAMA generate a synthetic 8,760-hour profile from your monthly kWh totals.
+- **Open databases:** OpenEI at [openei.org](https://openei.org) provides representative commercial and residential load profiles by building type and U.S. climate zone.
+
+### A.5 Thermal Load Data (`house_load.xlsx`) for Heat Pump
+
+`house_load.xlsx` must have hourly heating load (`Hload`) in column 2 and cooling load (`Cload`) in column 3, 8,760 rows each, in kW. Options:
+
+- **EnergyPlus:** Free DOE building simulation software at [energyplus.net](https://energyplus.net). Build a model with local weather and export hourly heating/cooling loads. Most accurate approach.
+- **RETScreen:** Free software from Natural Resources Canada at [nrcan.gc.ca](https://nrcan.gc.ca).
+- **Manual entry:** In `samapy-config`, set `Tload_type` to 2 or higher and enter monthly average loads.
+
+### A.6 Solar PV Parameters
+
+- **Module efficiency and temperature coefficient:** From the manufacturer datasheet. Use EnergySage ([energysage.com](https://energysage.com)) or the California Energy Commission (CEC) equipment list. Leading 2025 monocrystalline modules range from 20 to 25% efficiency.
+- **Capital and O&M costs:** NREL cost benchmark reports at [nrel.gov](https://nrel.gov). NREL reports residential PV system costs of USD 2,500 to 3,500 per kW installed and O&M of USD 20 to 40 per kW per year for 2025.
+- **Azimuth and tilt:** For the Northern Hemisphere, south-facing (180°) at a tilt equal to your site latitude maximizes annual yield. Use PVWatts ([pvwatts.nrel.gov](https://pvwatts.nrel.gov)) to optimize for your specific location.
+
+### A.7 Wind Turbine Parameters
+
+- **Wind speed data:** Included in the `METEO.csv` from NSRDB.
+- **Turbine specs:** From the manufacturer datasheet. Typical small turbine values: cut-in 2.5–3.5 m/s, rated speed 9–13 m/s, cut-out 25 m/s.
+- **Friction coefficient:** Use 0.14 for open flat terrain, 0.20 for suburban, 0.30 for forested or urban.
+- **Capital costs:** NREL Distributed Wind Market Report at [nrel.gov/wind](https://nrel.gov/wind). Small residential turbines cost approximately USD 4,000 to 8,000 per kW installed in 2025.
+
+### A.8 Battery Storage Parameters
+
+- **Capital cost:** NREL Annual Technology Baseline at [nrel.gov](https://nrel.gov). Li-ion installed costs average USD 200 to 400 per kWh in the U.S. for 2025.
+- **Round-trip efficiency and SOC limits:** From manufacturer datasheet. Li-ion: 90–95% round-trip efficiency. Lead-acid: 70–85%.
+- **Lifetime throughput:** From manufacturer cycle life tables. NREL and PNNL publish battery degradation models for Li-ion.
+
+### A.9 Diesel Generator Parameters
+
+- **Fuel cost per liter:** U.S. EIA weekly petroleum reports at [eia.gov/petroleum](https://eia.gov/petroleum), GasBuddy at [gasbuddy.com](https://gasbuddy.com), or GlobalPetrolPrices at [globalpetrolprices.com](https://globalpetrolprices.com).
+- **Fuel curve coefficients (a and b):** From the manufacturer fuel consumption data sheet. Typical: $a$ = 0.24–0.44 L/hr per kW output, $b$ = 0.01–0.11 L/hr per kW rated.
+- **CO₂ emissions:** U.S. EIA default is 2.68 kg CO₂ per liter of diesel.
+
+### A.10 Heat Pump Parameters
+
+SAMA includes built-in performance models for Bosch and Goodman brand heat pumps. Select the brand that most closely matches your planned installation.
+
+- **Rated capacity:** Determined by Manual J heating/cooling load calculations per ACCA standards. The required capacity is typically 15 to 30 BTU/hr per square foot depending on climate.
+- **Capital cost:** EnergySage, Angi, and Home Depot provide current quotes. For 2025, mini-split systems cost approximately USD 3,000 to 8,000 installed for a 12,000 BTU unit. Federal IRA rebates (up to USD 2,000) and state incentives at [dsireusa.org](https://dsireusa.org) can reduce effective cost.
+
+### A.11 Electric Vehicle Parameters
+
+- **Battery capacity, range, and charging specs:** [EV-Database.org](https://ev-database.org), [InsideEVs](https://insideevs.com), or the U.S. EPA at [fueleconomy.gov](https://fueleconomy.gov).
+- **Battery replacement cost:** Recurrent Auto ([recurrentauto.com](https://recurrentauto.com)) tracks real-world EV battery health and replacement cost estimates. As of 2025, battery costs are approximately USD 100 to 150 per kWh.
+- **Daily trip distance:** From your own odometer records or U.S. DOT National Household Travel Survey (NHTS) at [nhts.ornl.gov](https://nhts.ornl.gov). U.S. average daily vehicle travel is approximately 50 to 65 km.
+
+### A.12 Grid and Utility Rate Parameters
+
+> **Grid rate parameters have the largest impact on SAMA economic results. Always use your actual utility tariff rather than national averages.**
+
+- **Electricity rate schedule:** Download from your utility website or OpenEI Utility Rate Database at [openei.org/apps/USURDB](https://openei.org/apps/USURDB).
+- **Current electricity prices:** From your most recent utility bill. U.S. EIA publishes monthly state average prices at [eia.gov/electricity](https://eia.gov/electricity).
+- **Electricity price escalation:** Review historical rate filings on your state Public Utility Commission (PUC) website. U.S. average is 2 to 3% per year historically.
+- **Net metering policy:** DSIRE at [dsireusa.org](https://dsireusa.org) for state rules.
+- **Natural gas rates:** From your gas utility bill or U.S. EIA natural gas reports at [eia.gov/naturalgas](https://eia.gov/naturalgas).
+
+> **Tip:** For TOU or ULO rate structures, contact your utility customer service or visit their website for the exact on-peak, mid-peak, and off-peak hour windows. These vary significantly by utility and season.
+
+### A.13 Summary of Recommended Data Sources
+
+| Input Category | Recommended Data Source |
+|----------------|------------------------|
+| Weather (`METEO.csv`) | NSRDB ([nsrdb.nrel.gov](https://nsrdb.nrel.gov)), NASA POWER ([power.larc.nasa.gov](https://power.larc.nasa.gov)) |
+| POA Irradiance (`Irradiance.csv`) | PVWatts ([pvwatts.nrel.gov](https://pvwatts.nrel.gov)), SAM ([sam.nrel.gov](https://sam.nrel.gov)) |
+| Electrical load (`Eload.csv`) | Utility smart meter / Green Button data, OpenEI load profiles |
+| Thermal load (`house_load.xlsx`) | EnergyPlus ([energyplus.net](https://energyplus.net)), RETScreen ([nrcan.gc.ca](https://nrcan.gc.ca)) |
+| PV module specs and costs | Manufacturer datasheet, EnergySage, NREL cost benchmarks |
+| PV incentives | DSIRE ([dsireusa.org](https://dsireusa.org)), IRS ITC documentation |
+| Wind turbine specs and costs | Manufacturer datasheet, NREL Distributed Wind Market Report |
+| Battery costs | NREL Annual Technology Baseline, SEIA reports, EnergySage |
+| Battery specs | Manufacturer datasheet, Battery University ([batteryuniversity.com](https://batteryuniversity.com)) |
+| Diesel fuel cost | EIA weekly petroleum ([eia.gov](https://eia.gov)), GasBuddy, GlobalPetrolPrices |
+| Diesel emissions factors | U.S. EPA emission factors, The Climate Registry ([theclimateregistry.org](https://theclimateregistry.org)) |
+| Heat pump costs | EnergySage, Angi, DSIRE for IRA rebates |
+| EV specs and battery cost | [EV-Database.org](https://ev-database.org), InsideEVs, [fueleconomy.gov](https://fueleconomy.gov), Recurrent Auto |
+| Electricity rates | Your utility bill, OpenEI USURDB ([openei.org](https://openei.org)), EIA |
+| Net metering policy | DSIRE ([dsireusa.org](https://dsireusa.org)), utility interconnection agreement |
+| Discount rate | Federal Reserve ([federalreserve.gov](https://federalreserve.gov)), local central bank |
+| Inflation rate | BLS CPI ([bls.gov](https://bls.gov)), Federal Reserve projections |
+| Natural gas rates | Gas utility bill, EIA natural gas ([eia.gov/naturalgas](https://eia.gov/naturalgas)) |
 
 ---
 
