@@ -74,11 +74,10 @@ samapy-run    = "samapy.cli.runner:main"
 # URLs shown on the PyPI project page
 # ------------------------------------------------------------------------------
 [project.urls]
-Homepage      = "https://github.com/Sas1997/SAMA"
-Repository    = "https://github.com/Sas1997/SAMA"
-Issues        = "https://github.com/Sas1997/SAMA/issues"
-Readme = "https://github.com/Sas1997/SAMA#readme"
-Full Documentation = "https://github.com/Sas1997/SAMA/blob/main/Docs/SAMA_Documentation.md"
+Homepage          = "https://github.com/Sas1997/SAMA"
+Repository        = "https://github.com/Sas1997/SAMA"
+Issues            = "https://github.com/Sas1997/SAMA/issues"
+Documentation     = "https://github.com/Sas1997/SAMA/blob/main/Docs/SAMA_Documentation.md"
 
 
 # ------------------------------------------------------------------------------
