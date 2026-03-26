@@ -14,7 +14,7 @@ build-backend = "setuptools.build_meta"
 # ------------------------------------------------------------------------------
 [project]
 name = "samapy"
-version = "1.0.0"
+version = "1.0.1"
 description = "SAMAPy - Solar Alone Multi-objective Advisor for Hybrid Renewable Energy Systems Python Package"
 readme = "README.md"
 license = { file = "License" }
