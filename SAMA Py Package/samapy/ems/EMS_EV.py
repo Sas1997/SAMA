@@ -1,7 +1,7 @@
 import numpy as np
-from Battery_Model import KiBaM, IdealizedBattery
+from samapy.models.Battery_Model import KiBaM, IdealizedBattery
 from numba import jit
-from EV_demand_dest import distribute_excess_demand
+from samapy.utilities.EV_demand_dest import distribute_excess_demand
 
 
 @jit(nopython=True, fastmath=True, cache=True)
