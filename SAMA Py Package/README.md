@@ -91,7 +91,7 @@ SAMAPy handles the full modelling stack (solar PV, wind turbines, battery storag
 ```bash
 ## Installation
 
-### Stable release (Not Released Yet!)
+### Stable release (V 1.0.1)
 pip install samapy
 
 ### Testing release (for testers and early adopters)
