@@ -439,7 +439,7 @@ def Gen_Results(X, output_dir=None):
     Eev2 = Eev[t]  # Adjust for 0-based indexing in Python
     # Define conditions
     ind1 = (EV_p[t - 1] == 1) & (EV_p[t] == 0)  # Adjust for 0-based indexing
-    ind2 = (Eev[t] / C_ev < SOC_dep)
+    ind2 = (Eev[t] / C_ev < SOC_dep) if C_ev > 0 else 0
     ind = (ind1 == 1) & (ind2 == 1)
 
     # Calculate ENS of EV charge
