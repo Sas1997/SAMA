@@ -1552,7 +1552,7 @@ def Gen_Results(X, output_dir=None):
         plt.savefig(os.path.join(figs_dir, 'Daily-Monthly-Yearly average earning Sell to the Grid.png'), dpi=300)
         plt.close()
 
-    if EV > 0 :
+    if EV > 0 and C_ev > 0:
         # EV figures
         plt.rcParams.update({'xtick.labelsize': 14, 'ytick.labelsize': 14})
 
