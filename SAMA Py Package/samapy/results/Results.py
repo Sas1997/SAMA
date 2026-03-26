@@ -186,15 +186,15 @@ OUTPUT_DIR = 'samapy_outputs'
 
 def Gen_Results(X, output_dir=None):
     if HP == 0:
-    NT = Eload.size
-    hp_model = 'No Heat Pump'
-    HP_size = 0
-    MO_HP = 0
-    S_HP = 0
-    power_hp_heating = np.zeros(NT)
-    power_hp_cooling = np.zeros(NT)
-    COP_hp_heating = np.full(8760, np.nan)
-    COP_hp_cooling = np.full(8760, np.nan)
+        NT = Eload.size
+        hp_model = 'No Heat Pump'
+        HP_size = 0
+        MO_HP = 0
+        S_HP = 0
+        power_hp_heating = np.zeros(NT)
+        power_hp_cooling = np.zeros(NT)
+        COP_hp_heating = np.full(8760, np.nan)
+        COP_hp_cooling = np.full(8760, np.nan)
     """
     Generate optimization results and save outputs.
 
