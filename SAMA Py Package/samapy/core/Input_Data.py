@@ -489,7 +489,7 @@ class Input_Data:
         self.Range_EV = 468  # in km EV travel range with one full charge
         self.Daily_trip = 68 # in kW, average amount daily you travel
         self.SOC_dep = 0.85  # SOC at departure time
-        self.SOC_arr = self.SOC_dep - ((self.Daily_trip * self.C_ev_usable) / (self.Range_EV * self.C_ev))  # SOC at arrival time
+        self.SOC_arr = (self.SOC_dep - ((self.Daily_trip * self.C_ev_usable) / (self.Range_EV * self.C_ev))) if self.C_ev > 0 else 0 # SOC at arrival time
         self.n_e = 0.9  # EV battery charge efficiency
         self.self_discharge_rate_ev = 0
         self.L_EV_dis = 400000 # in km lifetime of EV battery in terms of total distance driven
