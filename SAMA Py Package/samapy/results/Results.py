@@ -180,7 +180,12 @@ COP_hp_cooling = InData.COP_hp_cooling
 hp_model = InData.hp_model
 HP_size = InData.HP_size
 
-if HP == 0:
+#@jit(nopython=True, fastmath=True)
+# Set by runner.py before optimization — lets optimizers call Gen_Results() with no args
+OUTPUT_DIR = 'samapy_outputs'
+
+def Gen_Results(X, output_dir=None):
+    if HP == 0:
     NT = Eload.size
     hp_model = 'No Heat Pump'
     HP_size = 0
@@ -190,12 +195,6 @@ if HP == 0:
     power_hp_cooling = np.zeros(NT)
     COP_hp_heating = np.full(8760, np.nan)
     COP_hp_cooling = np.full(8760, np.nan)
-
-#@jit(nopython=True, fastmath=True)
-# Set by runner.py before optimization — lets optimizers call Gen_Results() with no args
-OUTPUT_DIR = 'samapy_outputs'
-
-def Gen_Results(X, output_dir=None):
     """
     Generate optimization results and save outputs.
 
