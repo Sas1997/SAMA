@@ -1,13 +1,13 @@
 import numpy as np
-from samapy.models.Battery_Model import KiBaM, IdealizedBattery
+from Battery_Model import KiBaM, IdealizedBattery
 from numba import jit
-from samapy.utilities.EV_demand_dest import distribute_excess_demand
+from EV_demand_dest import distribute_excess_demand
 
 
 @jit(nopython=True, fastmath=True, cache=True)
 def EMS_EV(Lead_acid, Li_ion, Ich_max_Li_ion, Idch_max_Li_ion, Vnom_Li_ion, ef_bat_Li, Q_lifetime_Li, alfa_battery_Li_ion, Ppv, Pwt, Eload, Cn_B, Nbat, Pn_DG, NT, SOC_max, SOC_min, SOC_initial, n_I, Grid, Cbuy, Csell, a, b, R_DG, TL_DG, MO_DG, Pinv_max, LR_DG, C_fuel, Pbuy_max, Psell_max, R_B, Q_lifetime_leadacid, self_discharge_rate, self_discharge_rate_ev, alfa_battery_leadacid, c, k_lead_acid, Ich_max_leadacid, Vnom_leadacid, ef_bat_leadacid, Tin, Tout, C_ev, Pev_max, SOCe_initial, SOC_dep, SOC_arr, SOCe_min, SOCe_max, n_e, Q_lifetime_ev, EV_p, R_EVB):
     # tdep = Tout
-
+    C_ev = float(C_ev)
     if Li_ion == 1:
         ef_bat = ef_bat_Li
         Q_lifetime = Q_lifetime_Li
@@ -148,7 +148,7 @@ def EMS_EV(Lead_acid, Li_ion, Ich_max_Li_ion, Idch_max_Li_ion, Vnom_Li_ion, ef_b
 
                     # ENHANCED: Smart off-peak charging for V2G arbitrage
                     # Check if we have capacity and if conditions are right for profitable V2G
-                    current_soc = Eev[t] / C_ev
+                    current_soc = Eev[t] / C_ev if C_ev > 0 else 0
                     available_capacity = max(0, SOCe_max - current_soc)
 
                     if available_capacity > 0.05:  # At least 5% capacity available
@@ -227,7 +227,7 @@ def EMS_EV(Lead_acid, Li_ion, Ich_max_Li_ion, Idch_max_Li_ion, Vnom_Li_ion, ef_b
                             Eev_dch[t] = EV_p[t] * min(max(0, Eev[t] - Ee_min), safe_discharge) * n_e
 
                         # If we have extra capacity and it's a good price, charge more for future arbitrage
-                        current_soc_after_required = (Eev[t] + Ech_req[t] * n_e) / C_ev
+                        current_soc_after_required = (Eev[t] + Ech_req[t] * n_e) / C_ev if C_ev > 0 else 0
                         remaining_capacity = max(0, SOCe_max - current_soc_after_required)
 
                         if remaining_capacity > 0.05 and remaining_hours >= min_charging_hours + 3:
@@ -470,7 +470,7 @@ def EMS_EV(Lead_acid, Li_ion, Ich_max_Li_ion, Idch_max_Li_ion, Vnom_Li_ion, ef_b
                             Psell[t] += actual_discharge
 
             # V2G logic
-            if (Psell_max - Psell[t] > 0 and Eev_dch[t] - Pev_dch[t] > 0 and Csell[t] > Cevw and (Eev[t] / C_ev > SOC_dep)):
+            if (C_ev > 0 and Psell_max - Psell[t] > 0 and Eev_dch[t] - Pev_dch[t] > 0 and Csell[t] > Cevw and (Eev[t] / C_ev > SOC_dep)):
 
                 # 1. EV departure and lookahead analysis
                 t_dep = -1
@@ -598,7 +598,7 @@ def EMS_EV(Lead_acid, Li_ion, Ich_max_Li_ion, Idch_max_Li_ion, Vnom_Li_ion, ef_b
                 base_profit_requirement = wear_cost_significance * (1 + price_volatility)
 
                 # 4. SYSTEM CONSTRAINTS AND CURRENT STATE
-                current_soc = Eev[t] / C_ev
+                current_soc = Eev[t] / C_ev if C_ev > 0 else 0
                 max_dischargeable = max(0, Eev[t] - SOC_dep * C_ev - safety_buffer)
 
                 # Available discharge power
