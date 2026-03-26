@@ -94,8 +94,7 @@ SAMAPy handles the full modelling stack (solar PV, wind turbines, battery storag
 ### Stable release (V 1.0.1)
 pip install samapy
 
-### Testing release (for testers and early adopters)
-To install the latest test version from TestPyPI:
+### Testing release (for testers and early adopters), to install the latest test version from TestPyPI:
 
 pip install -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ samapy
 
