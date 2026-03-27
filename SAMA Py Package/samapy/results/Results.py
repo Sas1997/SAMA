@@ -144,12 +144,6 @@ Grid_credit_NG = InData.Grid_credit_NG
 Hload = InData.Hload
 Cload = InData.Cload
 Grid_Tax_NG = InData.Grid_Tax_NG
-L_HP = InData.L_HP
-R_HP = InData.R_HP
-RT_HP = InData.RT_HP
-MO_HP = InData.MO_HP
-C_HP = InData.C_HP
-Php_r = InData.Php_r
 NG_Grid = InData.NG_Grid
 
 # EV data
@@ -172,25 +166,35 @@ L_EV = InData.L_EV
 RT_EV = InData.RT_EV
 Cost_EV = InData.Cost_EV
 MO_EV = InData.MO_EV
-HP_brand = InData.HP_brand
-power_hp_heating = InData.power_hp_heating
-power_hp_cooling = InData.power_hp_cooling
-COP_hp_heating = InData.COP_hp_heating
-COP_hp_cooling = InData.COP_hp_cooling
-hp_model = InData.hp_model
-HP_size = InData.HP_size
+
 
 #@jit(nopython=True, fastmath=True)
 # Set by runner.py before optimization — lets optimizers call Gen_Results() with no args
 OUTPUT_DIR = 'samapy_outputs'
 
 def Gen_Results(X, output_dir=None):
+
+    HP_brand = InData.HP_brand
+    power_hp_heating = InData.power_hp_heating
+    power_hp_cooling = InData.power_hp_cooling
+    COP_hp_heating = InData.COP_hp_heating
+    COP_hp_cooling = InData.COP_hp_cooling
+    hp_model = InData.hp_model
+    HP_size = InData.HP_size
+    L_HP = InData.L_HP
+    R_HP = InData.R_HP
+    RT_HP = InData.RT_HP
+    MO_HP = InData.MO_HP
+    C_HP = InData.C_HP
+    Php_r = InData.Php_r
+    
+
+    
     if HP == 0:
         NT = Eload.size
         hp_model = 'No Heat Pump'
         HP_size = 0
         MO_HP = 0
-        S_HP = 0
         power_hp_heating = np.zeros(NT)
         power_hp_cooling = np.zeros(NT)
         COP_hp_heating = np.full(8760, np.nan)
