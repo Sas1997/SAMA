@@ -5,9 +5,8 @@ import math
 from numba import njit
 from samapy import get_content_path
 
-
 # =============================================================================
-# JIT-COMPILED KERNELS  (module-level so Numba can cache across calls)
+# JIT-COMPILED KERNELS (module-level so Numba can cache across calls)
 # =============================================================================
 
 @njit(cache=True)
@@ -48,7 +47,7 @@ def _heating_core(stacked_hs, stacked_hp,
     Z_hs = np.empty(5)
     Z_hp = np.empty(5)
     for i in range(5):
-        Z_hs[i] = poly2d_nb(To,      Tid,      stacked_hs[i], deg_x_hs, deg_y_hs)
+        Z_hs[i] = poly2d_nb(To, Tid, stacked_hs[i], deg_x_hs, deg_y_hs)
         Z_hp[i] = poly2d_nb(To_norm, Tid_norm, stacked_hp[i], deg_x_hp, deg_y_hp)
 
     i_high = 0
@@ -57,10 +56,10 @@ def _heating_core(stacked_hs, stacked_hp,
     i_low = i_high - 1
 
     if load <= Z_hs[0]:
-        COP      = Z_hs[0] / (Z_hp[0] * kW_to_BTU)
+        COP = Z_hs[0] / (Z_hp[0] * kW_to_BTU)
         Zhp_load = load / (COP * kW_to_BTU)
     elif load >= Z_hs[4]:
-        COP      = Z_hs[4] / (Z_hp[4] * kW_to_BTU)
+        COP = Z_hs[4] / (Z_hp[4] * kW_to_BTU)
         Zhp_load = load / (COP * kW_to_BTU)
     else:
         Zhp_load = (Z_hp[i_low]
@@ -88,7 +87,7 @@ def _cooling_core(b_cs_b0, b_cs_b1, b_cs_b2,
     for i in range(5):
         array_cs_i = b_cs_b0[i] + b_cs_b1[i] * Tiw + b_cs_b2[i] * Tiw2
         array_cp_i = b_cp_b0[i] + b_cp_b1[i] * Tiw + b_cp_b2[i] * Tiw2
-        Z_cs[i] = poly2d_nb(Tid,      To,      array_cs_i, deg_x_cs, deg_y_cs)
+        Z_cs[i] = poly2d_nb(Tid, To, array_cs_i, deg_x_cs, deg_y_cs)
         Z_cp[i] = poly2d_nb(Tid_norm, To_norm, array_cp_i, deg_x_cp, deg_y_cp)
 
     i_high = 0
@@ -97,10 +96,10 @@ def _cooling_core(b_cs_b0, b_cs_b1, b_cs_b2,
     i_low = i_high - 1
 
     if load <= Z_cs[0]:
-        COP      = Z_cs[0] / (Z_cp[0] * kW_to_BTU)
+        COP = Z_cs[0] / (Z_cp[0] * kW_to_BTU)
         Zcp_load = load / (COP * kW_to_BTU)
     elif load >= Z_cs[4]:
-        COP      = Z_cs[4] / (Z_cp[4] * kW_to_BTU)
+        COP = Z_cs[4] / (Z_cp[4] * kW_to_BTU)
         Zcp_load = load / (COP * kW_to_BTU)
     else:
         Zcp_load = (Z_cp[i_low]
@@ -121,39 +120,39 @@ def Heat_Pump_Model(T, P, Hload, Cload):
 
     Parameters:
     -----------
-    T : array        Hourly ambient temperature [C]
-    P : array        Hourly ambient pressure [kPa]
-    Hload : array    Hourly heating load [kW]
-    Cload : array    Hourly cooling load [kW]
+    T      : array  Hourly ambient temperature [C]
+    P      : array  Hourly ambient pressure [kPa]
+    Hload  : array  Hourly heating load [kW]
+    Cload  : array  Hourly cooling load [kW]
 
     Returns:
     --------
-    power_hp_total   : array   Total hourly electricity consumption [kW]
-    power_hp_heating : array   Heating mode electricity consumption [kW]
-    power_hp_cooling : array   Cooling mode electricity consumption [kW]
-    COP_hp_heating   : array   Hourly COP in heating mode
-    COP_hp_cooling   : array   Hourly COP in cooling mode
-    hp_model         : str     Selected heat pump model description
-    HP_size          : int     Total heat pump system capacity [BTU/hr]
+    power_hp_total   : array  Total hourly electricity consumption [kW]
+    power_hp_heating : array  Heating mode electricity consumption [kW]
+    power_hp_cooling : array  Cooling mode electricity consumption [kW]
+    COP_hp_heating   : array  Hourly COP in heating mode
+    COP_hp_cooling   : array  Hourly COP in cooling mode
+    hp_model         : str    Selected heat pump model description
+    HP_size          : int    Total heat pump system capacity [BTU/hr]
     """
 
     max_heating_load_hourly = np.amax(Hload)
     max_cooling_load_hourly = np.amax(Cload)
 
     # Heating set-points
-    T_in_design_heating = 23   # indoor design temperature in winter [C]
+    T_in_design_heating = 23       # indoor design temperature in winter [C]
 
     # Cooling set-points
-    T_in_design_cooling = 22   # indoor design temperature in summer [C]
-    w_in_design         = 0.005  # indoor design humidity ratio [kg/kg da]
+    T_in_design_cooling = 22       # indoor design temperature in summer [C]
+    w_in_design = 0.005            # indoor design humidity ratio [kg/kg da]
 
-    # Calculate indoor wet bulb temperature (vectorised — unchanged)
+    # Calculate indoor wet bulb temperature (vectorised)
     P_sat_in = (0.623692418 + 0.0424692499 * T_in_design_cooling +
-                0.00134403923  * T_in_design_cooling ** 2 +
+                0.00134403923 * T_in_design_cooling ** 2 +
                 0.0000309447379 * T_in_design_cooling ** 3 +
-                3.74294905E-07  * T_in_design_cooling ** 4)
-    P_in      = P
-    RH_in     = w_in_design * P_in / (w_in_design * P_sat_in + 0.622 * P_sat_in)
+                3.74294905E-07 * T_in_design_cooling ** 4)
+    P_in = P
+    RH_in = w_in_design * P_in / (w_in_design * P_sat_in + 0.622 * P_sat_in)
     RH_in_100 = RH_in * 100
     T_iwb_cooling = (T_in_design_cooling * np.arctan(0.151977 * (RH_in_100 + 8.313659) ** 0.5) +
                      np.arctan(T_in_design_cooling + RH_in_100) -
@@ -161,41 +160,70 @@ def Heat_Pump_Model(T, P, Hload, Cload):
                      (0.00391838 * RH_in_100 ** 1.5) * np.arctan(0.023101 * RH_in_100) - 4.686035)
 
     # Heat pump sizes available [BTU/hr]
-    y         = [24000, 36000, 48000, 60000]
+    y = [24000, 36000, 48000, 60000]
     kW_to_BTU = 3412.142
 
     # -------------------------------------------------------------------------
-    # OPTIMISATION 1: O(1) HP selection replacing the original O(max_units^4)
-    # nested loops.
+    # HP SELECTION — O(1) greedy matching File 2's brute-force iteration order.
     #
-    # All four unit sizes share GCD = 12 000 BTU/hr, so any achievable total
-    # is a multiple of 12 000. The minimum total >= load is therefore
-    # ceil(load / 12 000) * 12 000. A one-pass greedy then decomposes that
-    # target into actual units — HP_size is identical to the original.
+    # All four unit sizes share GCD = 12 000 BTU/hr, so the minimum achievable
+    # total >= load is always ceil(load / 12 000) * 12 000 (T_val multiples).
+    # The decomposition below reproduces the exact unit mix that File 2's O(n^4)
+    # loop selects (first minimum-total combo found in n1→n2→n3→n4 order).
+    #
+    # Pattern by T_val % 5:
+    #   rem=0 : pure 60k   → n×60k
+    #   rem=4 : 1×48k      → 1×48k + n×60k
+    #   rem=3 : T_val=3  → 1×36k
+    #           T_val≥8  → 2×48k + n×60k
+    #   rem=2 : T_val=2  → 1×24k
+    #           T_val=7  → 1×36k + 1×48k
+    #           T_val≥12 → 3×48k + n×60k
+    #   rem=1 : T_val=6  → 2×36k
+    #           T_val=11 → 1×36k + 2×48k
+    #           T_val≥16 → 4×48k + n×60k
     # -------------------------------------------------------------------------
     def selectHP(demand_kW):
         load   = demand_kW * kW_to_BTU
         GCD    = 12_000
         target = max(int(math.ceil(load / GCD) * GCD), 24_000)
-        T_val  = target // GCD   # integer >= 2
+        T_val  = target // GCD      # integer >= 2
+        rem    = T_val % 5
+        counts = [0, 0, 0, 0]       # [n24k, n36k, n48k, n60k]
 
-        n3  = T_val // 5
-        rem = T_val % 5
-        counts = [0, 0, 0, 0]
         if rem == 0:
-            counts[3] = n3
-        elif rem == 1:          # can't patch with a single smaller unit; swap
-            counts[3] = n3 - 1  # one 60k → two 36k (net change: +12k = +1 GCD unit ✓)
-            counts[1] = 2
-        elif rem == 2:
-            counts[3] = n3
-            counts[0] = 1       # one 24 000
-        elif rem == 3:
-            counts[3] = n3
-            counts[1] = 1       # one 36 000
+            counts[3] = T_val // 5                            # pure 60k
+
         elif rem == 4:
-            counts[3] = n3
-            counts[2] = 1       # one 48 000
+            counts[2] = 1
+            counts[3] = T_val // 5                            # 1×48k + n×60k
+
+        elif rem == 3:
+            if T_val == 3:
+                counts[1] = 1                                 # 1×36k (only option)
+            else:                                             # T_val >= 8
+                counts[2] = 2
+                counts[3] = (T_val - 8) // 5                 # 2×48k + n×60k
+
+        elif rem == 2:
+            if T_val == 2:
+                counts[0] = 1                                 # 1×24k (only option)
+            elif T_val == 7:
+                counts[1] = 1
+                counts[2] = 1                                 # 1×36k + 1×48k
+            else:                                             # T_val >= 12
+                counts[2] = 3
+                counts[3] = (T_val - 12) // 5                # 3×48k + n×60k
+
+        elif rem == 1:
+            if T_val == 6:
+                counts[1] = 2                                 # 2×36k (no 48/60 solution)
+            elif T_val == 11:
+                counts[1] = 1
+                counts[2] = 2                                 # 1×36k + 2×48k
+            else:                                             # T_val >= 16
+                counts[2] = 4
+                counts[3] = (T_val - 16) // 5                # 4×48k + n×60k
 
         return np.array([counts, y])
 
@@ -203,7 +231,7 @@ def Heat_Pump_Model(T, P, Hload, Cload):
     matrix_heating = selectHP(max_heating_load_hourly)
     matrix_cooling = selectHP(max_cooling_load_hourly)
 
-    # Filter and select final configuration (logic unchanged)
+    # Filter and select final configuration
     mask_heating = matrix_heating[0, :] > 0
     mask_cooling = matrix_cooling[0, :] > 0
 
@@ -226,10 +254,10 @@ def Heat_Pump_Model(T, P, Hload, Cload):
 
     # Create model description string
     hp_model = "Bosch: " + ", ".join([f"{int(n)}x{int(cap)}BTU"
-                                      for n, cap in zip(Final_HP_size_matrix[0],
-                                                        Final_HP_size_matrix[1]) if n > 0])
+                                       for n, cap in zip(Final_HP_size_matrix[0],
+                                                         Final_HP_size_matrix[1]) if n > 0])
 
-    # Normalisation parameters (unchanged)
+    # Normalisation parameters
     X_range_h = np.array([30, 22.2, 19.4, 16.7, 13.9, 11.1, 8.3, 5.6, 2.8, 0,
                           -2.8, -5.6, -8.3, -11.1, -13.9, -16.7, -20])
     Y_range_h = np.array([15.6, 21.1, 23.9, 26.7])
@@ -242,9 +270,8 @@ def Heat_Pump_Model(T, P, Hload, Cload):
     Y_mean_c, Y_std_c = np.mean(Y_range_c), np.std(Y_range_c, ddof=0)
 
     # -------------------------------------------------------------------------
-    # OPTIMISATION 2: Read every Excel file exactly once up front via
-    # get_content_path (identical calls to the original), store as contiguous
-    # float64 arrays so they can be passed directly into @njit kernels.
+    # Read every Excel file exactly once (cached), store as contiguous float64
+    # arrays for direct use inside @njit kernels.
     # -------------------------------------------------------------------------
     heating_cache = {}
     for size in [24000, 36000, 48000, 60000]:
@@ -255,11 +282,11 @@ def Heat_Pump_Model(T, P, Hload, Cload):
             stacked_hs = np.ascontiguousarray(
                 np.vstack([hdf_hs.iloc[:, i].to_numpy(dtype=float) for i in range(1, 6)])),
             stacked_hp = np.ascontiguousarray(
-                np.vstack([hdf_p.iloc[:,  i].to_numpy(dtype=float) for i in range(1, 6)])),
-            deg_x_hs   = int(hdf_hs.iloc[0, 6]),
-            deg_y_hs   = int(hdf_hs.iloc[0, 7]),
-            deg_x_hp   = int(hdf_p.iloc[0, 6]),
-            deg_y_hp   = int(hdf_p.iloc[0, 7]),
+                np.vstack([hdf_p.iloc[:, i].to_numpy(dtype=float)  for i in range(1, 6)])),
+            deg_x_hs = int(hdf_hs.iloc[0, 6]),
+            deg_y_hs = int(hdf_hs.iloc[0, 7]),
+            deg_x_hp = int(hdf_p.iloc[0, 6]),
+            deg_y_hp = int(hdf_p.iloc[0, 7]),
         )
 
     cooling_cache = {}
@@ -267,9 +294,6 @@ def Heat_Pump_Model(T, P, Hload, Cload):
         path   = get_content_path(f'HP_Bosch/C-{size}.xlsx')
         cdf_cs = pd.read_excel(path, sheet_name='Cooling Supply')
         cdf_p  = pd.read_excel(path, sheet_name='Power')
-        # Store b-coefficient triplets as stacked (5 × n_coeffs) float64 arrays.
-        # The Tiw-polynomial (b0 + b1*Tiw + b2*Tiw²) is evaluated per-hour
-        # inside the @njit kernel, so only the raw coefficients are cached.
         cooling_cache[size] = dict(
             b_cs_b0 = np.ascontiguousarray(
                 np.vstack([cdf_cs.iloc[:, 1+3*i].to_numpy(dtype=float) for i in range(5)])),
@@ -278,11 +302,11 @@ def Heat_Pump_Model(T, P, Hload, Cload):
             b_cs_b2 = np.ascontiguousarray(
                 np.vstack([cdf_cs.iloc[:, 3+3*i].to_numpy(dtype=float) for i in range(5)])),
             b_cp_b0 = np.ascontiguousarray(
-                np.vstack([cdf_p.iloc[:,  1+3*i].to_numpy(dtype=float) for i in range(5)])),
+                np.vstack([cdf_p.iloc[:, 1+3*i].to_numpy(dtype=float) for i in range(5)])),
             b_cp_b1 = np.ascontiguousarray(
-                np.vstack([cdf_p.iloc[:,  2+3*i].to_numpy(dtype=float) for i in range(5)])),
+                np.vstack([cdf_p.iloc[:, 2+3*i].to_numpy(dtype=float) for i in range(5)])),
             b_cp_b2 = np.ascontiguousarray(
-                np.vstack([cdf_p.iloc[:,  3+3*i].to_numpy(dtype=float) for i in range(5)])),
+                np.vstack([cdf_p.iloc[:, 3+3*i].to_numpy(dtype=float) for i in range(5)])),
             deg_x_cs = int(cdf_cs.iloc[0, 16]),
             deg_y_cs = int(cdf_cs.iloc[0, 17]),
             deg_x_cp = int(cdf_p.iloc[0, 16]),
@@ -318,13 +342,9 @@ def Heat_Pump_Model(T, P, Hload, Cload):
         )
 
     # -------------------------------------------------------------------------
-    # OPTIMISATION 3: Pre-build dispatch look-up table once.
-    #
-    # The original dispatch_heat_pumps() rebuilt and searched all combinations
-    # on every one of the 8 760 hourly calls, even though Final_installed_units
-    # never changes. We generate every combination once, sort by
-    # (unit-count, total-capacity), and at runtime do a single linear scan —
-    # the first entry whose total >= hourly load is the answer.
+    # Pre-build dispatch look-up table once (sorted by unit-count then total
+    # capacity). At runtime a single linear scan finds the minimum-unit combo
+    # whose total capacity >= hourly load — identical logic to File 2.
     # -------------------------------------------------------------------------
     _n = len(Final_installed_units)
     _dispatch_table = []
@@ -346,7 +366,7 @@ def Heat_Pump_Model(T, P, Hload, Cload):
 
     # -------------------------------------------------------------------------
     # WARM-UP: trigger JIT compilation before the main loop so the first
-    # simulated hour is not slowed by a one-time ~1-2 s compile.
+    # simulated hour is not slowed by the one-time ~1-2 s compile.
     # -------------------------------------------------------------------------
     _dummy = np.ones((5, 10), dtype=np.float64)
     _heating_core(_dummy, _dummy, 0.0, 0.0, 0.0, 0.0, 2, 2, 2, 2, 1.0, kW_to_BTU)
@@ -354,7 +374,7 @@ def Heat_Pump_Model(T, P, Hload, Cload):
                   0.0, 0.0, 0.0, 0.0, 0.0, 2, 2, 2, 2, 1.0, kW_to_BTU)
 
     # -------------------------------------------------------------------------
-    # Main hourly loop — logic identical to the original
+    # Main hourly loop
     # -------------------------------------------------------------------------
     power_hp_heating = np.zeros(len(Hload))
     power_hp_cooling = np.zeros(len(Cload))
@@ -364,40 +384,40 @@ def Heat_Pump_Model(T, P, Hload, Cload):
     for i in range(len(Hload)):
 
         if T[i] < -20:
-            power_hp_heating[i] = 0  # supplementary heating system is required
+            power_hp_heating[i] = 0          # supplementary heating system required
         else:
-            matrix_h  = dispatch_heat_pumps(Hload[i])
-            m         = [row[0] for row in matrix_h]  # nominal capacities of selected heat pumps
-            n         = [row[1] for row in matrix_h]  # on/off flags
-            denominator = sum(m[j] * n[j] for j in range(len(m)))  # total active nominal capacity
-            c         = [(m[k] * n[k]) / denominator for k in range(len(m))]  # contribution share
-            l         = [c[u] * Hload[i] for u in range(len(c))]              # demand share per unit
-            p_h       = [heating_model(m[y], l[y], T[i], T_in_design_heating)[0]
-                         for y in range(len(l))]
-            p_h_clean = np.array([np.nan if x is None else x for x in p_h], dtype=float)
+            matrix_h    = dispatch_heat_pumps(Hload[i])
+            m           = [row[0] for row in matrix_h]   # nominal capacities
+            n           = [row[1] for row in matrix_h]   # on/off flags
+            denominator = sum(m[j] * n[j] for j in range(len(m)))
+            c           = [(m[k] * n[k]) / denominator for k in range(len(m))]
+            l           = [c[u] * Hload[i]              for u in range(len(c))]
+            p_h         = [heating_model(m[y], l[y], T[i], T_in_design_heating)[0]
+                           for y in range(len(l))]
+            p_h_clean   = np.array([np.nan if x is None else x for x in p_h], dtype=float)
             power_hp_heating[i] = np.nansum(p_h_clean)
             if power_hp_heating[i] > 0 and Hload[i] > 0:
                 COP_hp_heating[i] = Hload[i] / power_hp_heating[i]
 
         if T[i] < 18.33:
-            power_hp_cooling[i] = 0  # ventilation can address the load
+            power_hp_cooling[i] = 0          # ventilation can address the load
         else:
-            matrix_c  = dispatch_heat_pumps(Cload[i])
-            m         = [row[0] for row in matrix_c]  # nominal capacities of selected heat pumps
-            n         = [row[1] for row in matrix_c]  # on/off flags
-            denominator = sum(m[j] * n[j] for j in range(len(m)))  # total active nominal capacity
-            c         = [(m[k] * n[k]) / denominator for k in range(len(m))]  # contribution share
-            l         = [c[u] * Cload[i] for u in range(len(c))]              # demand share per unit
-            p_c       = [cooling_model(m[y], l[y], T[i], T_in_design_cooling, T_iwb_cooling[i])[0]
-                         for y in range(len(l))]
-            p_c_clean = np.array([np.nan if x is None else x for x in p_c], dtype=float)
+            matrix_c    = dispatch_heat_pumps(Cload[i])
+            m           = [row[0] for row in matrix_c]
+            n           = [row[1] for row in matrix_c]
+            denominator = sum(m[j] * n[j] for j in range(len(m)))
+            c           = [(m[k] * n[k]) / denominator for k in range(len(m))]
+            l           = [c[u] * Cload[i]              for u in range(len(c))]
+            p_c         = [cooling_model(m[y], l[y], T[i], T_in_design_cooling, T_iwb_cooling[i])[0]
+                           for y in range(len(l))]
+            p_c_clean   = np.array([np.nan if x is None else x for x in p_c], dtype=float)
             power_hp_cooling[i] = np.nansum(p_c_clean)
             if power_hp_cooling[i] > 0 and Cload[i] > 0:
                 COP_hp_cooling[i] = Cload[i] / power_hp_cooling[i]
 
     power_hp_heating = np.nan_to_num(power_hp_heating, nan=0)
     power_hp_cooling = np.nan_to_num(power_hp_cooling, nan=0)
+    power_hp_total   = power_hp_heating + power_hp_cooling
 
-    power_hp_total = power_hp_heating + power_hp_cooling
-
-    return power_hp_total, power_hp_heating, power_hp_cooling, COP_hp_heating, COP_hp_cooling, hp_model, HP_size
+    return (power_hp_total, power_hp_heating, power_hp_cooling,
+            COP_hp_heating, COP_hp_cooling, hp_model, HP_size)
