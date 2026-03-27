@@ -129,12 +129,6 @@ Grid_credit_NG = InData.Grid_credit_NG
 Hload = InData.Hload
 Cload = InData.Cload
 Grid_Tax_NG = InData.Grid_Tax_NG
-L_HP = InData.L_HP
-R_HP = InData.R_HP
-RT_HP = InData.RT_HP
-MO_HP = InData.MO_HP
-C_HP = InData.C_HP
-Php_r = InData.Php_r
 NG_Grid = InData.NG_Grid
 
 # EV data
@@ -163,27 +157,38 @@ cap_size = InData.cap_size
 available_roof_surface = InData.available_roof_surface
 PVPanel_surface_per_rated_capacity = InData.PVPanel_surface_per_rated_capacity
 generation_cap = InData.generation_cap
-HP_brand = InData.HP_brand
-power_hp_heating = InData.power_hp_heating
-power_hp_cooling = InData.power_hp_cooling
-COP_hp_heating = InData.COP_hp_heating
-COP_hp_cooling = InData.COP_hp_cooling
-hp_model = InData.hp_model
-HP_size = InData.HP_size
 
-if HP == 0:
-    NT = Eload.size
-    hp_model = 'No Heat Pump'
-    HP_size = 0
-    MO_HP = 0
-    S_HP = 0
-    power_hp_heating = np.zeros(NT)
-    power_hp_cooling = np.zeros(NT)
-    COP_hp_heating = np.full(8760, np.nan)
-    COP_hp_cooling = np.full(8760, np.nan)
+
 
 #@jit(nopython=True, fastmath=True)
 def fitness(X):
+    
+    HP_brand = InData.HP_brand
+    power_hp_heating = InData.power_hp_heating
+    power_hp_cooling = InData.power_hp_cooling
+    COP_hp_heating = InData.COP_hp_heating
+    COP_hp_cooling = InData.COP_hp_cooling
+    hp_model = InData.hp_model
+    HP_size = InData.HP_size
+    L_HP = InData.L_HP
+    R_HP = InData.R_HP
+    RT_HP = InData.RT_HP
+    MO_HP = InData.MO_HP
+    C_HP = InData.C_HP
+    Php_r = InData.Php_r
+
+    
+
+    if HP == 0:
+        NT = Eload.size
+        hp_model = 'No Heat Pump'
+        HP_size = 0
+        MO_HP = 0
+        power_hp_heating = np.zeros(NT)
+        power_hp_cooling = np.zeros(NT)
+        COP_hp_heating = np.full(8760, np.nan)
+        COP_hp_cooling = np.full(8760, np.nan)
+    
     if X.size == 1:
         X = X[0]
 
