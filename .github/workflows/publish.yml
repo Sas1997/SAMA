@@ -1,12 +1,11 @@
 name: Publish SAMAPy to PyPI
-
 on:
   release:
     types: [published]
-
 jobs:
   build:
     name: Build package
+    if: "!contains(github.ref, '-win') && !contains(github.ref, '-linux') && !contains(github.ref, '-mac')"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -24,7 +23,6 @@ jobs:
         with:
           name: dist
           path: SAMA Py Package/dist/
-
   publish-testpypi:
     name: Publish to TestPyPI
     needs: build
@@ -44,7 +42,6 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: https://test.pypi.org/legacy/
-
   publish-pypi:
     name: Publish to PyPI
     needs: publish-testpypi
