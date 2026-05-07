@@ -101,7 +101,7 @@ pip install numpy pandas scipy numba matplotlib openpyxl seaborn numpy-financial
 Edit `Input_Data.py` to configure your system, then run:
 
 ```bash
-python ADE.py --algorithm ADE
+python ADE.py
 ```
 
 Available algorithms: `pso`, `ade`, `abc`, `gwo`
@@ -120,7 +120,7 @@ pip install samapy
 ```bash
 samapy-config
 ```
-An interactive 18-section wizard guides you through all parameters and saves `sama_config_COMPLETE.yaml`.
+An interactive multi section wizard guides you through all parameters and saves `sama_config_COMPLETE.yaml`.
 
 **Step 2: Run the optimization:**
 ```bash
@@ -168,7 +168,7 @@ samapy-run
 #    samapy_outputs/data/    → Outputforplotting.csv (8,760-hour time series)
 ```
 
-> **Expected runtime:** 5–30 minutes for `MaxIt=200`, `nPop=50` depending on hardware. The first run is slower due to one-time Numba JIT compilation of the EMS engine.
+> **Expected runtime:** 2–10 minutes for `MaxIt=200`, `nPop=50` depending on hardware. The first run is slower due to one-time Numba JIT compilation of the EMS engine.
 
 ---
 
