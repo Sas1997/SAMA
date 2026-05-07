@@ -98,10 +98,10 @@ cd "SAMA/Backend Codes/SAMA V2.0.1-GitHub"
 pip install numpy pandas scipy numba matplotlib openpyxl seaborn numpy-financial questionary PyYAML
 ```
 
-Edit `sama/core/Input_Data.py` to configure your system, then run:
+Edit `Input_Data.py` to configure your system, then run:
 
 ```bash
-python run_sama_optimized.py --algorithm pso
+python ADE.py --algorithm ADE
 ```
 
 Available algorithms: `pso`, `ade`, `abc`, `gwo`
@@ -111,20 +111,20 @@ Available algorithms: `pso`, `ade`, `abc`, `gwo`
 The recommended method for most users. No source editing required.
 
 ```bash
-pip install sama
+pip install samapy
 ```
 
-> **Note:** The PyPI distribution name is `SAMAbyRenXera`. Once installed, import and CLI commands use `sama`.
+> **Note:** The PyPI distribution name is `samapy`. Once installed, import and CLI commands use `samapy`.
 
 **Step 1: Configure your project:**
 ```bash
-sama-config
+samapy-config
 ```
 An interactive 18-section wizard guides you through all parameters and saves `sama_config_COMPLETE.yaml`.
 
 **Step 2: Run the optimization:**
 ```bash
-sama-run
+samapy-run
 ```
 
 **Step 3: View results in `sama_outputs/`**
@@ -132,40 +132,40 @@ sama-run
 Additional run options:
 
 ```bash
-sama-run --algorithm ade          # override algorithm
-sama-run --output results/run1    # override output directory
-sama-run --dry-run --verbose      # validate config without running
-sama-run --no-gui                 # headless / server mode
+samapy-run --algorithm ade          # override algorithm
+samapy-run --output results/run1    # override output directory
+samapy-run --dry-run --verbose      # validate config without running
+samapy-run --no-gui                 # headless / server mode
 ```
 
 ### Method 3: Windows .exe (Alpha)
 
-A point-and-click GUI for non-technical users. No Python installation required. Currently in alpha, contact the developers to request access.
+A point-and-click GUI for non-technical users. No Python installation required. Currently in alpha.
 
-> https://github.com/Sas1997/SAMA
+> [https://github.com/Sas1997/SAMA](https://github.com/Sas1997/SAMA/releases/latest/download/SAMA-Setup.exe)
 
 ---
 
 ## Quick Start
 
-Run SAMA in five steps using bundled sample data (London, Ontario):
+Run SAMAPY in five steps using bundled sample data (London, Ontario):
 
 ```bash
 # 1. Install
-pip install sama
+pip install samapy
 
 # 2. Create a project folder and navigate into it
-mkdir my_sama_project && cd my_sama_project
+mkdir my_samapy_project && cd my_samapy_project
 
 # 3. Launch the configuration wizard (accept defaults for a quick test)
-sama-config
+samapy-config
 
 # 4. Run the optimization
-sama-run
+samapy-run
 
 # 5. View your results
-#    sama_outputs/figs/    → all charts (PNG/SVG)
-#    sama_outputs/data/    → Outputforplotting.csv (8,760-hour time series)
+#    samapy_outputs/figs/    → all charts (PNG/SVG)
+#    samapy_outputs/data/    → Outputforplotting.csv (8,760-hour time series)
 ```
 
 > **Expected runtime:** 5–30 minutes for `MaxIt=200`, `nPop=50` depending on hardware. The first run is slower due to one-time Numba JIT compilation of the EMS engine.
@@ -189,17 +189,17 @@ For rigorous comparison, set `Run_Time > 1` to average across multiple independe
 
 ## Output Examples
 
-After `sama-run` completes, results are organized in `sama_outputs/`:
+After `samapy-run` completes, results are organized in `samapy_outputs/`:
 
 ```
-sama_outputs/
+samapy_outputs/
 ├── Optimization.png                  ← convergence curve
 ├── figs/
 │   ├── Cash_Flow.svg                 ← 25-year lifecycle cost breakdown
 │   ├── Energy Distribution.png       ← annual energy supply by source
 │   ├── Battery State of Charge.png   ← hourly SOC profile
 │   ├── Grid Interconnection.png      ← hourly grid import/export
-│   ├── electricity_comparison.png    ← SAMA system vs. grid-only cost
+│   ├── electricity_comparison.png    ← SAMAPY system vs. grid-only cost
 │   ├── hp_monthly_summary.png        ← heat pump COP and energy (if HP=1)
 │   └── EV Energy.png                 ← EV charge/discharge (if EV=1)
 └── data/
