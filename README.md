@@ -89,45 +89,33 @@ Constraints include reliability (LPSP), renewable energy fraction, capital budge
 SAMA supports three usage methods. Choose the one that fits your workflow:
 
 ### Method 1: Raw Python Code
-
 For researchers and developers who want full access to source code and algorithms.
-
 ```bash
 git clone https://github.com/Sas1997/SAMA.git
-cd "SAMA/Backend Codes/SAMA V2.0.1-GitHub"
-pip install numpy pandas scipy numba matplotlib openpyxl seaborn numpy-financial questionary PyYAML
+cd SAMA
+pip install -e .
 ```
-
-Edit `Input_Data.py` to configure your system, then run:
-
+This installs SAMA in editable mode, so you can edit any file under `src/samapy/` directly and see your changes immediately. Configure your system with the wizard or by editing `src/samapy/core/Input_Data.py`, then run:
 ```bash
-python ADE.py
+samapy-run
 ```
-
 Available algorithms: `pso`, `ade`, `abc`, `gwo`
-
 ### Method 2: Python Package (pip)
-
 The recommended method for most users. No source editing required.
-
 ```bash
 pip install samapy
 ```
-
 > **Note:** The PyPI distribution name is `samapy`. Once installed, import and CLI commands use `samapy`.
-
 **Step 1: Configure your project:**
 ```bash
 samapy-config
 ```
-An interactive multi section wizard guides you through all parameters and saves `sama_config_COMPLETE.yaml`.
-
+An interactive multi section wizard guides you through all parameters and saves `samapy_config_COMPLETE.yaml`.
 **Step 2: Run the optimization:**
 ```bash
 samapy-run
 ```
-
-**Step 3: View results in `sama_outputs/`**
+**Step 3: View results in `samapy_outputs/`**
 
 Additional run options:
 
@@ -213,20 +201,20 @@ samapy_outputs/
 
 Full documentation is available in this repository:
 
-- **[SAMA_Documentation_v3_final.md](./Docs/SAMA_Documentation_v3_final.md)**: Complete user guide covering all parameters, algorithms, financial models, input formats, troubleshooting, and mathematical formulations
+- **[SAMA_Documentation.md](./Docs/SAMA_Documentation.md)**: Complete user guide covering all parameters, algorithms, financial models, input formats, troubleshooting, and mathematical formulations
 
 Key documentation sections:
 
 | Topic | Location |
 |-------|----------|
-| All configuration parameters | [Section 6: Configuration File](./Docs/SAMA_Documentation_v3_final.md#6-the-configuration-file-sama_config_completeyaml) |
-| Optimization algorithms (detail) | [Section 7](./Docs/SAMA_Documentation_v3_final.md#7-optimization-algorithms) |
-| Energy management system | [Section 8](./Docs/SAMA_Documentation_v3_final.md#8-energy-management-system-ems) |
-| Component models | [Section 9](./Docs/SAMA_Documentation_v3_final.md#9-component-models) |
-| Financial model | [Section 10](./Docs/SAMA_Documentation_v3_final.md#10-financial-model) |
-| Troubleshooting | [Section 13](./Docs/SAMA_Documentation_v3_final.md#13-troubleshooting) |
-| Mathematical formulations | [Section 17](./Docs/SAMA_Documentation_v3_final.md#17-technical-framework-and-mathematical-formulation) |
-| Where to find input data | [Appendix A](./Docs/SAMA_Documentation_v3_final.md#appendix-a-where-to-find-input-data-for-sama) |
+| All configuration parameters | [Section 6: Configuration File](./Docs/SAMA_Documentation.md#6-the-configuration-file-sama_config_completeyaml) |
+| Optimization algorithms (detail) | [Section 7](./Docs/SAMA_Documentation.md#7-optimization-algorithms) |
+| Energy management system | [Section 8](./Docs/SAMA_Documentation.md#8-energy-management-system-ems) |
+| Component models | [Section 9](./Docs/SAMA_Documentation.md#9-component-models) |
+| Financial model | [Section 10](./Docs/SAMA_Documentation.md#10-financial-model) |
+| Troubleshooting | [Section 13](./Docs/SAMA_Documentation.md#13-troubleshooting) |
+| Mathematical formulations | [Section 19](./Docs/SAMA_Documentation.md#19-technical-framework-and-mathematical-formulation) |
+| Where to find input data | [Appendix A](./Docs/SAMA_Documentation.md#appendix-a-where-to-find-input-data-for-sama) |
 
 ---
 
@@ -283,3 +271,5 @@ SAMA is released under the **[GNU General Public License v3.0 (GPL-3.0)](./LICEN
 <p align="center">
   Made with ☀️ by the <a href="https://github.com/Sas1997/SAMA">FAST Research Group</a> · Western University · GPL-3.0
 </p>
+
+

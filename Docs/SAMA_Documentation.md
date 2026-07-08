@@ -36,7 +36,7 @@
   - [4.8 Understanding the Working Directory](#48-understanding-the-working-directory)
   - [4.9 What to Expect on the First Run](#49-what-to-expect-on-the-first-run)
 - [5. Method 3: Windows .exe Application (Alpha)](#5-method-3--windows-exe-application-alpha)
-- [6. The Configuration File (sama_config_COMPLETE.yaml)](#6-the-configuration-file-sama_config_completeyaml)
+- [6. The Configuration File (samapy_config_COMPLETE.yaml)](#6-the-configuration-file-samapy_config_completeyaml)
   - [6.1 File Structure Overview](#61-file-structure-overview)
   - [6.2 Key Parameter Reference](#62-key-parameter-reference)
 - [7. Optimization Algorithms](#7-optimization-algorithms)
@@ -63,7 +63,7 @@
 - [11. Bundled Data Files (content/ folder)](#11-bundled-data-files-content-folder)
 - [12. Input Data Formats](#12-input-data-formats)
   - [12.1 Electrical Load CSV (Eload.csv)](#121-electrical-load-csv-eloadcsv)
-  - [12.2 METEO.csv (SAM NSRDB format)](#122-meteocsy-sam-nsrdb-format)
+  - [12.2 METEO.csv (SAM NSRDB format)](#122-meteocsv-sam-nsrdb-format)
   - [12.3 Plane-of-Array Irradiance CSV (Irradiance.csv)](#123-plane-of-array-irradiance-csv-irradiancecsv)
   - [12.4 house_load.xlsx (Thermal Load)](#124-house_loadxlsx-thermal-load)
 - [13. Troubleshooting](#13-troubleshooting)
@@ -206,32 +206,27 @@ This method gives you full access to all source files. You can directly edit `In
 ### 3.2 Downloading and Opening the Code
 
 > **GitHub Repository (Method 1 source code):**
-> https://github.com/Sas1997/SAMA/tree/main/Backend%20Codes/SAMA%20V2.0.1-GitHub
+> https://github.com/Sas1997/SAMA
 
 1. Open the URL above in your browser.
 2. Click the green **Code** button and choose **Download ZIP**, or clone with Git:
-
 ```bash
 git clone https://github.com/Sas1997/SAMA.git
 ```
-
-3. Extract the ZIP (or navigate into the cloned folder) and open the folder `Backend Codes/SAMA V2.0.1-GitHub` in PyCharm (or your preferred IDE).
+3. Extract the ZIP (or navigate into the cloned folder) and open the `SAMA` folder in PyCharm (or your preferred IDE). The actual package source lives under `src/samapy/`.
 4. PyCharm will detect the project structure automatically. Set up a Python interpreter (Python 3.9 or higher) in **File > Settings > Project > Python Interpreter**.
-5. Install the required packages. You can do this in the PyCharm terminal or any command prompt:
-
+5. Install SAMA in editable mode. You can do this in the PyCharm terminal or any command prompt:
 ```bash
-pip install numpy pandas scipy numba matplotlib openpyxl seaborn numpy-financial questionary PyYAML
+pip install -e .
 ```
-
+This installs all required dependencies automatically and lets you edit any file under `src/samapy/` with changes taking effect immediately, no reinstall needed.
 6. Verify the setup by running:
-
 ```bash
 python -c "from samapy.core.Input_Data import InData; print('OK')"
 ```
-
 ### 3.3 Configuring Parameters Directly in Input_Data.py
 
-Open `samapy/core/Input_Data.py` in your IDE. All parameters are set in the `Input_Data.__init__` method. The key sections to edit are described below.
+Open `src/samapy/core/Input_Data.py` in your IDE. All parameters are set in the `Input_Data.__init__` method. The key sections to edit are described below.
 
 #### 3.3.1 System Components
 
@@ -379,24 +374,23 @@ When `HP = 1` and a natural gas furnace baseline is being compared, set `rateStr
 
 After configuring `Input_Data.py`, run one of the optimizer scripts directly. In PyCharm, right-click the script and choose Run, or use the terminal.
 
-#### 3.4.1 Using `run_sama_optimized.py` (recommended for raw-code users)
+#### 3.4.1 Using `run_samapy_optimized.py` (recommended for raw-code users)
 
 ```bash
-python run_sama_optimized.py --algorithm pso
-python run_sama_optimized.py --algorithm ade
-python run_sama_optimized.py --algorithm abc
-python run_sama_optimized.py --algorithm gwo
+python run_samapy_optimized.py --algorithm pso
+python run_samapy_optimized.py --algorithm ade
+python run_samapy_optimized.py --algorithm abc
+python run_samapy_optimized.py --algorithm gwo
 ```
 
-This script loads `sama_config_COMPLETE_HYBRID.yaml` (if present) and applies it to `InData` at runtime, then runs the chosen algorithm.
+This script loads `samapy_config_COMPLETE_HYBRID.yaml` (if present) and applies it to `InData` at runtime, then runs the chosen algorithm.
 
 #### 3.4.2 Running optimizer modules directly
-
 ```bash
-python sama/optimizers/pso.py        # Particle Swarm Optimization
-python sama/optimizers/ade.py        # Advanced Differential Evolution
-python sama/optimizers/run_abc.py    # Artificial Bee Colony
-python sama/optimizers/gwo.py        # Grey Wolf Optimizer
+python src/samapy/optimizers/pso.py        # Particle Swarm Optimization
+python src/samapy/optimizers/ade.py        # Advanced Differential Evolution
+python src/samapy/optimizers/run_abc.py    # Artificial Bee Colony
+python src/samapy/optimizers/gwo.py        # Grey Wolf Optimizer
 ```
 
 #### 3.4.3 Using the `examples/` folder
@@ -461,11 +455,11 @@ The wizard launches an interactive terminal interface with **18 sections** that 
 | **Section 17:** Natural Gas Rate Structure | NG unit (m³/therms/kWh), rate type (1–8), NG prices, escalation |
 | **Section 18:** Output Settings | Output directory, compare-with-grid scenario flag |
 
-When the wizard completes, it saves a file called `sama_config_COMPLETE.yaml` in your working directory. This YAML file contains all your parameters and can be edited manually or re-run through the wizard at any time.
+When the wizard completes, it saves a file called `samapy_config_COMPLETE.yaml` in your working directory. This YAML file contains all your parameters and can be edited manually or re-run through the wizard at any time.
 
 ### 4.3 Step 2: Run the Optimization
 
-With `sama_config_COMPLETE.yaml` in your working directory, run:
+With `samapy_config_COMPLETE.yaml` in your working directory, run:
 
 ```bash
 samapy-run
@@ -477,7 +471,7 @@ SAMA will automatically find the config file, load all parameters, and run the o
 
 | Option | Description | Example |
 |--------|-------------|---------|
-| `-c` / `--config` | Path to config YAML (default: `sama_config_COMPLETE.yaml` in cwd) | `samapy-run -c my_project.yaml` |
+| `-c` / `--config` | Path to config YAML (default: `samapy_config_COMPLETE.yaml` in cwd) | `samapy-run -c my_project.yaml` |
 | `-a` / `--algorithm` | Override the algorithm from the config file | `samapy-run -a pso` |
 | `--output` | Override the output directory from the config | `samapy-run --output results/run1` |
 | `--dry-run` | Validate the config file without running optimization | `samapy-run --dry-run --verbose` |
@@ -488,16 +482,16 @@ The `optimization_algorithm` key in the YAML accepts: `pso`, `ade`, `abc`, or `g
 
 ### 4.4 Step 3: View Results
 
-Results are saved to the output directory specified in the config (default: `sama_outputs/` in your working directory). The folder is organized as:
+Results are always saved to `samapy_outputs/` in your working directory (this is not configurable through the YAML file). The folder is organized as:
 
 ```
-sama_outputs/
+samapy_outputs/
     Optimization.png          convergence curve (best cost vs. iteration)
     figs/                     all chart PNG/SVG files
     data/                     CSV data files
 ```
 
-#### 4.4.1 Chart files generated in `sama_outputs/figs/`
+#### 4.4.1 Chart files generated in `samapy_outputs/figs/`
 
 | File | Description |
 |------|-------------|
@@ -523,9 +517,9 @@ sama_outputs/
 | `hp_cooling_performance.png` | Heat pump cooling power and COP (when `HP = 1`) |
 | `hp_cop_vs_temp.png` | COP as a function of ambient temperature (when `HP = 1`) |
 | `hp_monthly_summary.png` | Monthly heat pump energy and COP summary (when `HP = 1`) |
-| `Optimization.png` | Optimizer convergence curve (saved in `sama_outputs/` root) |
+| `Optimization.png` | Optimizer convergence curve (saved in `samapy_outputs/` root) |
 
-#### 4.4.2 Data files generated in `sama_outputs/data/`
+#### 4.4.2 Data files generated in `samapy_outputs/data/`
 
 | File | Description |
 |------|-------------|
@@ -543,7 +537,7 @@ from samapy.core.Input_Data import InData
 from samapy.cli.config_loader import load_config, apply_config
 
 # Load a YAML config produced by samapy-config
-config = load_config('sama_config_COMPLETE.yaml')
+config = load_config('samapy_config_COMPLETE.yaml')
 
 # Apply all parameters to the InData singleton
 apply_config(config)
@@ -572,16 +566,16 @@ swarm.optimize()
 | `save_config(config, path)` | Save a config dictionary to a YAML file |
 | `merge_configs(*paths)` | Merge multiple YAML config files into one dictionary (later files override earlier ones) |
 
-#### 4.5.4 Important: Package Name vs Import Name
+#### 4.5.4 Package and Import Name
 
-The SAMA Python package is published on PyPI under the distribution name **`samapy`**. This is the name you use with pip to install the package. However, once installed, the package is imported in Python code using the name **`sama`** (all lowercase). These are two different names for the same package:
+The SAMA Python package is published on PyPI under the distribution name **`samapy`**, and it is imported in Python code using the same name:
 
 **Install with pip** (use the PyPI distribution name):
 ```bash
 pip install samapy
 ```
 
-**Import in Python scripts** (use the internal package name):
+**Import in Python scripts**:
 ```python
 import samapy
 ```
@@ -596,9 +590,8 @@ When searching for the package on the PyPI website, look for `samapy`. When writ
 
 ### 4.6 Using Your Own Custom Data Files
 
-SAMA ships with bundled default data files for Boston, MA (weather, electrical load, and heat pump data). When you run `samapy-config` and provide your own file paths, the wizard automatically copies those files into the local `samapy/content/` folder in your working directory. SAMA reads from this local folder instead of the bundled defaults.
-
-You can also copy your custom files directly into the `samapy/content/` folder yourself, and SAMA will use them automatically when you run `samapy-run`. The `samapy/content/` folder is created in your working directory the first time you run `samapy-config` or `samapy-run`.
+SAMA ships with bundled default data files for Boston, MA (weather, electrical load, and heat pump data). When you run `samapy-config` and provide your own file paths, the wizard automatically copies those files into the installed `samapy` package's `content/` folder, overwriting the bundled defaults. This is not a folder inside your project directory, it is wherever `samapy` itself is installed (inside your repo's `src/samapy/content/` if you installed with `pip install -e .`, or inside your Python environment's `site-packages` if you installed with plain `pip install samapy`).
+You can find this location yourself by running `python -c "from samapy import get_content_path; print(get_content_path(''))"`. You can also copy your custom files directly into that folder, and SAMA will use them automatically when you run `samapy-run`.
 
 The expected file names and formats are:
 
@@ -607,7 +600,7 @@ The expected file names and formats are:
 - **`house_load.xlsx`**, Building thermal load. Excel file with heating load (Hload) in column 2 and cooling load (Cload) in column 3, 8,760 rows each, in kW.
 - **`Irradiance.csv`**, Only needed when `G_type = 2` (manual plane-of-array irradiance). One column, 8,760 rows, no header. Values in W/m².
 
-If a file is not present in the local `samapy/content/` folder, SAMA automatically falls back to the bundled default. You only need to provide files you want to customize.
+If a file is not present in the installed package's `content/` folder, SAMA automatically falls back to the bundled default. You only need to provide files you want to customize.
 
 ### 4.7 Typical Workflow for a New Project Location
 
@@ -615,13 +608,14 @@ If a file is not present in the local `samapy/content/` folder, SAMA automatical
 2. Download your `METEO.csv` weather file from https://nsrdb.nrel.gov/ for your project location.
 3. Prepare your `Eload.csv` file with 8,760 rows of hourly electrical load data in kW.
 4. If modeling a heat pump, prepare `house_load.xlsx` with Hload and Cload columns.
-5. Open a terminal in your project folder and run `samapy-config`. The wizard will ask for paths to your data files and copy them into `samapy/content/` automatically.
-6. When the wizard finishes, `sama_config_COMPLETE.yaml` is saved in your project folder. You can open it in any text editor to review or manually adjust settings.
-7. Run `samapy-run` to start the optimization. Results are saved in `sama_outputs/` inside your project folder.
+5. Open a terminal in your project folder and run `samapy-config`. The wizard will ask for paths to your data files and copy them into the installed `samapy` package's `content/` folder (see Section 4.6 for how to find that location).
+6. When the wizard finishes, `samapy_config_COMPLETE.yaml` is saved in your project folder. You can open it in any text editor to review or manually adjust settings.
+7. Run `samapy-run` to start the optimization. Results are saved in `samapy_outputs/` inside your project folder.
 
-### 4.8 Understanding the Working Directory
-
-SAMA creates all its folders (`samapy/content/`, `sama_inputs/`, `sama_outputs/`) relative to the folder where you run the `samapy-config` and `samapy-run` commands. This folder is called the **working directory**. Always run both commands from the same project folder so that the configuration file, custom data files, and results all stay together in one place.
+### 4.8 Understanding Where Your Files Go
+SAMA uses two different locations, and it helps to know the difference:
+- **Results** (`samapy_inputs/`, `samapy_outputs/`) are created relative to the folder where you run `samapy-config` and `samapy-run`. Always run both commands from the same project folder so your configuration file and results stay together.
+- **Input data overrides** (`Eload.csv`, `METEO.csv`, `house_load.xlsx`, `Irradiance.csv`) always go into the installed `samapy` package's own `content/` folder, regardless of which directory you run commands from. Providing new data files through the wizard replaces the bundled defaults for every project on your machine until you replace them again.
 
 > **On Windows:** navigate to your project folder in File Explorer, click the address bar, type `cmd`, and press Enter. This opens a Command Prompt already pointed at that folder.
 
@@ -650,15 +644,13 @@ To request the Windows `.exe` version, contact the FAST research group at Wester
 
 ---
 
-## 6. The Configuration File (`sama_config_COMPLETE.yaml`)
+## 6. The Configuration File (`samapy_config_COMPLETE.yaml`)
 
 Whether you use the wizard (`samapy-config`) or edit it manually, the configuration file is a standard YAML text file. You can open it in any text editor. Below is a complete reference of all keys.
 
 ### 6.1 File Structure Overview
 
 ```yaml
-input_directory: C:\path\to\project   # working directory (used by raw code)
-output_directory: C:\path\to\sama_outputs  # results output folder
 optimization_algorithm: abc            # pso | ade | abc | gwo
 
 # Optimization settings
@@ -939,7 +931,7 @@ The financial model projects cash flows year by year over the `n`-year project l
 
 ## 11. Bundled Data Files (`content/` folder)
 
-The following data files are bundled with the SAMA package in the `samapy/content/` directory and can be accessed via `get_content_path()`:
+The following data files are bundled with the SAMA package in its `content/` directory (`src/samapy/content/` if installed with `pip install -e .`) and can be accessed via `get_content_path()`:
 
 | File | Description |
 |------|-------------|
@@ -993,7 +985,7 @@ To use your own weather or load data, either replace these files in place or spe
 
 | Error / Symptom | Cause | Fix |
 |-----------------|-------|-----|
-| `ModuleNotFoundError: No module named 'sama'` | SAMA not installed in current Python environment | Run `pip install samapy` (or `pip install -e .` from project root) |
+| `ModuleNotFoundError: No module named 'samapy'` | SAMA not installed in current Python environment | Run `pip install samapy` (or `pip install -e .` from project root) |
 | `command not found: samapy-config` | `pip install` did not add scripts to PATH | On Windows: restart terminal. On Linux/Mac: add `~/.local/bin` to PATH |
 | `BackendUnavailable: Cannot import setuptools.backends.legacy` | Old version of setuptools | The `pyproject.toml` uses `setuptools.build_meta`. Ensure the correct `pyproject.toml` is present. |
 | `ModuleNotFoundError: No module named 'numba'` | numba not installed or wrong version for Python 3.13+ | `pip install 'numba>=0.60'` |
@@ -1002,7 +994,7 @@ To use your own weather or load data, either replace these files in place or spe
 | Optimization produces 0 kW for all components | All candidate solutions violate constraints (LPSP, RE_min, Budget) | Relax constraints: increase `LPSP_max_rate`, decrease `RE_min_rate`, increase `Budget` or `VarMax` |
 | `samapy-config` freezes or no text appears | Terminal does not support questionary interactive prompts | Try a different terminal: `cmd.exe` or PowerShell on Windows; bash or zsh on Linux/macOS |
 | Very slow optimization (many hours) | numba JIT compilation on first run, or `MaxIt`/`nPop` too large | First run includes JIT compilation (expected). Reduce `MaxIt` or `nPop` for testing. |
-| Results folder is empty after optimization | Output directory not created or permissions issue | Check `output_directory` in YAML config. Ensure write permissions in that folder. |
+| Results folder is empty after optimization | Output directory not created or permissions issue | SAMA always writes to `samapy_outputs/` inside the folder where you ran `samapy-run`. Check that folder, and ensure you have write permissions there. |
 
 ---
 
@@ -1038,7 +1030,7 @@ Follow all 18 sections. For a quick test, accept defaults in most sections.
 samapy-run
 ```
 
-**Step 5.** View results in `sama_outputs/figs/` and `sama_outputs/data/Outputforplotting.csv`.
+**Step 5.** View results in `samapy_outputs/figs/` and `samapy_outputs/data/Outputforplotting.csv`.
 
 > **Expected Runtime:**
 > - The first run always takes longer because numba compiles the EMS functions on first call.
@@ -1051,29 +1043,29 @@ samapy-run
 
 | Module / File | Description |
 |---------------|-------------|
-| **`sama/core/`** | |
+| **`src/samapy/core/`** | |
 | `Input_Data.py` | Main parameter class: defines all input data and default values. Singleton pattern: `InData = Input_Data()` |
 | `Fitness.py` | Fitness evaluation function: calls EMS for each candidate design and returns NPC, LCOE, LEM, LPSP, and constraint penalties |
-| **`sama/cli/`** | |
-| `wizard.py` | Entry point for `samapy-config` command: launches `sama_Wizard.py` |
-| `sama_Wizard.py` | Interactive 18-section configuration wizard using questionary |
+| **`src/samapy/cli/`** | |
+| `wizard.py` | Entry point for `samapy-config` command: launches `samapy_Wizard.py` |
+| `samapy_Wizard.py` | Interactive 18-section configuration wizard using questionary |
 | `runner.py` | Entry point for `samapy-run` command: loads YAML, applies config, runs selected algorithm |
 | `config_loader.py` | `load_config()`, `apply_config()`, `save_config()`, `merge_configs()` functions |
-| **`sama/optimizers/`** | |
+| **`src/samapy/optimizers/`** | |
 | `swarm.py` | Particle Swarm Optimization (`Swarm` class) |
 | `AdvancedDifferentialEvolution.py` | Advanced Differential Evolution (`AdvancedDifferentialEvolution` class) |
 | `ArtificialBeeColony.py` | Improved Artificial Bee Colony (`ImprovedArtificialBeeColony` class) |
 | `GreyWolfOptimizer.py` | Grey Wolf Optimizer (`GreyWolfOptimizer` and `ParallelGreyWolfOptimizer` classes) |
 | `pso.py` / `ade.py` / `run_abc.py` / `gwo.py` | Thin wrapper scripts for running each algorithm directly from command line |
-| **`sama/ems/`** | |
+| **`src/samapy/ems/`** | |
 | `EMS.py` | Base hourly dispatch engine (Numba JIT compiled) |
 | `EMS_EV.py` | Extended dispatch engine with EV smart charging and V2X lookahead arbitrage |
 | `EMS_HP.py` | Heat pump energy attribution post-processor |
-| **`sama/models/`** | |
+| **`src/samapy/models/`** | |
 | `Battery_Model.py` | Battery discharge and degradation models (lead-acid KiBaM and Li-ion) |
 | `BB_HP_Goodman.py` | Goodman air-source heat pump black-box model |
 | `BB_HP_Bosch.py` | Bosch air-source heat pump black-box model |
-| **`sama/pricing/`** | |
+| **`src/samapy/pricing/`** | |
 | `Electricity_Bill_Calculator.py` | Monthly and annual billing calculations with escalation and NEM reconciliation |
 | `calcFlatRate.py` | Flat rate tariff calculator |
 | `calcSeasonalRate.py` | Seasonal rate tariff calculator |
@@ -1086,9 +1078,9 @@ samapy-run
 | `calcULTouRate.py` | Ultra-Low TOU (ULO) rate calculator |
 | `service_charge.py` | Monthly utility service charge calculator (flat or tiered) |
 | `Advanced_multi_cashflow.py` | Advanced multi-run cash flow analysis and comparison plots |
-| **`samapy/results/`** | |
+| **`src/samapy/results/`** | |
 | `Results.py` | `Gen_Results()`: generates all output charts and the `Outputforplotting.csv` data file |
-| **`samapy/utilities/`** | |
+| **`src/samapy/utilities/`** | |
 | `daysInMonth.py` | Calendar utility: leap-year aware days-per-month array |
 | `dataextender.py` | Expand monthly averages to 8,760-hour arrays |
 | `generic_load.py` | Generic electrical load profile generator (July-peak and January-peak archetypes) |
@@ -1098,7 +1090,7 @@ samapy-run
 | `EV_travel.py` | EV travel energy consumption modeling |
 | `EV_demand_dest.py` | EV demand and destination distribution utilities |
 | `Ev_Battery_Throughput.py` | EV battery lifetime throughput calculation based on degradation and km driven |
-| **`samapy/content/`** | |
+| **`src/samapy/content/`** | |
 | *(data files)* | Bundled CSV, Excel, and meteorological data files (see Section 11) |
 
 ---
@@ -1142,7 +1134,7 @@ If you use SAMA in academic work, please cite the primary published paper [A1]. 
 This section walks through five complete, self-contained examples covering the most common SAMAPy use cases. Each example can be run as a standalone Python script from your working directory, provided SAMAPy is installed and the relevant input files are available.
 
 The full example scripts are also available in the repository at:
-> https://github.com/Sas1997/SAMA/tree/main/SAMA%20Py%20Package/examples
+> https://github.com/Sas1997/SAMA/tree/main/examples
 
 ---
 
@@ -1927,7 +1919,7 @@ For the off-grid PV+DG+Battery configuration in Sacramento, the optimizer found 
 
 ---
 
-## 19. SAMA Publications and Further Reading
+## 21. SAMA Publications and Further Reading
 
 The following peer-reviewed publications describe SAMA's development, validation, and application across a range of techno-economic energy studies. Users who wish to cite SAMA in academic work should reference these papers.
 
