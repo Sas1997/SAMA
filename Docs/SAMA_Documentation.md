@@ -566,16 +566,16 @@ swarm.optimize()
 | `save_config(config, path)` | Save a config dictionary to a YAML file |
 | `merge_configs(*paths)` | Merge multiple YAML config files into one dictionary (later files override earlier ones) |
 
-#### 4.5.4 Important: Package Name vs Import Name
+#### 4.5.4 Package and Import Name
 
-The SAMA Python package is published on PyPI under the distribution name **`samapy`**. This is the name you use with pip to install the package. However, once installed, the package is imported in Python code using the name **`sama`** (all lowercase). These are two different names for the same package:
+The SAMA Python package is published on PyPI under the distribution name **`samapy`**, and it is imported in Python code using the same name:
 
 **Install with pip** (use the PyPI distribution name):
 ```bash
 pip install samapy
 ```
 
-**Import in Python scripts** (use the internal package name):
+**Import in Python scripts**:
 ```python
 import samapy
 ```
@@ -600,7 +600,7 @@ The expected file names and formats are:
 - **`house_load.xlsx`**, Building thermal load. Excel file with heating load (Hload) in column 2 and cooling load (Cload) in column 3, 8,760 rows each, in kW.
 - **`Irradiance.csv`**, Only needed when `G_type = 2` (manual plane-of-array irradiance). One column, 8,760 rows, no header. Values in W/m².
 
-If a file is not present in the local `samapy/content/` folder, SAMA automatically falls back to the bundled default. You only need to provide files you want to customize.
+If a file is not present in the installed package's `content/` folder, SAMA automatically falls back to the bundled default. You only need to provide files you want to customize.
 
 ### 4.7 Typical Workflow for a New Project Location
 
@@ -931,7 +931,7 @@ The financial model projects cash flows year by year over the `n`-year project l
 
 ## 11. Bundled Data Files (`content/` folder)
 
-The following data files are bundled with the SAMA package in the `samapy/content/` directory and can be accessed via `get_content_path()`:
+The following data files are bundled with the SAMA package in its `content/` directory (`src/samapy/content/` if installed with `pip install -e .`) and can be accessed via `get_content_path()`:
 
 | File | Description |
 |------|-------------|
@@ -985,7 +985,7 @@ To use your own weather or load data, either replace these files in place or spe
 
 | Error / Symptom | Cause | Fix |
 |-----------------|-------|-----|
-| `ModuleNotFoundError: No module named 'sama'` | SAMA not installed in current Python environment | Run `pip install samapy` (or `pip install -e .` from project root) |
+| `ModuleNotFoundError: No module named 'samapy'` | SAMA not installed in current Python environment | Run `pip install samapy` (or `pip install -e .` from project root) |
 | `command not found: samapy-config` | `pip install` did not add scripts to PATH | On Windows: restart terminal. On Linux/Mac: add `~/.local/bin` to PATH |
 | `BackendUnavailable: Cannot import setuptools.backends.legacy` | Old version of setuptools | The `pyproject.toml` uses `setuptools.build_meta`. Ensure the correct `pyproject.toml` is present. |
 | `ModuleNotFoundError: No module named 'numba'` | numba not installed or wrong version for Python 3.13+ | `pip install 'numba>=0.60'` |
@@ -1078,9 +1078,9 @@ samapy-run
 | `calcULTouRate.py` | Ultra-Low TOU (ULO) rate calculator |
 | `service_charge.py` | Monthly utility service charge calculator (flat or tiered) |
 | `Advanced_multi_cashflow.py` | Advanced multi-run cash flow analysis and comparison plots |
-| **`samapy/results/`** | |
+| **`src/samapy/results/`** | |
 | `Results.py` | `Gen_Results()`: generates all output charts and the `Outputforplotting.csv` data file |
-| **`samapy/utilities/`** | |
+| **`src/samapy/utilities/`** | |
 | `daysInMonth.py` | Calendar utility: leap-year aware days-per-month array |
 | `dataextender.py` | Expand monthly averages to 8,760-hour arrays |
 | `generic_load.py` | Generic electrical load profile generator (July-peak and January-peak archetypes) |
@@ -1090,7 +1090,7 @@ samapy-run
 | `EV_travel.py` | EV travel energy consumption modeling |
 | `EV_demand_dest.py` | EV demand and destination distribution utilities |
 | `Ev_Battery_Throughput.py` | EV battery lifetime throughput calculation based on degradation and km driven |
-| **`samapy/content/`** | |
+| **`src/samapy/content/`** | |
 | *(data files)* | Bundled CSV, Excel, and meteorological data files (see Section 11) |
 
 ---
@@ -1134,7 +1134,7 @@ If you use SAMA in academic work, please cite the primary published paper [A1]. 
 This section walks through five complete, self-contained examples covering the most common SAMAPy use cases. Each example can be run as a standalone Python script from your working directory, provided SAMAPy is installed and the relevant input files are available.
 
 The full example scripts are also available in the repository at:
-> https://github.com/Sas1997/SAMA/tree/main/SAMA%20Py%20Package/examples
+> https://github.com/Sas1997/SAMA/tree/main/examples
 
 ---
 
