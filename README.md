@@ -89,45 +89,33 @@ Constraints include reliability (LPSP), renewable energy fraction, capital budge
 SAMA supports three usage methods. Choose the one that fits your workflow:
 
 ### Method 1: Raw Python Code
-
 For researchers and developers who want full access to source code and algorithms.
-
 ```bash
 git clone https://github.com/Sas1997/SAMA.git
-cd "SAMA/Backend Codes/SAMA V2.0.1-GitHub"
-pip install numpy pandas scipy numba matplotlib openpyxl seaborn numpy-financial questionary PyYAML
+cd SAMA
+pip install -e .
 ```
-
-Edit `Input_Data.py` to configure your system, then run:
-
+This installs SAMA in editable mode, so you can edit any file under `src/samapy/` directly and see your changes immediately. Configure your system with the wizard or by editing `src/samapy/core/Input_Data.py`, then run:
 ```bash
-python ADE.py
+samapy-run
 ```
-
 Available algorithms: `pso`, `ade`, `abc`, `gwo`
-
 ### Method 2: Python Package (pip)
-
 The recommended method for most users. No source editing required.
-
 ```bash
 pip install samapy
 ```
-
 > **Note:** The PyPI distribution name is `samapy`. Once installed, import and CLI commands use `samapy`.
-
 **Step 1: Configure your project:**
 ```bash
 samapy-config
 ```
-An interactive multi section wizard guides you through all parameters and saves `sama_config_COMPLETE.yaml`.
-
+An interactive multi section wizard guides you through all parameters and saves `samapy_config_COMPLETE.yaml`.
 **Step 2: Run the optimization:**
 ```bash
 samapy-run
 ```
-
-**Step 3: View results in `sama_outputs/`**
+**Step 3: View results in `samapy_outputs/`**
 
 Additional run options:
 
