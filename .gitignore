@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+build/
+dist/
+
+# SAMA run outputs
+samapy_outputs/
+output/
+*.log
+
+# Legacy archive zips, these belong in GitHub Releases, not git history
+*.zip
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
