@@ -206,32 +206,27 @@ This method gives you full access to all source files. You can directly edit `In
 ### 3.2 Downloading and Opening the Code
 
 > **GitHub Repository (Method 1 source code):**
-> https://github.com/Sas1997/SAMA/tree/main/Backend%20Codes/SAMA%20V2.0.1-GitHub
+> https://github.com/Sas1997/SAMA
 
 1. Open the URL above in your browser.
 2. Click the green **Code** button and choose **Download ZIP**, or clone with Git:
-
 ```bash
 git clone https://github.com/Sas1997/SAMA.git
 ```
-
-3. Extract the ZIP (or navigate into the cloned folder) and open the folder `Backend Codes/SAMA V2.0.1-GitHub` in PyCharm (or your preferred IDE).
+3. Extract the ZIP (or navigate into the cloned folder) and open the `SAMA` folder in PyCharm (or your preferred IDE). The actual package source lives under `src/samapy/`.
 4. PyCharm will detect the project structure automatically. Set up a Python interpreter (Python 3.9 or higher) in **File > Settings > Project > Python Interpreter**.
-5. Install the required packages. You can do this in the PyCharm terminal or any command prompt:
-
+5. Install SAMA in editable mode. You can do this in the PyCharm terminal or any command prompt:
 ```bash
-pip install numpy pandas scipy numba matplotlib openpyxl seaborn numpy-financial questionary PyYAML
+pip install -e .
 ```
-
+This installs all required dependencies automatically and lets you edit any file under `src/samapy/` with changes taking effect immediately, no reinstall needed.
 6. Verify the setup by running:
-
 ```bash
 python -c "from samapy.core.Input_Data import InData; print('OK')"
 ```
-
 ### 3.3 Configuring Parameters Directly in Input_Data.py
 
-Open `samapy/core/Input_Data.py` in your IDE. All parameters are set in the `Input_Data.__init__` method. The key sections to edit are described below.
+Open `src/samapy/core/Input_Data.py` in your IDE. All parameters are set in the `Input_Data.__init__` method. The key sections to edit are described below.
 
 #### 3.3.1 System Components
 
@@ -596,9 +591,8 @@ When searching for the package on the PyPI website, look for `samapy`. When writ
 
 ### 4.6 Using Your Own Custom Data Files
 
-SAMA ships with bundled default data files for Boston, MA (weather, electrical load, and heat pump data). When you run `samapy-config` and provide your own file paths, the wizard automatically copies those files into the local `samapy/content/` folder in your working directory. SAMA reads from this local folder instead of the bundled defaults.
-
-You can also copy your custom files directly into the `samapy/content/` folder yourself, and SAMA will use them automatically when you run `samapy-run`. The `samapy/content/` folder is created in your working directory the first time you run `samapy-config` or `samapy-run`.
+SAMA ships with bundled default data files for Boston, MA (weather, electrical load, and heat pump data). When you run `samapy-config` and provide your own file paths, the wizard automatically copies those files into the installed `samapy` package's `content/` folder, overwriting the bundled defaults. This is not a folder inside your project directory, it is wherever `samapy` itself is installed (inside your repo's `src/samapy/content/` if you installed with `pip install -e .`, or inside your Python environment's `site-packages` if you installed with plain `pip install samapy`).
+You can find this location yourself by running `python -c "from samapy import get_content_path; print(get_content_path(''))"`. You can also copy your custom files directly into that folder, and SAMA will use them automatically when you run `samapy-run`.
 
 The expected file names and formats are:
 
@@ -615,13 +609,14 @@ If a file is not present in the local `samapy/content/` folder, SAMA automatical
 2. Download your `METEO.csv` weather file from https://nsrdb.nrel.gov/ for your project location.
 3. Prepare your `Eload.csv` file with 8,760 rows of hourly electrical load data in kW.
 4. If modeling a heat pump, prepare `house_load.xlsx` with Hload and Cload columns.
-5. Open a terminal in your project folder and run `samapy-config`. The wizard will ask for paths to your data files and copy them into `samapy/content/` automatically.
-6. When the wizard finishes, `sama_config_COMPLETE.yaml` is saved in your project folder. You can open it in any text editor to review or manually adjust settings.
-7. Run `samapy-run` to start the optimization. Results are saved in `sama_outputs/` inside your project folder.
+5. Open a terminal in your project folder and run `samapy-config`. The wizard will ask for paths to your data files and copy them into the installed `samapy` package's `content/` folder (see Section 4.6 for how to find that location).
+6. When the wizard finishes, `samapy_config_COMPLETE.yaml` is saved in your project folder. You can open it in any text editor to review or manually adjust settings.
+7. Run `samapy-run` to start the optimization. Results are saved in `samapy_outputs/` inside your project folder.
 
-### 4.8 Understanding the Working Directory
-
-SAMA creates all its folders (`samapy/content/`, `sama_inputs/`, `sama_outputs/`) relative to the folder where you run the `samapy-config` and `samapy-run` commands. This folder is called the **working directory**. Always run both commands from the same project folder so that the configuration file, custom data files, and results all stay together in one place.
+### 4.8 Understanding Where Your Files Go
+SAMA uses two different locations, and it helps to know the difference:
+- **Results** (`samapy_inputs/`, `samapy_outputs/`) are created relative to the folder where you run `samapy-config` and `samapy-run`. Always run both commands from the same project folder so your configuration file and results stay together.
+- **Input data overrides** (`Eload.csv`, `METEO.csv`, `house_load.xlsx`, `Irradiance.csv`) always go into the installed `samapy` package's own `content/` folder, regardless of which directory you run commands from. Providing new data files through the wizard replaces the bundled defaults for every project on your machine until you replace them again.
 
 > **On Windows:** navigate to your project folder in File Explorer, click the address bar, type `cmd`, and press Enter. This opens a Command Prompt already pointed at that folder.
 
