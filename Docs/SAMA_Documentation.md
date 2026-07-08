@@ -36,7 +36,7 @@
   - [4.8 Understanding the Working Directory](#48-understanding-the-working-directory)
   - [4.9 What to Expect on the First Run](#49-what-to-expect-on-the-first-run)
 - [5. Method 3: Windows .exe Application (Alpha)](#5-method-3--windows-exe-application-alpha)
-- [6. The Configuration File (sama_config_COMPLETE.yaml)](#6-the-configuration-file-sama_config_completeyaml)
+- [6. The Configuration File (samapy_config_COMPLETE.yaml)](#6-the-configuration-file-samapy_config_completeyaml)
   - [6.1 File Structure Overview](#61-file-structure-overview)
   - [6.2 Key Parameter Reference](#62-key-parameter-reference)
 - [7. Optimization Algorithms](#7-optimization-algorithms)
@@ -383,7 +383,7 @@ python run_sama_optimized.py --algorithm abc
 python run_sama_optimized.py --algorithm gwo
 ```
 
-This script loads `sama_config_COMPLETE_HYBRID.yaml` (if present) and applies it to `InData` at runtime, then runs the chosen algorithm.
+This script loads `samapy_config_COMPLETE_HYBRID.yaml` (if present) and applies it to `InData` at runtime, then runs the chosen algorithm.
 
 #### 3.4.2 Running optimizer modules directly
 
@@ -456,11 +456,11 @@ The wizard launches an interactive terminal interface with **18 sections** that 
 | **Section 17:** Natural Gas Rate Structure | NG unit (m³/therms/kWh), rate type (1–8), NG prices, escalation |
 | **Section 18:** Output Settings | Output directory, compare-with-grid scenario flag |
 
-When the wizard completes, it saves a file called `sama_config_COMPLETE.yaml` in your working directory. This YAML file contains all your parameters and can be edited manually or re-run through the wizard at any time.
+When the wizard completes, it saves a file called `samapy_config_COMPLETE.yaml` in your working directory. This YAML file contains all your parameters and can be edited manually or re-run through the wizard at any time.
 
 ### 4.3 Step 2: Run the Optimization
 
-With `sama_config_COMPLETE.yaml` in your working directory, run:
+With `samapy_config_COMPLETE.yaml` in your working directory, run:
 
 ```bash
 samapy-run
@@ -472,7 +472,7 @@ SAMA will automatically find the config file, load all parameters, and run the o
 
 | Option | Description | Example |
 |--------|-------------|---------|
-| `-c` / `--config` | Path to config YAML (default: `sama_config_COMPLETE.yaml` in cwd) | `samapy-run -c my_project.yaml` |
+| `-c` / `--config` | Path to config YAML (default: `samapy_config_COMPLETE.yaml` in cwd) | `samapy-run -c my_project.yaml` |
 | `-a` / `--algorithm` | Override the algorithm from the config file | `samapy-run -a pso` |
 | `--output` | Override the output directory from the config | `samapy-run --output results/run1` |
 | `--dry-run` | Validate the config file without running optimization | `samapy-run --dry-run --verbose` |
@@ -483,16 +483,16 @@ The `optimization_algorithm` key in the YAML accepts: `pso`, `ade`, `abc`, or `g
 
 ### 4.4 Step 3: View Results
 
-Results are saved to the output directory specified in the config (default: `sama_outputs/` in your working directory). The folder is organized as:
+Results are always saved to `samapy_outputs/` in your working directory (this is not configurable through the YAML file). The folder is organized as:
 
 ```
-sama_outputs/
+samapy_outputs/
     Optimization.png          convergence curve (best cost vs. iteration)
     figs/                     all chart PNG/SVG files
     data/                     CSV data files
 ```
 
-#### 4.4.1 Chart files generated in `sama_outputs/figs/`
+#### 4.4.1 Chart files generated in `samapy_outputs/figs/`
 
 | File | Description |
 |------|-------------|
@@ -518,9 +518,9 @@ sama_outputs/
 | `hp_cooling_performance.png` | Heat pump cooling power and COP (when `HP = 1`) |
 | `hp_cop_vs_temp.png` | COP as a function of ambient temperature (when `HP = 1`) |
 | `hp_monthly_summary.png` | Monthly heat pump energy and COP summary (when `HP = 1`) |
-| `Optimization.png` | Optimizer convergence curve (saved in `sama_outputs/` root) |
+| `Optimization.png` | Optimizer convergence curve (saved in `samapy_outputs/` root) |
 
-#### 4.4.2 Data files generated in `sama_outputs/data/`
+#### 4.4.2 Data files generated in `samapy_outputs/data/`
 
 | File | Description |
 |------|-------------|
@@ -538,7 +538,7 @@ from samapy.core.Input_Data import InData
 from samapy.cli.config_loader import load_config, apply_config
 
 # Load a YAML config produced by samapy-config
-config = load_config('sama_config_COMPLETE.yaml')
+config = load_config('samapy_config_COMPLETE.yaml')
 
 # Apply all parameters to the InData singleton
 apply_config(config)
@@ -645,15 +645,13 @@ To request the Windows `.exe` version, contact the FAST research group at Wester
 
 ---
 
-## 6. The Configuration File (`sama_config_COMPLETE.yaml`)
+## 6. The Configuration File (`samapy_config_COMPLETE.yaml`)
 
 Whether you use the wizard (`samapy-config`) or edit it manually, the configuration file is a standard YAML text file. You can open it in any text editor. Below is a complete reference of all keys.
 
 ### 6.1 File Structure Overview
 
 ```yaml
-input_directory: C:\path\to\project   # working directory (used by raw code)
-output_directory: C:\path\to\sama_outputs  # results output folder
 optimization_algorithm: abc            # pso | ade | abc | gwo
 
 # Optimization settings
@@ -997,7 +995,7 @@ To use your own weather or load data, either replace these files in place or spe
 | Optimization produces 0 kW for all components | All candidate solutions violate constraints (LPSP, RE_min, Budget) | Relax constraints: increase `LPSP_max_rate`, decrease `RE_min_rate`, increase `Budget` or `VarMax` |
 | `samapy-config` freezes or no text appears | Terminal does not support questionary interactive prompts | Try a different terminal: `cmd.exe` or PowerShell on Windows; bash or zsh on Linux/macOS |
 | Very slow optimization (many hours) | numba JIT compilation on first run, or `MaxIt`/`nPop` too large | First run includes JIT compilation (expected). Reduce `MaxIt` or `nPop` for testing. |
-| Results folder is empty after optimization | Output directory not created or permissions issue | Check `output_directory` in YAML config. Ensure write permissions in that folder. |
+| Results folder is empty after optimization | Output directory not created or permissions issue | SAMA always writes to `samapy_outputs/` inside the folder where you ran `samapy-run`. Check that folder, and ensure you have write permissions there. |
 
 ---
 
@@ -1033,7 +1031,7 @@ Follow all 18 sections. For a quick test, accept defaults in most sections.
 samapy-run
 ```
 
-**Step 5.** View results in `sama_outputs/figs/` and `sama_outputs/data/Outputforplotting.csv`.
+**Step 5.** View results in `samapy_outputs/figs/` and `samapy_outputs/data/Outputforplotting.csv`.
 
 > **Expected Runtime:**
 > - The first run always takes longer because numba compiles the EMS functions on first call.
@@ -2070,3 +2068,4 @@ SAMA includes built-in performance models for Bosch and Goodman brand heat pumps
 *SAMAPy is developed and maintained by the Free Appropriate Sustainability Technology (FAST) Research Group at Western University, London, Ontario, Canada.*
 
 *Repository: https://github.com/Sas1997/SAMA | PyPI: https://pypi.org/project/samapy | License: GPL-3.0*
+
