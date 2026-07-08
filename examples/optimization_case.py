@@ -32,9 +32,10 @@ class Config:
     # ========================================================================
     # FILES
     # ========================================================================
-    Eload_csv_path = "Eload.csv"
-    METEO_csv_path = "METEO.csv"
-    house_load_xlsx_path = "house_load.xlsx"
+    from samapy import get_content_path
+    Eload_csv_path = get_content_path("Eload.csv")
+    METEO_csv_path = get_content_path("METEO.csv")
+    house_load_xlsx_path = get_content_path("house_load.xlsx")
 
     # ========================================================================
     # PSO ALGORITHM
@@ -460,24 +461,33 @@ def copy_files_to_content(config):
         print(f"ERROR: {eload_src} not found!")
         sys.exit(1)
 
-    shutil.copy2(eload_src, eload_dest)
+    if eload_src.resolve() != Path(eload_dest).resolve():
+        shutil.copy2(eload_src, eload_dest)
+        print(f"\n✓ Eload.csv → {eload_dest}")
+    else:
+        print(f"\n✓ Eload.csv already in place at {eload_dest}")
     df = pd.read_csv(eload_dest, header=None)
     csv_total = df[0].sum()
-    print(f"\n✓ Eload.csv → {eload_dest}")
     print(f"  CSV Total: {csv_total:.0f} kWh/year")
 
     meteo_dest = get_content_path('METEO.csv')
     meteo_src = Path(config.METEO_csv_path)
     if meteo_src.exists():
-        shutil.copy2(meteo_src, meteo_dest)
-        print(f"✓ METEO.csv → {meteo_dest}")
+        if meteo_src.resolve() != Path(meteo_dest).resolve():
+            shutil.copy2(meteo_src, meteo_dest)
+            print(f"✓ METEO.csv → {meteo_dest}")
+        else:
+            print(f"✓ METEO.csv already in place at {meteo_dest}")
 
     if config.HP == 1:
         house_dest = get_content_path('house_load.xlsx')
         house_src = Path(config.house_load_xlsx_path)
         if house_src.exists():
-            shutil.copy2(house_src, house_dest)
-            print(f"✓ house_load.xlsx → {house_dest}")
+            if house_src.resolve() != Path(house_dest).resolve():
+                shutil.copy2(house_src, house_dest)
+                print(f"✓ house_load.xlsx → {house_dest}")
+            else:
+                print(f"✓ house_load.xlsx already in place at {house_dest}")
 
     print("=" * 80)
     return csv_total
