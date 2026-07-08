@@ -63,7 +63,7 @@
 - [11. Bundled Data Files (content/ folder)](#11-bundled-data-files-content-folder)
 - [12. Input Data Formats](#12-input-data-formats)
   - [12.1 Electrical Load CSV (Eload.csv)](#121-electrical-load-csv-eloadcsv)
-  - [12.2 METEO.csv (SAM NSRDB format)](#122-meteocsy-sam-nsrdb-format)
+  - [12.2 METEO.csv (SAM NSRDB format)](#122-meteocsv-sam-nsrdb-format)
   - [12.3 Plane-of-Array Irradiance CSV (Irradiance.csv)](#123-plane-of-array-irradiance-csv-irradiancecsv)
   - [12.4 house_load.xlsx (Thermal Load)](#124-house_loadxlsx-thermal-load)
 - [13. Troubleshooting](#13-troubleshooting)
@@ -374,24 +374,23 @@ When `HP = 1` and a natural gas furnace baseline is being compared, set `rateStr
 
 After configuring `Input_Data.py`, run one of the optimizer scripts directly. In PyCharm, right-click the script and choose Run, or use the terminal.
 
-#### 3.4.1 Using `run_sama_optimized.py` (recommended for raw-code users)
+#### 3.4.1 Using `run_samapy_optimized.py` (recommended for raw-code users)
 
 ```bash
-python run_sama_optimized.py --algorithm pso
-python run_sama_optimized.py --algorithm ade
-python run_sama_optimized.py --algorithm abc
-python run_sama_optimized.py --algorithm gwo
+python run_samapy_optimized.py --algorithm pso
+python run_samapy_optimized.py --algorithm ade
+python run_samapy_optimized.py --algorithm abc
+python run_samapy_optimized.py --algorithm gwo
 ```
 
 This script loads `samapy_config_COMPLETE_HYBRID.yaml` (if present) and applies it to `InData` at runtime, then runs the chosen algorithm.
 
 #### 3.4.2 Running optimizer modules directly
-
 ```bash
-python sama/optimizers/pso.py        # Particle Swarm Optimization
-python sama/optimizers/ade.py        # Advanced Differential Evolution
-python sama/optimizers/run_abc.py    # Artificial Bee Colony
-python sama/optimizers/gwo.py        # Grey Wolf Optimizer
+python src/samapy/optimizers/pso.py        # Particle Swarm Optimization
+python src/samapy/optimizers/ade.py        # Advanced Differential Evolution
+python src/samapy/optimizers/run_abc.py    # Artificial Bee Colony
+python src/samapy/optimizers/gwo.py        # Grey Wolf Optimizer
 ```
 
 #### 3.4.3 Using the `examples/` folder
@@ -1920,7 +1919,7 @@ For the off-grid PV+DG+Battery configuration in Sacramento, the optimizer found 
 
 ---
 
-## 19. SAMA Publications and Further Reading
+## 21. SAMA Publications and Further Reading
 
 The following peer-reviewed publications describe SAMA's development, validation, and application across a range of techno-economic energy studies. Users who wish to cite SAMA in academic work should reference these papers.
 
@@ -2068,4 +2067,6 @@ SAMA includes built-in performance models for Bosch and Goodman brand heat pumps
 *SAMAPy is developed and maintained by the Free Appropriate Sustainability Technology (FAST) Research Group at Western University, London, Ontario, Canada.*
 
 *Repository: https://github.com/Sas1997/SAMA | PyPI: https://pypi.org/project/samapy | License: GPL-3.0*
+
+
 
