@@ -1043,29 +1043,29 @@ samapy-run
 
 | Module / File | Description |
 |---------------|-------------|
-| **`sama/core/`** | |
+| **`src/samapy/core/`** | |
 | `Input_Data.py` | Main parameter class: defines all input data and default values. Singleton pattern: `InData = Input_Data()` |
 | `Fitness.py` | Fitness evaluation function: calls EMS for each candidate design and returns NPC, LCOE, LEM, LPSP, and constraint penalties |
-| **`sama/cli/`** | |
-| `wizard.py` | Entry point for `samapy-config` command: launches `sama_Wizard.py` |
-| `sama_Wizard.py` | Interactive 18-section configuration wizard using questionary |
+| **`src/samapy/cli/`** | |
+| `wizard.py` | Entry point for `samapy-config` command: launches `samapy_Wizard.py` |
+| `samapy_Wizard.py` | Interactive 18-section configuration wizard using questionary |
 | `runner.py` | Entry point for `samapy-run` command: loads YAML, applies config, runs selected algorithm |
 | `config_loader.py` | `load_config()`, `apply_config()`, `save_config()`, `merge_configs()` functions |
-| **`sama/optimizers/`** | |
+| **`src/samapy/optimizers/`** | |
 | `swarm.py` | Particle Swarm Optimization (`Swarm` class) |
 | `AdvancedDifferentialEvolution.py` | Advanced Differential Evolution (`AdvancedDifferentialEvolution` class) |
 | `ArtificialBeeColony.py` | Improved Artificial Bee Colony (`ImprovedArtificialBeeColony` class) |
 | `GreyWolfOptimizer.py` | Grey Wolf Optimizer (`GreyWolfOptimizer` and `ParallelGreyWolfOptimizer` classes) |
 | `pso.py` / `ade.py` / `run_abc.py` / `gwo.py` | Thin wrapper scripts for running each algorithm directly from command line |
-| **`sama/ems/`** | |
+| **`src/samapy/ems/`** | |
 | `EMS.py` | Base hourly dispatch engine (Numba JIT compiled) |
 | `EMS_EV.py` | Extended dispatch engine with EV smart charging and V2X lookahead arbitrage |
 | `EMS_HP.py` | Heat pump energy attribution post-processor |
-| **`sama/models/`** | |
+| **`src/samapy/models/`** | |
 | `Battery_Model.py` | Battery discharge and degradation models (lead-acid KiBaM and Li-ion) |
 | `BB_HP_Goodman.py` | Goodman air-source heat pump black-box model |
 | `BB_HP_Bosch.py` | Bosch air-source heat pump black-box model |
-| **`sama/pricing/`** | |
+| **`src/samapy/pricing/`** | |
 | `Electricity_Bill_Calculator.py` | Monthly and annual billing calculations with escalation and NEM reconciliation |
 | `calcFlatRate.py` | Flat rate tariff calculator |
 | `calcSeasonalRate.py` | Seasonal rate tariff calculator |
@@ -2067,6 +2067,3 @@ SAMA includes built-in performance models for Bosch and Goodman brand heat pumps
 *SAMAPy is developed and maintained by the Free Appropriate Sustainability Technology (FAST) Research Group at Western University, London, Ontario, Canada.*
 
 *Repository: https://github.com/Sas1997/SAMA | PyPI: https://pypi.org/project/samapy | License: GPL-3.0*
-
-
-
