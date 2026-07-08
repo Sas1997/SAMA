@@ -19,21 +19,24 @@ import shutil
 
 
 def copy_to_content(source_file, target_filename):
-    """Copy user file to samapy/content/ folder"""
-    content_dir = Path.cwd() / 'samapy' / 'content'
-    content_dir.mkdir(parents=True, exist_ok=True)
+    """Copy user file to the installed samapy package's content folder"""
+    from samapy import get_content_path
+    target = Path(get_content_path(target_filename))
+    target.parent.mkdir(parents=True, exist_ok=True)
 
     source = Path(source_file)
-    target = content_dir / target_filename
 
-    if source.exists():
-        shutil.copy2(source, target)
-        print(f"✅ Copied {source_file} → {target}")
-        return True
-    else:
+    if not source.exists():
         print(f"❌ File not found: {source_file}")
         return False
 
+    if source.resolve() == target.resolve():
+        print(f"✅ {target_filename} already in place at {target}")
+        return True
+
+    shutil.copy2(source, target)
+    print(f"✅ Copied {source_file} → {target}")
+    return True
 
 def setup_directories():
     """Ask only where results should be saved. Config saves in cwd."""
