@@ -19,3 +19,5 @@ output/
 Thumbs.db
 .vscode/
 .idea/
+samapy_inputs/
+test_samapy_outputs/
