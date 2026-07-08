@@ -86,7 +86,7 @@ Documentation     = "https://github.com/Sas1997/SAMA/blob/main/Docs/SAMA_Documen
 [tool.setuptools.packages.find]
 # Auto-discovers all packages (folders with __init__.py) in the project root.
 # Equivalent to find_packages() in the old setup.py.
-where = ["."]
+where = ["src"]
 
 [tool.setuptools.package-data]
 # Ensures data files inside the samapy package are included in the wheel.
