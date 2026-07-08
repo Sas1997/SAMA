@@ -201,20 +201,20 @@ samapy_outputs/
 
 Full documentation is available in this repository:
 
-- **[SAMA_Documentation_v3_final.md](./Docs/SAMA_Documentation_v3_final.md)**: Complete user guide covering all parameters, algorithms, financial models, input formats, troubleshooting, and mathematical formulations
+- **[SAMA_Documentation.md](./Docs/SAMA_Documentation.md)**: Complete user guide covering all parameters, algorithms, financial models, input formats, troubleshooting, and mathematical formulations
 
 Key documentation sections:
 
 | Topic | Location |
 |-------|----------|
-| All configuration parameters | [Section 6: Configuration File](./Docs/SAMA_Documentation_v3_final.md#6-the-configuration-file-sama_config_completeyaml) |
-| Optimization algorithms (detail) | [Section 7](./Docs/SAMA_Documentation_v3_final.md#7-optimization-algorithms) |
-| Energy management system | [Section 8](./Docs/SAMA_Documentation_v3_final.md#8-energy-management-system-ems) |
-| Component models | [Section 9](./Docs/SAMA_Documentation_v3_final.md#9-component-models) |
-| Financial model | [Section 10](./Docs/SAMA_Documentation_v3_final.md#10-financial-model) |
-| Troubleshooting | [Section 13](./Docs/SAMA_Documentation_v3_final.md#13-troubleshooting) |
-| Mathematical formulations | [Section 17](./Docs/SAMA_Documentation_v3_final.md#17-technical-framework-and-mathematical-formulation) |
-| Where to find input data | [Appendix A](./Docs/SAMA_Documentation_v3_final.md#appendix-a-where-to-find-input-data-for-sama) |
+| All configuration parameters | [Section 6: Configuration File](./Docs/SAMA_Documentation.md#6-the-configuration-file-sama_config_completeyaml) |
+| Optimization algorithms (detail) | [Section 7](./Docs/SAMA_Documentation.md#7-optimization-algorithms) |
+| Energy management system | [Section 8](./Docs/SAMA_Documentation.md#8-energy-management-system-ems) |
+| Component models | [Section 9](./Docs/SAMA_Documentation.md#9-component-models) |
+| Financial model | [Section 10](./Docs/SAMA_Documentation.md#10-financial-model) |
+| Troubleshooting | [Section 13](./Docs/SAMA_Documentation.md#13-troubleshooting) |
+| Mathematical formulations | [Section 19](./Docs/SAMA_Documentation.md#19-technical-framework-and-mathematical-formulation) |
+| Where to find input data | [Appendix A](./Docs/SAMA_Documentation.md#appendix-a-where-to-find-input-data-for-sama) |
 
 ---
 
@@ -271,3 +271,5 @@ SAMA is released under the **[GNU General Public License v3.0 (GPL-3.0)](./LICEN
 <p align="center">
   Made with ☀️ by the <a href="https://github.com/Sas1997/SAMA">FAST Research Group</a> · Western University · GPL-3.0
 </p>
+
+
