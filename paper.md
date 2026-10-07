@@ -1,4 +1,4 @@
-﻿---
+---
 title: 'SAMA: Open-Source Multi-Objective Optimization Platform for Hybrid Renewable Energy Microgrid Design'
 tags:
   - Python
