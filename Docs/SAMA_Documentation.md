@@ -173,7 +173,7 @@ The search space is bounded by `VarMin` and `VarMax` (default: 0 to 60 for each 
 | **Load inputs** | 10 electrical load input modes (CSV, monthly/annual averages, generic profiles), thermal load from Excel |
 | **Weather inputs** | SAM NSRDB API integration, user CSV files, monthly/annual averages |
 | **Outputs** | Convergence plots, cash flow charts, energy distribution, battery SOC, grid interconnection, EV energy charts, HP performance charts, hourly data CSV |
-| **License** | GNU General Public License v3.0 (GPL-3.0), free to use, modify, and distribute |
+| **License** | GNU Affero General Public License v3.0 (AGPL-3.0), free to use, modify, and distribute |
 
 ### 1.3 Comparison to HOMER Pro
 
@@ -1099,7 +1099,7 @@ samapy-run
 
 ### 16.1 License
 
-SAMA is released under the **GNU General Public License v3.0 (GPL-3.0)**. You are free to use, copy, modify, and distribute SAMA under the terms of this license. Any derivative works must also be released under GPL-3.0.
+SAMA is released under the **GNU Affero General Public License v3.0 (AGPL-3.0)**. You are free to use, copy, modify, and distribute SAMA under the terms of this license. Any derivative works must also be released under AGPL-3.0, including modified versions that are offered to users over a network.
 
 ### 16.2 Authors
 
@@ -1125,7 +1125,7 @@ If you use SAMA in academic work, please cite the primary published paper [A1]. 
 
 > Sadat & Pearce (2025). Electricity pricing structures in Canada. *Renewable Energy*, 242, 122456.
 
-**Repository:** https://github.com/Sas1997/SAMA | FAST Research Group, Western University | GPL-3.0 License
+**Repository:** https://github.com/Sas1997/SAMA | FAST Research Group, Western University | AGPL-3.0 License
 
 ---
 
@@ -2066,4 +2066,4 @@ SAMA includes built-in performance models for Bosch and Goodman brand heat pumps
 
 *SAMAPy is developed and maintained by the Free Appropriate Sustainability Technology (FAST) Research Group at Western University, London, Ontario, Canada.*
 
-*Repository: https://github.com/Sas1997/SAMA | PyPI: https://pypi.org/project/samapy | License: GPL-3.0*
+*Repository: https://github.com/Sas1997/SAMA | PyPI: https://pypi.org/project/samapy | License: AGPL-3.0*
