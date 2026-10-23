@@ -7,8 +7,8 @@
 
 <p align="center">
   <a href="https://doi.org/10.1016/j.enconman.2023.117686"><img src="https://img.shields.io/badge/DOI-10.1016%2Fj.enconman.2023.117686-blue?style=flat-square" alt="DOI"/></a>
-  <a href="https://github.com/Sas1997/SAMA/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-GPL%20v3-green?style=flat-square" alt="License: GPL v3"/></a>
-  <a href="https://pypi.org/project/SAMAbyRenXera/"><img src="https://img.shields.io/pypi/v/SAMAbyRenXera?style=flat-square&label=PyPI&color=orange" alt="PyPI"/></a>
+  <a href="https://github.com/Sas1997/SAMA/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-AGPL%20v3-green?style=flat-square" alt="License: AGPL v3"/></a>
+  <a href="https://pypi.org/project/samapy/"><img src="https://img.shields.io/pypi/v/samapy?style=flat-square&label=PyPI&color=orange" alt="PyPI"/></a>
   <img src="https://img.shields.io/badge/Python-3.9%2B-blue?style=flat-square&logo=python&logoColor=white" alt="Python 3.9+"/>
   <a href="https://github.com/Sas1997/SAMA"><img src="https://img.shields.io/github/stars/Sas1997/SAMA?style=flat-square&color=yellow" alt="GitHub Stars"/></a>
 </p>
@@ -45,7 +45,7 @@ Developed by the **[FAST Research Group](https://github.com/Sas1997/SAMA)** at *
 
 Proprietary tools like HOMER Pro and HOMER Grid are closed-source and license-restricted. SAMA was built to remove that barrier:
 
-- **Free and open-source**: GPL-3.0, forever
+- **Free and open-source**: AGPL-3.0
 - **Transparent algorithms**: read, modify, and extend every line
 - **Validated**: cross-validated against HOMER Pro across multiple U.S. climate zones
 - **No cost barriers**: designed for researchers, students, and resource-constrained institutions worldwide
@@ -86,7 +86,7 @@ Constraints include reliability (LPSP), renewable energy fraction, capital budge
 
 ## Getting Started
 
-SAMA supports three usage methods. Choose the one that fits your workflow:
+SAMA can be used in three ways:
 
 ### Method 1: Raw Python Code
 For researchers and developers who want full access to source code and algorithms.
@@ -254,7 +254,7 @@ If you use SAMA in academic work, please cite the primary paper:
 
 ## License
 
-SAMA is released under the **[GNU General Public License v3.0 (GPL-3.0)](./LICENSE)**. You are free to use, copy, modify, and distribute SAMA. Any derivative works must also be released under GPL-3.0.
+SAMA is released under the **[GNU Affero General Public License v3.0 (AGPL-3.0)](./LICENSE)**. You are free to use, copy, modify, and distribute SAMA. Any derivative works must also be released under AGPL-3.0, including modified versions that are offered to users over a network.
 
 ---
 
@@ -264,12 +264,13 @@ SAMA is released under the **[GNU General Public License v3.0 (GPL-3.0)](./LICEN
 
 - GitHub: https://github.com/Sas1997/SAMA
 - Issues and bug reports: [Open an issue](https://github.com/Sas1997/SAMA/issues)
+- Contributing, questions and feature requests: see [CONTRIBUTING.md](./CONTRIBUTING.md)
 - For the Windows `.exe` alpha version or reprint requests, contact the developers through the GitHub repository.
 
 ---
 
 <p align="center">
-  Made with ☀️ by the <a href="https://github.com/Sas1997/SAMA">FAST Research Group</a> · Western University · GPL-3.0
+  Developed by the <a href="https://github.com/Sas1997/SAMA">FAST Research Group</a> · Western University · AGPL-3.0
 </p>
 
 

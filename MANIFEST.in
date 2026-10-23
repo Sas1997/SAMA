@@ -1,21 +1,20 @@
-# MANIFEST.in — controls what goes into the SOURCE DISTRIBUTION (sdist / .tar.gz)
-# The wheel (.whl) is controlled by package_data in pyproject.toml.
-# Both must be consistent so pip install works whether from sdist or wheel.
+# Files included in the source distribution (sdist).
+# Wheel contents are set by package-data in pyproject.toml.
 
-# --- Package data files (inside samapy/) ---
+# Package data
 recursive-include src/samapy/content *
 
-# --- Top-level project files ---
+# Top-level files
 include README.md
-include License
+include LICENSE
 include requirements.txt
 include pyproject.toml
 
-# --- Examples and tests (useful for developers who download the sdist) ---
+# Examples and tests
 recursive-include examples *.py *.csv *.yaml *.yml
 recursive-include tests *.py
 
-# --- Exclude things that should never be in a distribution ---
+# Excluded files
 global-exclude __pycache__
 global-exclude *.py[cod]
 global-exclude *.pyo

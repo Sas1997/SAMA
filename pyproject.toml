@@ -1,23 +1,16 @@
-# ==============================================================================
-# pyproject.toml, SAMA Package Configuration (PEP 517/518/621)
-# This is the single source of truth for all package metadata.
-# setup.py is kept only as a compatibility shim for older tools.
-# ==============================================================================
+# SAMA package configuration (PEP 517/518/621).
+# setup.py is kept only for compatibility with older tools.
 
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
-
-# ------------------------------------------------------------------------------
-# Core project metadata  (PEP 621)
-# ------------------------------------------------------------------------------
 [project]
 name = "samapy"
 version = "1.0.6"
 description = "SAMAPy - Solar Alone Multi-objective Advisor for Hybrid Renewable Energy Systems Python Package"
 readme = "README.md"
-license = { file = "License" }
+license = { file = "LICENSE" }
 authors = [
     { name = "Seyyed Ali Sadat", email = "alisadat942@gmail.com" }
 ]
@@ -35,7 +28,7 @@ classifiers = [
     "Intended Audience :: Education",
     "Topic :: Scientific/Engineering",
     "Topic :: Scientific/Engineering :: Physics",
-    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "License :: OSI Approved :: GNU Affero General Public License v3",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
@@ -44,10 +37,7 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 
-# Realistic minimum versions, allows the widest compatible user base.
-# These are the oldest versions that support all features SAMAPy uses.
-# Note: your requirements.txt should pin the exact versions you develop with;
-#       these minimums are intentionally lower to not block installation.
+# Minimum supported versions. requirements.txt pins the versions used in development.
 dependencies = [
     "numpy>=1.24",
     "pandas>=2.0",
@@ -61,46 +51,26 @@ dependencies = [
     "PyYAML>=6.0",
 ]
 
-
-# ------------------------------------------------------------------------------
-# Entry points (console commands installed by pip)
-# ------------------------------------------------------------------------------
 [project.scripts]
 samapy-config = "samapy.cli.wizard:main"
 samapy-run    = "samapy.cli.runner:main"
 
-
-# ------------------------------------------------------------------------------
-# URLs shown on the PyPI project page
-# ------------------------------------------------------------------------------
 [project.urls]
 Homepage          = "https://github.com/Sas1997/SAMA"
 Repository        = "https://github.com/Sas1997/SAMA"
 Issues            = "https://github.com/Sas1997/SAMA/issues"
 Documentation     = "https://github.com/Sas1997/SAMA/blob/main/Docs/SAMA_Documentation.md"
 
-
-# ------------------------------------------------------------------------------
-# Setuptools: package discovery and data files
-# ------------------------------------------------------------------------------
 [tool.setuptools.packages.find]
-# Auto-discovers all packages (folders with __init__.py) in the project root.
-# Equivalent to find_packages() in the old setup.py.
 where = ["src"]
 
 [tool.setuptools.package-data]
-# Ensures data files inside the samapy package are included in the wheel.
-# MANIFEST.in handles sdist (source distribution); this handles the wheel.
 samapy = [
     "content/*",
     "content/**/*",
     "cli/samapy_Wizard.py",
 ]
 
-
-# ------------------------------------------------------------------------------
-# pytest configuration
-# ------------------------------------------------------------------------------
 [tool.pytest.ini_options]
 testpaths    = ["tests"]
 python_files = ["test_*.py"]
