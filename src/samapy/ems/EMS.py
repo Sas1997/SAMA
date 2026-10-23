@@ -192,9 +192,19 @@ def EMS(Lead_acid, Li_ion, Ich_max_Li_ion, Idch_max_Li_ion, Cnom_Li, Vnom_Li_ion
                 Pch[t] = min(Eb_e, Pch[t] - Edef_DC)
                 Pch[t] = min(Pch[t], Pch_max[t])
 
-            Esur = P_RE[t] * n_I + Pbuy[t] + Pdg[t] - min(Pinv_max, (Pch[t] - Pdch[t]) * n_I + (Eload[t] + Psell[t]))
-            Ens[t] = max(0, Eload[t] - Pbuy[t] - Pdg[t] - min(Pinv_max, (P_RE[t] + Pdch[t] - Pch[t]) * n_I - Psell[t]))
-            Edump[t] = Esur * (Esur > 0)
+            # One AC-bus balance for both surplus and shortfall (issue #6).
+            # PV, wind and battery sit on the DC side and reach the AC bus only
+            # through the inverter; the generator and the grid connect directly
+            # to the AC bus and are not limited by the inverter rating.
+            # Energy sold (Psell) is an AC-side export, so it is counted as AC
+            # demand rather than subtracted from the inverter output.
+            P_inv = min(Pinv_max, (P_RE[t] + Pdch[t] - Pch[t]) * n_I)
+            E_bal_AC = Pbuy[t] + Pdg[t] + P_inv - Eload[t] - Psell[t]
+            # Renewable output that exceeds the inverter rating on its own is
+            # curtailed on the DC side. Battery discharge is not counted as dump.
+            E_curtail_DC = max(0, (P_RE[t] - Pch[t]) * n_I - Pinv_max)
+            Ens[t] = max(0, -E_bal_AC)
+            Edump[t] = max(0, E_bal_AC) + E_curtail_DC
 
         Ech[t] = Pch[t] * dt
         Edch[t] = Pdch[t] * dt
