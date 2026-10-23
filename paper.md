@@ -70,7 +70,7 @@ SAMA has supported six peer-reviewed publications. The primary paper describes t
 
 # AI Usage Disclosure
 
-Generative AI tools (Claude Sonnet 4.5, Anthropic, 2025-2026) were used in a supporting role. The optimization methods, system and component models, energy management strategies, and algorithms in SAMA were designed and implemented by the authors without generative AI. AI tools assisted with debugging and troubleshooting existing code, generating figure plotting code, developing parts of the Windows graphical interface, drafting and editing the user documentation, and converting the documentation from Word to Markdown. The authors reviewed, tested, and validated all AI-assisted outputs for technical accuracy and originality, and take full responsibility for all submitted materials.
+Generative AI tools (Claude models, Anthropic, 2025-2026) were used in a supporting role. The optimization methods, system and component models, energy management strategies, and algorithms in SAMA were designed and implemented by the authors without generative AI. AI tools assisted with debugging and troubleshooting existing code, generating figure plotting code, developing parts of the Windows graphical interface, drafting and editing the user documentation, converting the documentation from Word to Markdown, and editing portions of this paper's prose for clarity. The authors reviewed, tested, and validated all AI-assisted outputs for technical accuracy and originality, and take full responsibility for all submitted materials.
 
 # Acknowledgements
 This work was supported by the Natural Sciences and Engineering Research Council of Canada (NSERC) and the Thompson Endowment.
