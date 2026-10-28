@@ -24,8 +24,8 @@ Open an issue describing the use case, the component or tariff structure involve
 1. Fork the repository and create a branch from `main`.
 2. Install the package in editable mode: `pip install -e .`
 3. Make your change. Keep each pull request focused on one fix or feature.
-4. Run the test scripts in `tests/` that cover your change, for example `python tests/test_import.py` and `python tests/test_quick_optimization.py`.
-5. Open a pull request that explains what changed and why, and link the related issue.
+4. Install pytest (`pip install pytest`) and run the test suite with `pytest`. It takes about a minute and must pass before a pull request is merged. If your change affects energy management, results or the optimizers, also run the slow tests with `pytest -m slow` (a few minutes).
+5. Open a pull request that explains what changed and why, and link the related issue. The test suite runs automatically on every pull request.
 
 Changes to energy management, component models or economic calculations should explain the physical or financial reasoning and, where possible, include a small example showing the result before and after the change.
 

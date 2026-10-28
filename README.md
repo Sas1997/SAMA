@@ -34,6 +34,7 @@ Developed by the **[FAST Research Group](https://github.com/Sas1997/SAMA)** at *
 - [Optimization Algorithms](#optimization-algorithms)
 - [Output Examples](#output-examples)
 - [Documentation](#documentation)
+- [Running the Tests](#running-the-tests)
 - [Publications](#publications)
 - [Citation](#citation)
 - [License](#license)
@@ -215,6 +216,20 @@ Key documentation sections:
 | Troubleshooting | [Section 13](./Docs/SAMA_Documentation.md#13-troubleshooting) |
 | Mathematical formulations | [Section 19](./Docs/SAMA_Documentation.md#19-technical-framework-and-mathematical-formulation) |
 | Where to find input data | [Appendix A](./Docs/SAMA_Documentation.md#appendix-a-where-to-find-input-data-for-sama) |
+
+---
+
+## Running the Tests
+
+SAMA includes an automated test suite that runs through GitHub Actions on every push to `main` and on every pull request.
+
+```bash
+pip install -e . pytest
+pytest            # default suite, about one minute
+pytest -m slow    # full SAMA runs with result generation, a few minutes
+```
+
+The default suite checks installation, imports, bundled data, input data, the command-line runner, and the convergence of all four optimizers on benchmark functions with known optima (shifted sphere and Rosenbrock), using fixed random seeds. The test settings and pass criteria are documented in [`tests/test_optimizer_convergence.py`](./tests/test_optimizer_convergence.py).
 
 ---
 

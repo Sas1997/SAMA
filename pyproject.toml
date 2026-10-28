@@ -74,4 +74,7 @@ samapy = [
 [tool.pytest.ini_options]
 testpaths    = ["tests"]
 python_files = ["test_*.py"]
-addopts      = "-v --tb=short"
+# Slow tests (full SAMA runs with result generation) are skipped by default.
+# Run them with:  pytest -m slow     Run everything with:  pytest -m "slow or not slow"
+addopts      = "-v --tb=short -m \"not slow\""
+markers      = ["slow: long-running tests (full SAMA runs)"]
