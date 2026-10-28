@@ -1,36 +1,31 @@
-"""Test 2: Can we load input data?"""
+"""Default input data loads with the expected hourly resolution and sensible values."""
+import numpy as np
 
-print("="*60)
-print("TEST 2: Testing Input Data Loading")
-print("="*60)
+HOURS_PER_YEAR = 8760
 
-try:
+
+def test_hourly_series_have_one_value_per_hour():
     from samapy.core.Input_Data import InData
 
-    # Check if data loaded
-    print(f"\n✓ Load data shape: {InData.Eload.shape}")
-    print(f"✓ Solar irradiance shape: {InData.G.shape}")
-    print(f"✓ Temperature shape: {InData.T.shape}")
-    print(f"✓ Wind speed shape: {InData.Vw.shape}")
+    for name in ("Eload", "G", "T", "Vw"):
+        series = np.asarray(getattr(InData, name))
+        assert series.shape == (HOURS_PER_YEAR,), f"{name} has shape {series.shape}"
+        assert np.all(np.isfinite(series)), f"{name} contains non-finite values"
 
-    # Check configuration
-    print(f"\n✓ PV enabled: {InData.PV == 1}")
-    print(f"✓ Wind turbine enabled: {InData.WT == 1}")
-    print(f"✓ Battery enabled: {InData.Bat == 1}")
-    print(f"✓ Grid connected: {InData.Grid == 1}")
-    print(f"✓ EV enabled: {InData.EV == 1}")
-    print(f"✓ Heat pump enabled: {InData.HP == 1}")
 
-    # Check optimization parameters
-    print(f"\n✓ Population size: {InData.nPop}")
-    print(f"✓ Max iterations: {InData.MaxIt}")
-    print(f"✓ Number of runs: {InData.Run_Time}")
+def test_physical_ranges():
+    from samapy.core.Input_Data import InData
 
-    print("\n" + "="*60)
-    print("✓ INPUT DATA LOADED SUCCESSFULLY!")
-    print("="*60)
+    assert np.all(np.asarray(InData.Eload) >= 0), "electrical load must be non-negative"
+    assert np.all(np.asarray(InData.G) >= 0), "irradiance must be non-negative"
+    assert np.all(np.asarray(InData.Vw) >= 0), "wind speed must be non-negative"
 
-except Exception as e:
-    print(f"\n✗ INPUT LOADING FAILED: {e}")
-    import traceback
-    traceback.print_exc()
+
+def test_optimizer_settings_are_valid():
+    from samapy.core.Input_Data import InData
+
+    assert InData.nPop >= 6
+    assert InData.MaxIt >= 1
+    assert InData.Run_Time >= 1
+    assert len(InData.VarMin) == len(InData.VarMax) == 5
+    assert np.all(np.asarray(InData.VarMax) >= np.asarray(InData.VarMin))

@@ -1,33 +1,33 @@
-"""Test 1: Can we import SAMAPy?"""
+"""The package and its main modules import without errors."""
+import importlib
 
-print("=" * 60)
-print("TEST 1: Testing SAMAPy imports")
-print("=" * 60)
+import pytest
 
-try:
-    # Test core imports
-    from samapy.core.Input_Data import InData
+MODULES = [
+    "samapy",
+    "samapy.core.Input_Data",
+    "samapy.core.Fitness",
+    "samapy.ems.EMS",
+    "samapy.results.Results",
+    "samapy.optimizers.swarm",
+    "samapy.optimizers.AdvancedDifferentialEvolution",
+    "samapy.optimizers.ArtificialBeeColony",
+    "samapy.optimizers.GreyWolfOptimizer",
+    "samapy.cli.runner",
+    "samapy.cli.config_loader",
+]
 
-    print("✓ Input_Data imported successfully")
 
-    # Test optimizer imports
+@pytest.mark.parametrize("name", MODULES)
+def test_module_imports(name):
+    assert importlib.import_module(name) is not None
+
+
+def test_optimizer_classes_exist():
     from samapy.optimizers.swarm import Swarm
+    from samapy.optimizers.AdvancedDifferentialEvolution import AdvancedDifferentialEvolution
+    from samapy.optimizers.ArtificialBeeColony import ImprovedArtificialBeeColony
+    from samapy.optimizers.GreyWolfOptimizer import GreyWolfOptimizer
 
-    print("✓ Swarm optimizer imported successfully")
-
-    # Test results imports
-    from samapy.results.Results import Gen_Results
-
-    print("✓ Results module imported successfully")
-
-    # Test EMS imports
-    from samapy.ems.EMS import EMS
-
-    print("✓ EMS module imported successfully")
-
-    print("\n" + "=" * 60)
-    print("✓ ALL IMPORTS SUCCESSFUL!")
-    print("=" * 60)
-
-except Exception as e:
-    print(f"\n✗ IMPORT FAILED: {e}")
+    for cls in (Swarm, AdvancedDifferentialEvolution, ImprovedArtificialBeeColony, GreyWolfOptimizer):
+        assert callable(getattr(cls, "optimize"))
