@@ -92,8 +92,12 @@ def test_quick_workflow_writes_results(quick_settings, tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     from samapy.optimizers.swarm import Swarm
 
-    X, cost = Swarm(seed=1, verbose=False).optimize()
+    opt = Swarm(seed=1, verbose=False)
+    X, cost = opt.optimize()
 
+    # the run matches the reduced settings it was given
+    assert (opt.MaxIt, opt.nPop, opt.Run_Time) == (10, 20, 1)
+    assert len(opt.solution_cost_curve) == 1 and len(opt.solution_cost_curve[0]) == 10
     assert np.isfinite(cost)
     assert os.path.isfile(tmp_path / "samapy_outputs" / "Optimization.png")
     assert os.path.isfile(tmp_path / "samapy_outputs" / "data" / "Outputforplotting.csv")
