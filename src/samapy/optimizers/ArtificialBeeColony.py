@@ -33,19 +33,35 @@ VarMax = InData.VarMax
 
 # Problem Definition
 from samapy.core.Fitness import fitness as cost_function
+from samapy.optimizers._common import seed_all, resolve_settings
 
 
 class ImprovedArtificialBeeColony:
-    def __init__(self, **kwargs):
-        self.nVar = 5  # number of decision variables
+    """Improved Artificial Bee Colony.
 
+    With no arguments, it optimizes the SAMA design problem using the settings
+    in InData at the time it is constructed. Optional arguments (cost_function,
+    var_min, var_max, n_pop, max_it, run_time, seed, generate_results, verbose)
+    work as described for samapy.optimizers.swarm.Swarm.
+    """
+    def __init__(self, cost_function=None, var_min=None, var_max=None, n_pop=None,
+                 max_it=None, run_time=None, seed=None, generate_results=True,
+                 verbose=True, **kwargs):
         # Variable: PV number, WT number, Battery number, number of DG, Rated Power Inverter
-        self.VarMin = VarMin * [PV, WT, Bat, DG, 1]  # Lower bound of variables
-        self.VarMax = VarMax * [PV, WT, Bat, DG, 1]  # Upper bound of variables
+        (self.VarMin, self.VarMax, self.nPop, self.MaxIt,
+         self.Run_Time) = resolve_settings(InData, var_min, var_max, n_pop, max_it, run_time)
+        if self.nPop < 6:
+            # Needs at least 3 employed bees (tournament selection uses 3).
+            raise ValueError("Artificial Bee Colony needs a population size of at least 6")
+        self.nVar = len(self.VarMin)  # number of decision variables
+        self.cost_function = cost_function
+        self.seed = seed
+        self.generate_results = generate_results
+        self.verbose = verbose
 
         # Improved ABC parameters
-        self.nEmployedBees = nPop // 2  # Number of employed bees
-        self.nOnlookerBees = nPop // 2  # Number of onlooker bees
+        self.nEmployedBees = self.nPop // 2  # Number of employed bees
+        self.nOnlookerBees = self.nPop // 2  # Number of onlooker bees
         self.maxTrials = 15  # Increased for better exploration
         self.modification_rate = 0.8  # Probability of modifying multiple dimensions
 
@@ -58,6 +74,9 @@ class ImprovedArtificialBeeColony:
         self.solution_best_positions = []
         self.solution_cost_curve = []
 
+    def _cost(self, x):
+        return (self.cost_function or cost_function)(x)
+
     def initialize_food_sources(self):
         """Initialize food sources using improved initialization"""
         positions = np.random.uniform(self.VarMin, self.VarMax, (self.nEmployedBees, self.nVar))
@@ -68,13 +87,13 @@ class ImprovedArtificialBeeColony:
             positions[i] = (self.VarMin + self.VarMax) / 2 + np.random.normal(0, 0.1) * (self.VarMax - self.VarMin)
             positions[i] = np.minimum(np.maximum(positions[i], self.VarMin), self.VarMax)
 
-        costs = np.apply_along_axis(cost_function, 1, positions)
+        costs = np.apply_along_axis(self._cost, 1, positions)
         trials = np.zeros(self.nEmployedBees)
         return positions, costs, trials
 
     def adaptive_search_radius(self, iteration):
         """Calculate adaptive search radius based on iteration"""
-        progress = iteration / MaxIt
+        progress = iteration / self.MaxIt
         return self.initial_search_radius * (1 - progress) + self.final_search_radius * progress
 
     def improved_employed_bees_phase(self, positions, costs, trials, iteration, global_best_position):
@@ -129,7 +148,7 @@ class ImprovedArtificialBeeColony:
             new_position = np.minimum(np.maximum(new_position, self.VarMin), self.VarMax)
 
             # Evaluate new solution
-            new_cost = cost_function(new_position)
+            new_cost = self._cost(new_position)
 
             # Greedy selection with elitism
             if new_cost < costs[i]:
@@ -198,7 +217,7 @@ class ImprovedArtificialBeeColony:
             new_position = np.minimum(np.maximum(new_position, self.VarMin), self.VarMax)
 
             # Evaluate new solution
-            new_cost = cost_function(new_position)
+            new_cost = self._cost(new_position)
 
             # Greedy selection
             if new_cost < costs[i]:
@@ -228,16 +247,20 @@ class ImprovedArtificialBeeColony:
 
                 # Apply bounds
                 new_positions[i] = np.minimum(np.maximum(new_positions[i], self.VarMin), self.VarMax)
-                new_costs[i] = cost_function(new_positions[i])
+                new_costs[i] = self._cost(new_positions[i])
                 trials[i] = 0
 
         return new_positions, new_costs, trials
 
     def optimize(self):
-        plt.rcParams["font.family"] = "Times New Roman"
-        fig, ax = plt.subplots()
+        """Run the optimization and return (best_position, best_cost)."""
+        seed_all(self.seed)
+        MaxIt = self.MaxIt
+        if self.generate_results:
+            plt.rcParams["font.family"] = "Times New Roman"
+            fig, ax = plt.subplots()
 
-        for tt in range(Run_Time):
+        for tt in range(self.Run_Time):
             # Initialize food sources
             positions, costs, trials = self.initialize_food_sources()
 
@@ -283,7 +306,7 @@ class ImprovedArtificialBeeColony:
                     worst_indices = np.argsort(costs)[-self.nEmployedBees // 5:]
                     for idx in worst_indices:
                         positions[idx] = np.random.uniform(self.VarMin, self.VarMax)
-                        costs[idx] = cost_function(positions[idx])
+                        costs[idx] = self._cost(positions[idx])
                         trials[idx] = 0
                     stagnation_counter = 0
 
@@ -292,7 +315,7 @@ class ImprovedArtificialBeeColony:
                 mean_cost.append(np.mean(costs))
 
                 # Print results for current iteration
-                if it % 10 == 0 or it == 1:  # Print every 10 iterations to reduce output
+                if self.verbose and (it % 10 == 0 or it == 1):  # Print every 10 iterations to reduce output
                     print(
                         f'Run time = {tt}, Iteration = {it}, Best Cost = {round(global_best_cost, 4)}, Mean Cost = {round(mean_cost[-1], 4)}')
 
@@ -300,12 +323,15 @@ class ImprovedArtificialBeeColony:
             self.solution_best_positions.append(global_best_position)
             self.solution_cost_curve.append(best_cost)
 
-            ax.plot(best_cost, '-.', label=str(tt + 1))
+            if self.generate_results:
+                ax.plot(best_cost, '-.', label=str(tt + 1))
 
         # Find overall best solution
         Best = [self.solution_best_costs[t] for t in range(len(self.solution_best_positions))]
         index = np.argmin(Best)
         X = self.solution_best_positions[index]
+        if not self.generate_results:
+            return X, Best[index]
 
         # Plot results
         plt.xlabel('Iteration')
@@ -323,3 +349,4 @@ class ImprovedArtificialBeeColony:
 
         print(f"Best solution found: {X}")
         print(f"Best cost: {self.solution_best_costs[index]}")
+        return X, Best[index]

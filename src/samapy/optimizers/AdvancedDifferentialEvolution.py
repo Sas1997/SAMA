@@ -13,6 +13,7 @@ from samapy.results.Results import Gen_Results
 # Loading Inputs
 from samapy.core.Input_Data import InData
 import numpy as np
+from samapy.optimizers._common import seed_all, resolve_settings
 
 
 PV = InData.PV
@@ -31,18 +32,33 @@ VarMin = InData.VarMin
 VarMax = InData.VarMax
 
 class AdvancedDifferentialEvolution:
-    def __init__(self, **kwargs):
-        self.nVar = 5  # number of decision variables
+    """Advanced Differential Evolution.
 
+    With no arguments, it optimizes the SAMA design problem using the settings
+    in InData at the time it is constructed. Optional arguments (cost_function,
+    var_min, var_max, n_pop, max_it, run_time, seed, generate_results, verbose)
+    work as described for samapy.optimizers.swarm.Swarm.
+    """
+    def __init__(self, cost_function=None, var_min=None, var_max=None, n_pop=None,
+                 max_it=None, run_time=None, seed=None, generate_results=True,
+                 verbose=True, **kwargs):
         # Variable: PV number, WT number, Battery number, number of DG, Rated Power Inverter
-        self.VarMin = VarMin * [PV, WT, Bat, DG, 1]  # Lower bound of variables
-        self.VarMax = VarMax * [PV, WT, Bat, DG, 1]  # Upper bound of variables
+        (self.VarMin, self.VarMax, self.nPop, self.MaxIt,
+         self.Run_Time) = resolve_settings(InData, var_min, var_max, n_pop, max_it, run_time)
+        if self.nPop < 6:
+            # DE/rand/2 needs five distinct members besides the target vector.
+            raise ValueError("Differential Evolution needs a population size of at least 6")
+        self.nVar = len(self.VarMin)  # number of decision variables
+        self.cost_function = cost_function
+        self.seed = seed
+        self.generate_results = generate_results
+        self.verbose = verbose
 
         # DE parameters - adaptive and self-tuning
-        self.F_min = F_min  # Minimum scaling factor
-        self.F_max = F_max  # Maximum scaling factor
-        self.CR_min = CR_min  # Minimum crossover probability
-        self.CR_max = CR_max  # Maximum crossover probability
+        self.F_min = InData.F_min  # Minimum scaling factor
+        self.F_max = InData.F_max  # Maximum scaling factor
+        self.CR_min = InData.CR_min  # Minimum crossover probability
+        self.CR_max = InData.CR_max  # Maximum crossover probability
 
         # Advanced DE strategies
         self.strategies = ['DE/rand/1', 'DE/best/1', 'DE/current-to-best/1', 'DE/rand/2', 'DE/best/2']
@@ -52,8 +68,12 @@ class AdvancedDifferentialEvolution:
         self.solution_best_positions = []
         self.solution_cost_curve = []
 
+    def _cost(self, x):
+        return (self.cost_function or cost_function)(x)
+
     def initialize_population(self):
         """Initialize population with enhanced diversity"""
+        nPop = self.nPop
         population = np.zeros((nPop, self.nVar))
 
         # Initialize with different strategies
@@ -85,7 +105,7 @@ class AdvancedDifferentialEvolution:
         costs = np.zeros(nPop)
         for i in range(nPop):
             try:
-                costs[i] = cost_function(population[i])
+                costs[i] = self._cost(population[i])
                 if not np.isfinite(costs[i]):
                     costs[i] = 1e10
             except Exception as e:
@@ -96,7 +116,7 @@ class AdvancedDifferentialEvolution:
 
     def adaptive_parameters(self, iteration, success_rate):
         """Adaptive parameter control based on success rate and iteration"""
-        progress = iteration / MaxIt
+        progress = iteration / self.MaxIt
 
         # Adaptive F (scaling factor)
         if success_rate > 0.2:
@@ -194,7 +214,7 @@ class AdvancedDifferentialEvolution:
                 perturbed = np.clip(perturbed, self.VarMin, self.VarMax)
 
                 try:
-                    perturbed_cost = cost_function(perturbed)
+                    perturbed_cost = self._cost(perturbed)
                     if np.isfinite(perturbed_cost) and perturbed_cost < best_cost:
                         best_individual = perturbed
                         best_cost = perturbed_cost
@@ -206,10 +226,14 @@ class AdvancedDifferentialEvolution:
         return individual, cost
 
     def optimize(self):
-        plt.rcParams["font.family"] = "Times New Roman"
-        fig, ax = plt.subplots()
+        """Run the optimization and return (best_position, best_cost)."""
+        seed_all(self.seed)
+        nPop, MaxIt = self.nPop, self.MaxIt
+        if self.generate_results:
+            plt.rcParams["font.family"] = "Times New Roman"
+            fig, ax = plt.subplots()
 
-        for tt in range(Run_Time):
+        for tt in range(self.Run_Time):
             # Initialize population
             population, costs = self.initialize_population()
 
@@ -259,7 +283,7 @@ class AdvancedDifferentialEvolution:
 
                     # Evaluation
                     try:
-                        trial_cost = cost_function(trial)
+                        trial_cost = self._cost(trial)
                         if not np.isfinite(trial_cost):
                             trial_cost = 1e10
                     except:
@@ -292,7 +316,7 @@ class AdvancedDifferentialEvolution:
                 mean_cost_history.append(np.mean(costs))
 
                 # Print progress
-                if iteration % 10 == 0 or iteration == 1:
+                if self.verbose and (iteration % 10 == 0 or iteration == 1):
                     print(f'Run {tt}, Iteration {iteration}, Best Cost = {best_cost:.4f}, '
                           f'Mean Cost = {mean_cost_history[-1]:.4f}, Success Rate = {success_rate:.3f}')
 
@@ -305,7 +329,7 @@ class AdvancedDifferentialEvolution:
                         for idx in worst_indices:
                             population[idx] = np.random.uniform(self.VarMin, self.VarMax)
                             try:
-                                costs[idx] = cost_function(population[idx])
+                                costs[idx] = self._cost(population[idx])
                                 if not np.isfinite(costs[idx]):
                                     costs[idx] = 1e10
                             except:
@@ -317,11 +341,14 @@ class AdvancedDifferentialEvolution:
             self.solution_cost_curve.append(best_cost_history)
 
             # Plot convergence
-            ax.plot(best_cost_history, '-.', label=f'Run {tt + 1}')
+            if self.generate_results:
+                ax.plot(best_cost_history, '-.', label=f'Run {tt + 1}')
 
         # Find overall best solution
         best_run_idx = np.argmin(self.solution_best_costs)
         best_solution = self.solution_best_positions[best_run_idx]
+        if not self.generate_results:
+            return best_solution, self.solution_best_costs[best_run_idx]
 
         # Generate plots
         plt.xlabel('Iteration')
@@ -337,3 +364,4 @@ class AdvancedDifferentialEvolution:
 
         # Generate results
         Gen_Results(best_solution)
+        return best_solution, self.solution_best_costs[best_run_idx]

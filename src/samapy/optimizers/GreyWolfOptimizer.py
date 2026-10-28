@@ -30,6 +30,7 @@ VarMax = InData.VarMax
 
 # Problem Definition
 from samapy.core.Fitness import fitness as cost_function
+from samapy.optimizers._common import seed_all, resolve_settings
 
 
 # Vectorized fitness evaluation
@@ -117,23 +118,43 @@ def update_leaders_vectorized(fitness_values, positions, alpha_pos, beta_pos, de
 
 
 class GreyWolfOptimizer:
-    def __init__(self, **kwargs):
-        self.nVar = 5  # number of decision variables
+    """Grey Wolf Optimizer.
 
+    With no arguments, it optimizes the SAMA design problem using the settings
+    in InData at the time it is constructed. Optional arguments (cost_function,
+    var_min, var_max, n_pop, max_it, run_time, seed, generate_results, verbose)
+    work as described for samapy.optimizers.swarm.Swarm.
+    """
+    def __init__(self, cost_function=None, var_min=None, var_max=None, n_pop=None,
+                 max_it=None, run_time=None, seed=None, generate_results=True,
+                 verbose=True, **kwargs):
         # Variable: PV number, WT number, Battery number, number of DG, Rated Power Inverter
-        self.VarMin = VarMin * [PV, WT, Bat, DG, 1]  # Lower bound of variables
-        self.VarMax = VarMax * [PV, WT, Bat, DG, 1]  # Upper bound of variables
+        (self.VarMin, self.VarMax, self.nPop, self.MaxIt,
+         self.Run_Time) = resolve_settings(InData, var_min, var_max, n_pop, max_it, run_time)
+        self.nVar = len(self.VarMin)  # number of decision variables
+        self.cost_function = cost_function
+        self.seed = seed
+        self.generate_results = generate_results
+        self.verbose = verbose
 
         # Solution
         self.solution_best_costs = []
         self.solution_best_positions = []
         self.solution_cost_curve = []
 
-    def optimize(self):
-        plt.rcParams["font.family"] = "Times New Roman"
-        fig, ax = plt.subplots()
+    def _evaluate(self, positions):
+        f = self.cost_function or cost_function
+        return np.array([f(pos) for pos in positions])
 
-        for tt in range(Run_Time):
+    def optimize(self):
+        """Run the optimization and return (best_position, best_cost)."""
+        seed_all(self.seed)
+        nPop, MaxIt = self.nPop, self.MaxIt
+        if self.generate_results:
+            plt.rcParams["font.family"] = "Times New Roman"
+            fig, ax = plt.subplots()
+
+        for tt in range(self.Run_Time):
             # Initialize the population of grey wolves
             positions = np.random.uniform(self.VarMin, self.VarMax, (nPop, self.nVar))
 
@@ -151,7 +172,7 @@ class GreyWolfOptimizer:
             best_cost, mean_cost = [], []
 
             # Initial fitness evaluation
-            fitness_values = evaluate_population(positions)
+            fitness_values = self._evaluate(positions)
 
             # Update initial leaders
             alpha_pos, beta_pos, delta_pos, alpha_score, beta_score, delta_score = \
@@ -168,7 +189,7 @@ class GreyWolfOptimizer:
                                                         a, self.VarMin, self.VarMax)
 
                 # Evaluate fitness for all positions
-                fitness_values = evaluate_population(positions)
+                fitness_values = self._evaluate(positions)
 
                 # Update leaders using vectorized JIT-compiled function
                 alpha_pos, beta_pos, delta_pos, alpha_score, beta_score, delta_score = \
@@ -183,7 +204,7 @@ class GreyWolfOptimizer:
                 mean_cost.append(current_mean_cost)
 
                 # Print results for current iteration (reduce frequency for speed)
-                if it % 10 == 0 or it == MaxIt - 1:  # Print every 10 iterations
+                if self.verbose and (it % 10 == 0 or it == MaxIt - 1):  # Print every 10 iterations
                     print(
                         f'Run time = {tt}, Iteration = {it + 1}, Best Cost = {round(alpha_score, 4)}, Mean Cost = {round(current_mean_cost, 4)}')
 
@@ -191,12 +212,15 @@ class GreyWolfOptimizer:
             self.solution_best_positions.append(alpha_pos.copy())
             self.solution_cost_curve.append(best_cost)
 
-            ax.plot(best_cost, '-.', label=str(tt + 1))
+            if self.generate_results:
+                ax.plot(best_cost, '-.', label=str(tt + 1))
 
         # Find the best solution across all runs
         Best = [self.solution_best_costs[t] for t in range(len(self.solution_best_positions))]
         index = np.argmin(Best)
         X = self.solution_best_positions[index]
+        if not self.generate_results:
+            return X, Best[index]
 
         # Generate results
         plt.xlabel('Iteration')
@@ -204,19 +228,24 @@ class GreyWolfOptimizer:
         plt.title('Grey Wolf Optimizer Convergence Curve')
         plt.legend()  # Display the legend
         plt.tight_layout()
-        plt.savefig('output/figs/Optimization.png', dpi=300)
+        os.makedirs('samapy_outputs', exist_ok=True)
+        plt.savefig('samapy_outputs/Optimization.png', dpi=300)
+        print("✓ Saved: samapy_outputs/Optimization.png")
         Gen_Results(X)
+        return X, Best[index]
 
 
 # Alternative: Parallel implementation for multiple runs
 class ParallelGreyWolfOptimizer(GreyWolfOptimizer):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.n_processes = min(mp.cpu_count(), Run_Time)  # Use available cores
+        self.n_processes = min(mp.cpu_count(), self.Run_Time)  # Use available cores
 
     def single_run(self, run_id):
         """Single GWO run for parallel execution"""
-        np.random.seed(run_id)  # Different seed for each run
+        # Different seed for each run (offset by self.seed when one is given)
+        seed_all(run_id if self.seed is None else self.seed + run_id)
+        nPop, MaxIt = self.nPop, self.MaxIt
 
         # Initialize the population of grey wolves
         positions = np.random.uniform(self.VarMin, self.VarMax, (nPop, self.nVar))
@@ -235,7 +264,7 @@ class ParallelGreyWolfOptimizer(GreyWolfOptimizer):
         best_cost = []
 
         # Initial fitness evaluation
-        fitness_values = evaluate_population(positions)
+        fitness_values = self._evaluate(positions)
 
         # Update initial leaders
         alpha_pos, beta_pos, delta_pos, alpha_score, beta_score, delta_score = \
@@ -252,7 +281,7 @@ class ParallelGreyWolfOptimizer(GreyWolfOptimizer):
                                                     a, self.VarMin, self.VarMax)
 
             # Evaluate fitness for all positions
-            fitness_values = evaluate_population(positions)
+            fitness_values = self._evaluate(positions)
 
             # Update leaders using vectorized JIT-compiled function
             alpha_pos, beta_pos, delta_pos, alpha_score, beta_score, delta_score = \
@@ -271,7 +300,7 @@ class ParallelGreyWolfOptimizer(GreyWolfOptimizer):
 
         # Run multiple GWO instances in parallel
         with mp.Pool(processes=self.n_processes) as pool:
-            results = pool.map(self.single_run, range(Run_Time))
+            results = pool.map(self.single_run, range(self.Run_Time))
 
         # Process results
         for tt, (best_cost_val, best_pos, cost_curve) in enumerate(results):

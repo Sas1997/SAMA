@@ -32,15 +32,39 @@ VarMax = InData.VarMax
 
 # Problem Definition
 from samapy.core.Fitness import fitness as cost_function
+from samapy.optimizers._common import seed_all, resolve_settings
 
 
 class Swarm:
-    def __init__(self, **kwargs):
-        self.nVar = 5  # number of decision variables
+    """Particle Swarm Optimization.
 
+    With no arguments, Swarm() optimizes the SAMA design problem using the
+    settings in InData at the time it is constructed. The optional arguments
+    let the same algorithm run on another objective (for example a benchmark
+    function in the test suite):
+
+        cost_function     callable taking a 1-D array, returning a float
+        var_min, var_max  lower and upper bounds (sequences of equal length)
+        n_pop, max_it, run_time  population size, iterations, independent runs
+        seed              integer seed for reproducible runs
+        generate_results  False skips the SAMA convergence plot and Gen_Results
+        verbose           False suppresses per-iteration printing
+    """
+    def __init__(self, cost_function=None, var_min=None, var_max=None, n_pop=None,
+                 max_it=None, run_time=None, seed=None, generate_results=True,
+                 verbose=True, **kwargs):
         # Variable: PV number, WT number, Battery number, number of DG, Rated Power Inverter
-        self.VarMin = VarMin * [PV, WT, Bat, DG, 1]  # Lower bound of variables
-        self.VarMax = VarMax * [PV, WT, Bat, DG, 1]  # Upper bound of variables
+        (self.VarMin, self.VarMax, self.nPop, self.MaxIt,
+         self.Run_Time) = resolve_settings(InData, var_min, var_max, n_pop, max_it, run_time)
+        self.nVar = len(self.VarMin)  # number of decision variables
+        self.cost_function = cost_function
+        self.seed = seed
+        self.generate_results = generate_results
+        self.verbose = verbose
+        self.w = InData.w
+        self.c1 = InData.c1
+        self.c2 = InData.c2
+        self.wdamp = InData.wdamp
 
         # Velocity limits
         self.VelMax = 0.3 * (self.VarMax - self.VarMin)
@@ -50,11 +74,19 @@ class Swarm:
         self.solution_best_positions = []
         self.solution_cost_curve = []
 
+    def _cost(self, x):
+        return (self.cost_function or cost_function)(x)
+
     def optimize(self):
-        w = InData.w
-        plt.rcParams["font.family"] = "Times New Roman"
-        fig, ax = plt.subplots()
-        for tt in range(Run_Time):
+        """Run the optimization and return (best_position, best_cost)."""
+        seed_all(self.seed)
+        nPop, MaxIt = self.nPop, self.MaxIt
+        c1, c2, wdamp = self.c1, self.c2, self.wdamp
+        w = self.w
+        if self.generate_results:
+            plt.rcParams["font.family"] = "Times New Roman"
+            fig, ax = plt.subplots()
+        for tt in range(self.Run_Time):
 
             # Initialize particle positions
             particle_positions = np.random.uniform(self.VarMin, self.VarMax, (1, nPop, self.nVar))[0]
@@ -64,7 +96,7 @@ class Swarm:
             particle_velocities = np.zeros((nPop, self.nVar))
 
             # Evaluate costs per initial particle
-            particle_costs = np.apply_along_axis(cost_function, 1, particle_positions)
+            particle_costs = np.apply_along_axis(self._cost, 1, particle_positions)
             particle_personal_best_cost = deepcopy(particle_costs)
 
             # Determine global best
@@ -99,7 +131,7 @@ class Swarm:
                     particle_positions[i] = np.minimum(np.maximum(particle_positions[i], self.VarMin), self.VarMax)
 
                     # Evaluation
-                    particle_costs[i] = cost_function(particle_positions[i])
+                    particle_costs[i] = self._cost(particle_positions[i])
 
                     # Update Personal Best
                     if particle_costs[i] < particle_personal_best_cost[i]:
@@ -119,18 +151,22 @@ class Swarm:
                 w *= wdamp
 
                 # Print results for current iteration
-                print(
-                    f'Run time = {tt}, Iteration = {it}, Best Cost = {round(global_best_cost, 4)}, Mean Cost = {round(mean_cost[-1], 4)}')
+                if self.verbose:
+                    print(
+                        f'Run time = {tt}, Iteration = {it}, Best Cost = {round(global_best_cost, 4)}, Mean Cost = {round(mean_cost[-1], 4)}')
 
             self.solution_best_costs.append(global_best_cost)
             self.solution_best_positions.append(global_best_position)
             self.solution_cost_curve.append(best_cost)
 
-            ax.plot(best_cost, '-.', label=str(tt+1))
+            if self.generate_results:
+                ax.plot(best_cost, '-.', label=str(tt+1))
 
         Best= [self.solution_best_costs[t] for t in range(len(self.solution_best_positions))]
         index = np.argmin(Best)
         X = self.solution_best_positions[index]
+        if not self.generate_results:
+            return X, Best[index]
 
         # Run Results file
 
@@ -144,3 +180,4 @@ class Swarm:
         plt.savefig('samapy_outputs/Optimization.png', dpi=300)
         print("✓ Saved: samapy_outputs/Optimization.png")
         Gen_Results(X)
+        return X, Best[index]
