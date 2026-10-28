@@ -95,8 +95,17 @@ def EMS(Lead_acid, Li_ion, Ich_max_Li_ion, Idch_max_Li_ion, Cnom_Li, Vnom_Li_ion
             Psell[t] = min(Psur_AC, Psell_max)
             Psell[t] = min(max(0, Pinv_max - Eload[t]), Psell[t])
 
-            Edump[t] = P_RE[t] * n_I - min(Pinv_max, Pch[t] * n_I + (Eload[t] + Psell[t]))
-            Ens[t] = max(0, Eload[t] - min(Pinv_max, (P_RE[t] - Pch[t]) * n_I - Psell[t]))
+            # One AC-bus balance for both surplus and shortfall, as in the
+            # deficit branch below. Battery charging (Pch) happens on the DC
+            # side, so it does not pass through the inverter; only the
+            # remaining renewable output does. Load and exports (Psell) are
+            # both supplied through the inverter in this branch.
+            P_inv = min(Pinv_max, (P_RE[t] - Pch[t]) * n_I)
+            E_bal_AC = P_inv - Eload[t] - Psell[t]
+            # Renewable output above the inverter rating is curtailed on the DC side.
+            E_curtail_DC = max(0, (P_RE[t] - Pch[t]) * n_I - Pinv_max)
+            Ens[t] = max(0, -E_bal_AC)
+            Edump[t] = max(0, E_bal_AC) + E_curtail_DC
 
         else:
             Edef_AC = Eload[t] - min(Pinv_max, n_I * P_RE[t])
