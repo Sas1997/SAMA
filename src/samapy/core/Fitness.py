@@ -342,9 +342,12 @@ def fitness(X):
     Bought_electricity_p = ((Annual_expenses + np.sum(Service_charge) + np.sum(Pbuy_p * Cbuy) + Grid_Tax_amount * np.sum(Pbuy_p)) * (cumulative_escalation / ((1 + ir) ** np.arange(1, n + 1)))) * (1 + Grid_Tax) * (Grid > 0)
 
     Grid_Cost_p = Bought_electricity_p
-    eHeating_Cost = ((((np.sum(Pbuy_eH * Cbuy) + Grid_Tax_amount * np.sum(Pbuy_eH)) * (1 + Grid_Tax)) * (cumulative_escalation / ((1 + ir) ** np.arange(1, n + 1)))))
+    # Grid electricity for the heat pump can only be bought when a grid exists,
+    # so both heat pump grid costs are zero for off-grid systems (Grid == 0),
+    # matching Bought_electricity_p above.
+    eHeating_Cost = ((((np.sum(Pbuy_eH * Cbuy) + Grid_Tax_amount * np.sum(Pbuy_eH)) * (1 + Grid_Tax)) * (cumulative_escalation / ((1 + ir) ** np.arange(1, n + 1))))) * (Grid > 0)
     gHeating_Cost = (((Annual_expenses_NG + np.sum(Service_charge_NG) + np.sum(Pbuy_NG * Cbuy_NG) + Grid_Tax_amount_NG * np.sum(Pbuy_NG)) * (cumulative_escalation_NG / ((1 + ir) ** np.arange(1, n + 1)))) * (1 + Grid_Tax_NG) - ((Grid_credit_NG) * (cumulative_escalation_NG / ((1 + ir) ** np.arange(1, n + 1))))) * (NG_Grid > 0)
-    Cooling_Cost = (((np.sum(Pbuy_C * Cbuy) + Grid_Tax_amount * np.sum(Pbuy_C)) * (cumulative_escalation / ((1 + ir) ** np.arange(1, n + 1)))) * (1 + Grid_Tax))
+    Cooling_Cost = (((np.sum(Pbuy_C * Cbuy) + Grid_Tax_amount * np.sum(Pbuy_C)) * (cumulative_escalation / ((1 + ir) ** np.arange(1, n + 1)))) * (1 + Grid_Tax)) * (Grid > 0)
     Grid_Cost_HP = eHeating_Cost + Cooling_Cost
 
     Grid_Cost_net = Grid_Cost_p + Grid_Cost_HP - Sold_electricity - Total_grid_credits
