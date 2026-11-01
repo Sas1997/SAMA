@@ -277,6 +277,29 @@ def _recalc_pricing_method(d, config):
 # Weather rebuild
 # ─────────────────────────────────────────────────────────────────────────────
 
+_PV_IRRADIANCE_KEYS = ('G_type', 'weather_url', 'tilt', 'azimuth', 'soiling',
+                       'PV_module_type', 'bifaciality', 'shade_factor',
+                       'pv_gcr', 'pv_height', 'pv_pitch', 'PV_subarrays')
+
+
+def _recalc_pv_irradiance(d, config):
+    """Rebuild d.G_list, d.G_rear_list and d.PV_shares (samapy.models.pv_model)."""
+    from samapy.models.pv_model import build_pv_irradiance
+    from samapy import get_content_path
+    weather_url = config.get('weather_url')
+    if weather_url:
+        try:
+            url = get_content_path(weather_url)
+        except Exception:
+            url = weather_url
+        d.weather_url = url
+    url = d.weather_url
+    g_type = int(config.get('G_type', getattr(d, 'G_type', 1)))
+    build_pv_irradiance(d, url, float(getattr(d, 'soiling', 5)), g_type)
+    if getattr(d, 'PV_module_type', 'Mono-facial') == 'Bi-facial':
+        print(f"  → Bi-facial PV: rear irradiance computed for {len(d.G_list)} sub-array(s)")
+
+
 def _recalc_weather(d, config):
     weather_url = config.get('weather_url')
     tilt    = config.get('tilt',    getattr(d, 'tilt',    33))
@@ -895,6 +918,10 @@ _SCALAR_FIELDS = {
     'Tload_type':('Tload_type',int),
     'G_type':('G_type',int), 'T_type':('T_type',int), 'WS_type':('WS_type',int),
     'azimuth':('azimuth',float), 'tilt':('tilt',float), 'soiling':('soiling',float),
+    # PV module type (mono- or bi-facial) and rear geometry
+    'PV_module_type':('PV_module_type',str),
+    'bifaciality':('bifaciality',float), 'shade_factor':('shade_factor',float),
+    'pv_gcr':('pv_gcr',float), 'pv_height':('pv_height',float), 'pv_pitch':('pv_pitch',float),
     # Constraints — rates only; LPSP_max and RE_min are in _SKIP_KEYS (derived)
     'LPSP_max_rate':('LPSP_max_rate',float),
     'RE_min_rate':('RE_min_rate',float),
@@ -1005,6 +1032,17 @@ _SCALAR_FIELDS = {
     'SC_2':('SC_2',float), 'Limit_SC_2':('Limit_SC_2',float),
     'SC_3':('SC_3',float), 'Limit_SC_3':('Limit_SC_3',float),
     'SC_4':('SC_4',float),
+    # Demand charges (commercial / industrial) and minimum charge rule
+    'demand_charge_enabled':('demand_charge_enabled',int),
+    'demand_charge_type':('demand_charge_type',int),
+    'demand_ratchet_enabled':('demand_ratchet_enabled',int),
+    'demand_ratchet_rate':('demand_ratchet_rate',float),
+    'demand_flat_rate':('demand_flat_rate',float),
+    'nem_demand_netting':('nem_demand_netting',int),
+    'nem_demand_rate_override':('nem_demand_rate_override',int),
+    'minimum_charge_enabled':('minimum_charge_enabled',int),
+    'demand_tou_weekdays_only':('demand_tou_weekdays_only',int),
+    'minimum_charge_credit_carryover':('minimum_charge_credit_carryover',int),
     # Rate selectors
     'rateStructure':('rateStructure',int),
     'sellStructure':('sellStructure',int),
@@ -1046,6 +1084,16 @@ _ARRAY_FIELDS = {
     'tieredPrices_NG':('tieredPrices_NG',float),
     'tierMax_NG':('tierMax_NG',float),
     'season_NG':('season_NG',int),
+    # Demand charge rates
+    'demand_seasonal_rates':('demand_seasonal_rates',float),
+    'demand_season':('demand_season',int),
+    'demand_monthly_rates':('demand_monthly_rates',float),
+    'demand_tou_onpeak_rate':('demand_tou_onpeak_rate',float),
+    'demand_tou_offpeak_rate':('demand_tou_offpeak_rate',float),
+    'demand_tou_season':('demand_tou_season',int),
+    'nem_demand_rate_monthly':('nem_demand_rate_monthly',float),
+    'nem_demand_offpeak_rate_monthly':('nem_demand_offpeak_rate_monthly',float),
+    'minimum_charge_monthly':('minimum_charge_monthly',float),
 }
 
 # Jagged / nested arrays — stored via _to_hours_object_array
@@ -1061,6 +1109,7 @@ _OBJECT_ARRAY_FIELDS = {
     'seasonalTierMax_NG':'seasonalTierMax_NG',
     'monthlyTieredPrices_NG':'monthlyTieredPrices_NG',
     'monthlyTierLimits_NG':'monthlyTierLimits_NG',
+    'demand_tou_onpeak_hours':'demand_tou_onpeak_hours',
 }
 
 # Keys whose YAML values must NOT be applied raw — derived or unit-converted
@@ -1144,6 +1193,12 @@ def apply_config(config):
         d.MOO_selection = [float(w) for w in sel] if isinstance(sel, (list, tuple)) else str(sel)
         applied += 1
 
+    # PV sub-arrays (a list of dicts with tilt, azimuth and share), or null for one array
+    if 'PV_subarrays' in config:
+        subs = config['PV_subarrays']
+        d.PV_subarrays = [dict(s) for s in subs] if subs else None
+        applied += 1
+
     # ── Step 2: 1-D numpy arrays ──────────────────────────────────────────────
     for k, (attr, dtype) in _ARRAY_FIELDS.items():
         if k in config and k not in _SKIP_KEYS:
@@ -1207,6 +1262,10 @@ def apply_config(config):
         print("  → Rebuilding weather arrays (G, T, Vw)...")
         _recalc_weather(d, config)
 
+    # PV irradiance per sub-array (front, and rear for bi-facial modules)
+    if any(k in config for k in _PV_IRRADIANCE_KEYS):
+        _recalc_pv_irradiance(d, config)
+
     # Thermal load (Hload/Cload) — reload if house_load.xlsx or Tload_type changed
     if 'path_house_load' in config or 'Tload_type' in config:
         print("  → Rebuilding thermal load (Hload/Cload)...")
@@ -1232,6 +1291,10 @@ def apply_config(config):
 
     _recalc_service_charge(d)
     _recalc_service_charge_ng(d)
+
+    # Demand charge monthly rate arrays
+    from samapy.pricing.demand_charge import build_demand_rates
+    build_demand_rates(d)
 
     # Rebuild Eload_Previous when type != 1 or specific array keys present
     if (('load_previous_year_type' in config and int(config['load_previous_year_type']) != 1)

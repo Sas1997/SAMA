@@ -235,6 +235,8 @@ def _patch_fitness(indata, verbose=False):
     if hasattr(d, 'c2'):
         _F.c2 = d.c2
 
+    _sync_module_with_indata(_F, d)
+
     if verbose:
         print("  ✅ Fitness module patched (90+ variables)")
 
@@ -375,8 +377,25 @@ def _patch_results(indata, verbose=False):
     _R.Cost_EV            = d.Cost_EV
     _R.MO_EV              = d.MO_EV
 
+    # Every other module-level copy of an InData attribute (for example
+    # Service_charge, Grid_Tax, ir, n and the component costs), so that the
+    # reported results use the same inputs as the optimization
+    _sync_module_with_indata(_R, d)
+
     if verbose:
         print("  ✅ Results module patched")
+
+
+def _sync_module_with_indata(module, d):
+    """Set each public module-level name that is also an InData attribute."""
+    import types
+    for name in list(vars(module)):
+        if name.startswith('_') or not hasattr(d, name):
+            continue
+        value = getattr(d, name)
+        if callable(value) or isinstance(value, types.ModuleType):
+            continue
+        setattr(module, name, value)
 
 
 def _patch_optimizer(algo, indata, verbose=False):
