@@ -317,6 +317,27 @@ class Input_Data:
             self.Annual_average_windspeed = 10
             self.Vw = np.full(8760, self.Annual_average_windspeed)
 
+        # PV module type and array layout
+        self.weather_url = weather_url
+        self.tilt = tilt
+        self.azimuth = azimuth
+        self.soiling = soiling
+        self.G_type = G_type
+        # PV module types: 'Mono-facial' or 'Bi-facial'
+        self.PV_module_type = 'Mono-facial'
+        self.bifaciality = 0.70    # rear/front efficiency ratio (datasheet); bifacial only
+        self.shade_factor = -0.02  # rear-shading derate (pvlib default); 0 to ignore; bifacial only
+        # Rear geometry of the array; bifacial only (height and pitch in the same unit, e.g. m)
+        self.pv_gcr = 0.35     # ground coverage ratio = module width / pitch
+        self.pv_height = 1.5   # height of the row centre above the ground
+        self.pv_pitch = 6.0    # row-to-row spacing
+        # Optional sub-arrays with their own orientation, for example east and west faces:
+        # [{'tilt': 90, 'azimuth': 90, 'share': 0.5}, {'tilt': 90, 'azimuth': 270, 'share': 0.5}]
+        # 'share' is the fraction of the PV capacity (shares must sum to 1); 'gcr', 'height'
+        # and 'pitch' may also be given per sub-array. None = one array with tilt and azimuth above.
+        self.PV_subarrays = None
+        from samapy.models.pv_model import build_pv_irradiance
+        build_pv_irradiance(self, weather_url, soiling, G_type)
 
         # Other inputs
         # Technical data
@@ -711,6 +732,61 @@ class Input_Data:
 
             from samapy.pricing.service_charge import service_charge
             self.Service_charge = service_charge(self.daysInMonth, self.Eload_Previous, self.Limit_SC_1, self.SC_1, self.Limit_SC_2, self.SC_2, self.Limit_SC_3, self.SC_3, self.SC_4)
+
+        # =====================================================================
+        # Demand charges (commercial / industrial tariffs)
+        # Billed in $/kW of the metered peak demand in each month, on top of
+        # the per-kWh energy charges. The peak is the highest hourly grid
+        # purchase in the month (a 1-hour demand interval).
+        #   1 = Flat monthly     - one $/kW/month rate all year
+        #   2 = Seasonal         - summer / winter $/kW/month rates
+        #   3 = Monthly varying  - 12 individual $/kW/month rates
+        #   4 = TOU on/off-peak  - on-peak and off-peak $/kW/month rates with
+        #                          user-defined on-peak hours per season
+        # =====================================================================
+        self.demand_charge_enabled = 0   # 0 = disabled (residential), 1 = enabled
+        self.demand_charge_type = 1      # 1 / 2 / 3 / 4 (see above)
+
+        # Ratchet clause: bill at least this fraction of the highest monthly peak of the year
+        self.demand_ratchet_enabled = 0
+        self.demand_ratchet_rate = 0.85
+
+        # Type 1: flat rate ($/kW/month)
+        self.demand_flat_rate = 15.03
+        # Type 2: seasonal rates ($/kW/month) [summer, winter]; 1 = summer month
+        self.demand_seasonal_rates = np.array([18.0, 12.0])
+        self.demand_season = np.array([0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0])
+        # Type 3: monthly rates ($/kW/month, January to December)
+        self.demand_monthly_rates = np.array([12., 12., 14., 14., 16., 18., 18., 18., 16., 14., 12., 12.])
+        # Type 4: TOU demand rates ($/kW/month) [summer, winter]; off-peak 0 = not charged
+        self.demand_tou_onpeak_rate = np.array([20.0, 15.0])
+        self.demand_tou_offpeak_rate = np.array([0.0, 0.0])
+        self.demand_tou_season = np.array([0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0])
+        # On-peak hours of the day (0-23) [summer, winter]
+        self.demand_tou_onpeak_hours = np.array([[16, 17, 18, 19, 20], [16, 17, 18, 19, 20]], dtype=object)
+        # 1 = on-peak demand hours apply on weekdays only; weekends and holidays are off-peak
+        self.demand_tou_weekdays_only = 0
+
+        # Option B, NEM demand netting: 0 = peak of the gross import Pbuy (most utilities),
+        # 1 = peak of the hourly net import max(Pbuy - Psell, 0)
+        self.nem_demand_netting = 0
+        # Option C, NEM demand rate: 1 = replace the rates above by these NEM rates ($/kW/month)
+        self.nem_demand_rate_override = 0
+        self.nem_demand_rate_monthly = np.full(12, 10.0)
+        self.nem_demand_offpeak_rate_monthly = np.zeros(12)
+
+        # Minimum charge rule: each monthly bill is at least
+        # max(minimum_charge_monthly[m], Service_charge[m] + demand charge[m]), even with NEM credits
+        self.minimum_charge_enabled = 0
+        self.minimum_charge_monthly = np.full(12, 33.71)
+        # 0 = export credit a month cannot use because of its floor is lost;
+        # 1 = it is carried forward to later months (unused credit is lost after December)
+        self.minimum_charge_credit_carryover = 0
+
+        # Monthly rate arrays used by Fitness and Results:
+        # Demand_charge_rate_monthly and Demand_charge_offpeak_rate_monthly
+        from samapy.pricing.demand_charge import build_demand_rates
+        build_demand_rates(self)
 
         # Hourly charges
         if self.rateStructure == 1:  # Flat rate

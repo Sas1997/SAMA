@@ -4,6 +4,8 @@ from numba import jit
 from math import ceil
 from samapy.ems.EMS import EMS
 from samapy.ems.EMS_EV import EMS_EV
+from samapy.models.pv_model import pv_power
+from samapy.pricing.demand_charge import compute_monthly_peak_demand, compute_minimum_charge_adjustment
 
 
 Eload = InData.Eload
@@ -229,8 +231,11 @@ def evaluate(X):
     # PV Power Calculation
     #Tc = T + (((Tc_noct - 20) / 800) * G)  # Module Temprature
     # Module Temperature
-    Tc = (T + 273.15 + (Tc_noct - Ta_noct) * (G / G_noct) * (1 - ((n_PV * (1 - (Tcof / 100) * (Tref + 273.15))) / gama))) / (1 + (Tc_noct - Ta_noct) * (G / G_noct) * (((Tcof / 100) * n_PV) / gama))
-    Ppv = fpv * Pn_PV * (G / Gref) * (1 + (Tcof / 100) * (Tc - 273.15 - Tref))  # output power(kw)_hourly
+    # Mono- or bi-facial modules in one or more sub-arrays (samapy.models.pv_model);
+    # for one mono-facial array this is SAMA's PV equation with the irradiance G
+    Ppv = pv_power(Pn_PV, InData.G_list, InData.G_rear_list, InData.PV_shares,
+                   InData.bifaciality, InData.shade_factor, T, fpv, Gref, Tcof, Tref,
+                   Tc_noct, Ta_noct, G_noct, n_PV, gama)  # output power(kw)_hourly
 
     # Wind turbine Power Calculation
     v1 = Vw  # hourly wind speed
@@ -357,8 +362,29 @@ def evaluate(X):
     # Compute Total Grid Credits
     Total_grid_credits = (Grid_credit * (cumulative_escalation / ((1 + ir) ** np.arange(1, n + 1)))) * (Grid > 0)
 
-    # Compute Bought Electricity for the property load (rather than HP)
-    Bought_electricity_p = ((Annual_expenses + np.sum(Service_charge) + np.sum(Pbuy_p * Cbuy) + Grid_Tax_amount * np.sum(Pbuy_p)) * (cumulative_escalation / ((1 + ir) ** np.arange(1, n + 1)))) * (1 + Grid_Tax) * (Grid > 0)
+    # Demand charges (commercial / industrial tariffs): Year-1 charge on the monthly
+    # peaks of the total grid purchase Pbuy after dispatch. It is taxed and escalated
+    # like the energy charges. Zero when demand charges are disabled.
+    demand_charge_year1, _monthly_peak, _monthly_dc = compute_monthly_peak_demand(
+        Pbuy, InData.daysInMonth,
+        InData.demand_charge_enabled, InData.Demand_charge_rate_monthly,
+        InData.demand_charge_type, InData.Demand_charge_offpeak_rate_monthly,
+        InData.demand_tou_onpeak_hours, InData.demand_tou_season,
+        InData.demand_ratchet_enabled, InData.demand_ratchet_rate,
+        InData.nem_demand_netting, Psell,
+        tou_weekdays_only=InData.demand_tou_weekdays_only, year=InData.year, holidays=InData.holidays)
+
+    # Minimum charge rule: Year-1 post-tax amount needed to lift each monthly bill
+    # to max(minimum charge, service charge + demand charge). Zero when disabled.
+    min_charge_adj_year1, _ = compute_minimum_charge_adjustment(
+        Pbuy, Psell, Cbuy, Csell, InData.daysInMonth, Service_charge,
+        Grid_Tax, Grid_Tax_amount, Annual_expenses, Grid_credit,
+        InData.minimum_charge_enabled, InData.minimum_charge_monthly,
+        _monthly_dc, Grid, credit_carryover=InData.minimum_charge_credit_carryover)
+
+    # Compute Bought Electricity for the property load (rather than HP);
+    # the demand charge is billed on the total grid purchase and included here
+    Bought_electricity_p = ((Annual_expenses + np.sum(Service_charge) + np.sum(Pbuy_p * Cbuy) + Grid_Tax_amount * np.sum(Pbuy_p) + demand_charge_year1) * (cumulative_escalation / ((1 + ir) ** np.arange(1, n + 1)))) * (1 + Grid_Tax) * (Grid > 0)
 
     Grid_Cost_p = Bought_electricity_p
     # Grid electricity for the heat pump can only be bought when a grid exists,
@@ -370,6 +396,11 @@ def evaluate(X):
     Grid_Cost_HP = eHeating_Cost + Cooling_Cost
 
     Grid_Cost_net = Grid_Cost_p + Grid_Cost_HP - Sold_electricity - Total_grid_credits
+
+    # Minimum charge rule: the adjustment is already post-tax and is escalated and
+    # discounted like the other grid costs
+    if min_charge_adj_year1 > 0:
+        Grid_Cost_net = Grid_Cost_net + (min_charge_adj_year1 * (cumulative_escalation / ((1 + ir) ** np.arange(1, n + 1))) * (Grid > 0))
 
     # Capital recovery factor
     CRF = (ir * (1 + ir) ** n / ((1 + ir) ** n - 1)) if (ir != 0 and not np.isnan(ir)) else (1 / n)
@@ -516,6 +547,8 @@ def evaluate(X):
         "RE": float(RE),
         "I_Cost": float(I_Cost),
         "Edump": float(np.sum(Edump)),
+        "demand_charge_year1": float(demand_charge_year1),
+        "min_charge_adj_year1": float(min_charge_adj_year1),
         "constraints": {k: float(v) for k, v in constraints.items()},
     }
 
