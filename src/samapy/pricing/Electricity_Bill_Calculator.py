@@ -1,12 +1,29 @@
 import numpy as np
+from samapy.pricing.demand_charge import compute_monthly_peak_demand, compute_minimum_charge_adjustment, apply_minimum_charge
 
 
 def calculate_electricity_bills(daysInMonth, Pbuy, Cbuy, Service_charge,
                                 Grid_Tax, Grid_Tax_amount, Annual_expenses,
                                 Grid_escalation, Grid_credit, NEM_fee,
-                                Grid, Psell=None, Csell=None):
+                                Grid, Psell=None, Csell=None,
+                                demand_charge_enabled=0,
+                                Demand_charge_rate_monthly=None,
+                                Demand_charge_offpeak_rate_monthly=None,
+                                demand_charge_type=1,
+                                demand_tou_onpeak_hours=None,
+                                demand_tou_season=None,
+                                demand_ratchet_enabled=0,
+                                demand_ratchet_rate=0.85,
+                                nem_demand_netting=0,
+                                minimum_charge_enabled=0,
+                                minimum_charge_monthly=None,
+                                demand_tou_weekdays_only=0,
+                                year=None,
+                                holidays=None,
+                                minimum_charge_credit_carryover=0):
     """
     Calculate monthly and annual electricity bills with option for selling electricity back to grid.
+    Supports demand charges for commercial / industrial tariffs.
 
     Parameters:
     -----------
@@ -36,9 +53,47 @@ def calculate_electricity_bills(daysInMonth, Pbuy, Cbuy, Service_charge,
         Hourly power sold to grid in kWh
     Csell : array (8760,), optional
         Hourly sell rate in $/kWh
+    demand_charge_enabled : int, optional
+        1 = demand charges active (commercial/industrial), 0 = disabled. Default 0.
+    Demand_charge_rate_monthly : array (12,), optional
+        $/kW/month – non-coincident (or on-peak) demand charge rate per month.
+    Demand_charge_offpeak_rate_monthly : array (12,), optional
+        $/kW/month – off-peak demand charge rate (Type 4 TOU only).
+    demand_charge_type : int, optional
+        1=flat, 2=seasonal, 3=monthly, 4=TOU on/off-peak. Default 1.
+    demand_tou_onpeak_hours : array of lists, optional
+        On-peak hour-of-day definitions [summer, winter]; required for Type 4.
+    demand_tou_season : array (12,), optional
+        1=summer month, 0=winter month; required for Type 4.
+    demand_ratchet_enabled : int, optional
+        1 = apply ratchet clause, 0 = disabled. Default 0.
+    demand_ratchet_rate : float, optional
+        Ratchet fraction (e.g. 0.85). Default 0.85.
     """
     hours_in_month = daysInMonth * 24
     total_consumption = Pbuy  # This is what we actually buy from grid
+
+    # ---- Pre-compute monthly demand charges (per kW of peak demand) ------
+    if Demand_charge_rate_monthly is None:
+        Demand_charge_rate_monthly = np.zeros(12)
+    _, _monthly_peak_demand, _monthly_demand_costs = compute_monthly_peak_demand(
+        Pbuy, daysInMonth,
+        demand_charge_enabled,
+        Demand_charge_rate_monthly,
+        demand_charge_type,
+        Demand_charge_offpeak_rate_monthly,
+        demand_tou_onpeak_hours,
+        demand_tou_season,
+        demand_ratchet_enabled,
+        demand_ratchet_rate,
+        nem_demand_netting,   # Option B
+        Psell,                # Option B
+        tou_weekdays_only=demand_tou_weekdays_only, year=year, holidays=holidays
+    )
+
+    if minimum_charge_monthly is None:
+        minimum_charge_monthly = np.zeros(12)
+    minimum_charge_monthly = np.asarray(minimum_charge_monthly, dtype=float)
 
     # Initialize arrays for monthly calculations
     monthly_energy_costs = np.zeros(12)
@@ -49,6 +104,9 @@ def calculate_electricity_bills(daysInMonth, Pbuy, Cbuy, Service_charge,
     monthly_kwh_bought = np.zeros(12)
     monthly_kwh_sold = np.zeros(12)
     monthly_bills = np.zeros(12)
+    monthly_demand_charges = np.zeros(12)   # NEW: demand charge per month
+    monthly_peak_kw        = np.zeros(12)   # NEW: metered peak demand per month
+    monthly_floors         = np.zeros(12)   # minimum charge floor per month (post-tax)
 
     # Check if selling is enabled
     has_sell = (Psell is not None and Csell is not None and Grid > 0)
@@ -98,21 +156,40 @@ def calculate_electricity_bills(daysInMonth, Pbuy, Cbuy, Service_charge,
         monthly_grid_tax[month] = grid_tax_cost
 
         # Monthly bill formula matching Grid_Cost_net:
-        #   (energy_cost + grid_tax + service + annual_exp/12) * (1 + sales_tax)
+        #   (energy_cost + grid_tax + service + annual_exp/12 + demand_charge) * (1 + sales_tax)
         #   - sell_revenue                                    ← subtracted AFTER tax
         #   - grid_credit/12
         #
-        # Sell revenue is subtracted AFTER applying sales tax to the bought portion.
-        # This is consistent with the user's Grid_Cost_net formula structure and
-        # ensures that sum(monthly_bills) * df_year1 == year_1 projection value.
-        monthly_before_tax = energy_cost + grid_tax_cost + Service_charge[month] + (Annual_expenses / 12)
+        # Demand charge: billed on the metered peak kW in the month ($/kW).
+        # It is included INSIDE the tax bracket (utilities typically tax the
+        # demand charge the same way as energy charges).
+        demand_cost = _monthly_demand_costs[month]
+        monthly_demand_charges[month] = demand_cost
+        monthly_peak_kw[month]        = _monthly_peak_demand[month]
+
+        monthly_before_tax = energy_cost + grid_tax_cost + Service_charge[month] + (Annual_expenses / 12) + demand_cost
         monthly_with_tax = monthly_before_tax * (1 + Grid_Tax)
         monthly_after_credit = monthly_with_tax - sell_revenue - (Grid_credit / 12)
 
         monthly_bills[month] = monthly_after_credit
         monthly_tax_costs[month] = monthly_before_tax * Grid_Tax
 
+        # ---- Minimum charge rule ------------------------------------------
+        # floor = max(minimum_charge_monthly[m], Service_charge[m] + demand_cost)
+        # The floor is pre-tax; sales tax is then applied on top.
+        if minimum_charge_enabled:
+            floor_pretax  = max(float(minimum_charge_monthly[month]),
+                                float(Service_charge[month]) + float(demand_cost))
+            monthly_floors[month] = floor_pretax * (1.0 + Grid_Tax)
+
         hour_idx += hours_this_month
+
+    # Bills under the minimum charge rule (with optional credit carry-over),
+    # the same rule as compute_minimum_charge_adjustment
+    if minimum_charge_enabled:
+        monthly_bills = apply_minimum_charge(monthly_bills, monthly_floors,
+                                             minimum_charge_credit_carryover,
+                                             monthly_sell_revenue + Grid_credit / 12)
 
     # Calculate annual totals
     total_energy_cost = np.sum(monthly_energy_costs)
@@ -121,6 +198,7 @@ def calculate_electricity_bills(daysInMonth, Pbuy, Cbuy, Service_charge,
     total_service_charges = np.sum(Service_charge)
     total_grid_tax = np.sum(monthly_grid_tax)
     total_sales_tax = np.sum(monthly_tax_costs)
+    total_demand_charges = np.sum(monthly_demand_charges)   # NEW
 
     # Annual cost: sum of monthly bills
     annual_cost = np.sum(monthly_bills)
@@ -133,6 +211,7 @@ def calculate_electricity_bills(daysInMonth, Pbuy, Cbuy, Service_charge,
         'total_service_charges': total_service_charges,
         'total_grid_tax': total_grid_tax,
         'total_sales_tax': total_sales_tax,
+        'total_demand_charges': total_demand_charges,          # NEW: $/year demand charge
         'annual_expenses': Annual_expenses,
         'nem_fee': NEM_fee,
         'grid_credit': Grid_credit,
@@ -152,6 +231,8 @@ def calculate_electricity_bills(daysInMonth, Pbuy, Cbuy, Service_charge,
         'monthly_kwh_bought': monthly_kwh_bought,
         'monthly_kwh_sold': monthly_kwh_sold,
         'monthly_service_charges': Service_charge,
+        'monthly_demand_charges': monthly_demand_charges,      # NEW
+        'monthly_peak_kw': monthly_peak_kw,                    # NEW
         'breakdown': breakdown
     }
 
@@ -160,7 +241,24 @@ def calculate_nyear_projection(annual_cost_year1, Grid_escalation, Grid_credit,
                                Grid, n, ir,
                                Pbuy=None, Cbuy=None, Service_charge=None,
                                Grid_Tax=None, Grid_Tax_amount=None, Annual_expenses=None,
-                               Psell=None, Csell=None):
+                               Psell=None, Csell=None,
+                               demand_charge_enabled=0,
+                               Demand_charge_rate_monthly=None,
+                               Demand_charge_offpeak_rate_monthly=None,
+                               demand_charge_type=1,
+                               demand_tou_onpeak_hours=None,
+                               demand_tou_season=None,
+                               demand_ratchet_enabled=0,
+                               demand_ratchet_rate=0.85,
+                               nem_demand_netting=0,
+                               minimum_charge_enabled=0,
+                               minimum_charge_monthly=None,
+                               daysInMonth=None,
+                               min_charge_adj_year1=0.0,
+                               demand_tou_weekdays_only=0,
+                               year=None,
+                               holidays=None,
+                               minimum_charge_credit_carryover=0):
     """
     Calculate n-year cost projection.
 
@@ -193,24 +291,40 @@ def calculate_nyear_projection(annual_cost_year1, Grid_escalation, Grid_credit,
         #                   - sold_base * df           ← sell subtracted AFTER tax
         #                   - credit * df
         #
-        # This is consistent with the monthly bill formula in calculate_electricity_bills
-        # which does: (buy + grid_tax + service + annual/12)*(1+Tax) - sell - credit/12
-        # Summing 12 months and multiplying by df_year1 gives exactly this formula.
-        #
         # bought_base = Annual_expenses + sum(Service_charge) + sum(Pbuy*Cbuy)
-        #               + Grid_Tax_amount * sum(Pbuy)
-        # sold_base   = sum(Psell * Csell)   [raw sell revenue, no tax multiplier]
+        #               + Grid_Tax_amount * sum(Pbuy) + demand_charge_year1
+        # demand_charge_year1 derived from Pbuy peak per month × $/kW/month.
+
+        # Compute demand charge year-1 from raw Pbuy (if daysInMonth provided).
+        # Option B: pass nem_demand_netting and Psell so that the demand charge
+        # is computed on net import when netting is enabled, consistent with
+        # the min_charge_adj_year1 passed in from compare_scenarios.
+        demand_charge_year1 = 0.0
+        if demand_charge_enabled and daysInMonth is not None and Demand_charge_rate_monthly is not None:
+            _dc_annual, _, _ = compute_monthly_peak_demand(
+                Pbuy, daysInMonth,
+                demand_charge_enabled, Demand_charge_rate_monthly,
+                demand_charge_type, Demand_charge_offpeak_rate_monthly,
+                demand_tou_onpeak_hours, demand_tou_season,
+                demand_ratchet_enabled, demand_ratchet_rate,
+                nem_demand_netting, Psell,
+                tou_weekdays_only=demand_tou_weekdays_only, year=year, holidays=holidays
+            )
+            demand_charge_year1 = _dc_annual
 
         bought_base = (Annual_expenses + np.sum(Service_charge) +
                        np.sum(Pbuy * Cbuy) +
-                       Grid_Tax_amount * np.sum(Pbuy))
+                       Grid_Tax_amount * np.sum(Pbuy) +
+                       demand_charge_year1)
         sold_base = np.sum(Psell * Csell) if has_sell else 0.0
 
-        # Apply escalation, discount, and sales tax to bought; subtract raw sell and credit
-        yearly_net_costs_pv = (bought_base * (1 + Grid_Tax) * discount_factors
+        # Apply escalation, discount, and sales tax to bought; subtract raw sell and credit.
+        # min_charge_adj_year1 is post-tax — added AFTER the (1+Grid_Tax) bracket to
+        # avoid double-taxing. It is scaled by the same escalation/discount as all other costs.
+        yearly_net_costs_pv = ((bought_base * (1 + Grid_Tax) + min_charge_adj_year1) * discount_factors
                                - sold_base * discount_factors
                                - Grid_credit * discount_factors)
-        yearly_net_costs_nominal = (bought_base * (1 + Grid_Tax) * cumulative_escalation
+        yearly_net_costs_nominal = ((bought_base * (1 + Grid_Tax) + min_charge_adj_year1) * cumulative_escalation
                                     - sold_base * cumulative_escalation
                                     - Grid_credit * cumulative_escalation)
 
@@ -399,10 +513,26 @@ def compare_scenarios(daysInMonth, Pbuy_no_sell, Pbuy_with_sell, Cbuy, Service_c
                       Grid, n, ir, Psell=None, Csell=None,
                       HP=0, Hload=None, Cbuy_NG=None, Service_charge_NG=None,
                       Grid_Tax_NG=None, Grid_Tax_amount_NG=None, Annual_expenses_NG=None,
-                      Grid_escalation_NG=None, Grid_credit_NG=None):
+                      Grid_escalation_NG=None, Grid_credit_NG=None,
+                      demand_charge_enabled=0,
+                      Demand_charge_rate_monthly=None,
+                      Demand_charge_offpeak_rate_monthly=None,
+                      demand_charge_type=1,
+                      demand_tou_onpeak_hours=None,
+                      demand_tou_season=None,
+                      demand_ratchet_enabled=0,
+                      demand_ratchet_rate=0.85,
+                      nem_demand_netting=0,
+                      minimum_charge_enabled=0,
+                      minimum_charge_monthly=None,
+                      demand_tou_weekdays_only=0,
+                      year=None,
+                      holidays=None,
+                      minimum_charge_credit_carryover=0):
     """
     Compare electricity costs with and without selling electricity to grid.
-    Includes Natural Gas savings when heat pumps are present.
+    Includes Natural Gas savings when heat pumps are present, and demand
+    charge savings for commercial / industrial tariffs.
 
     Parameters:
     -----------
@@ -456,14 +586,77 @@ def compare_scenarios(daysInMonth, Pbuy_no_sell, Pbuy_with_sell, Cbuy, Service_c
         Yearly NG escalation rates
     Grid_credit_NG : float, optional
         NG credits offered in $
+    demand_charge_enabled : int, optional
+        1 = demand charges active (commercial/industrial), 0 = disabled. Default 0.
+    Demand_charge_rate_monthly : array (12,), optional
+        $/kW/month – non-coincident (or on-peak) demand charge rates.
+    Demand_charge_offpeak_rate_monthly : array (12,), optional
+        $/kW/month – off-peak demand charge rates (Type 4 only).
+    demand_charge_type : int, optional
+        1=flat, 2=seasonal, 3=monthly, 4=TOU on/off-peak. Default 1.
+    demand_tou_onpeak_hours : array of lists, optional
+        On-peak hours [summer, winter]; required for Type 4.
+    demand_tou_season : array (12,), optional
+        1=summer, 0=winter; required for Type 4.
+    demand_ratchet_enabled : int, optional
+        1 = apply ratchet clause. Default 0.
+    demand_ratchet_rate : float, optional
+        Ratchet fraction. Default 0.85.
     """
+    # Shared keyword arguments for demand charges passed to all sub-functions
+    _dc_kwargs = dict(
+        demand_charge_enabled=demand_charge_enabled,
+        Demand_charge_rate_monthly=Demand_charge_rate_monthly,
+        Demand_charge_offpeak_rate_monthly=Demand_charge_offpeak_rate_monthly,
+        demand_charge_type=demand_charge_type,
+        demand_tou_onpeak_hours=demand_tou_onpeak_hours,
+        demand_tou_season=demand_tou_season,
+        demand_ratchet_enabled=demand_ratchet_enabled,
+        demand_ratchet_rate=demand_ratchet_rate,
+        nem_demand_netting=nem_demand_netting,          # Option B
+        minimum_charge_enabled=minimum_charge_enabled,  # Minimum charge rule
+        minimum_charge_monthly=minimum_charge_monthly,
+        demand_tou_weekdays_only=demand_tou_weekdays_only,
+        year=year,
+        holidays=holidays,
+        minimum_charge_credit_carryover=minimum_charge_credit_carryover,
+    )
+    _cal = dict(tou_weekdays_only=demand_tou_weekdays_only, year=year, holidays=holidays)
+
+    # ---- Pre-compute minimum charge adjustments for both scenarios ---------
+    # These are post-tax scalars needed by calculate_nyear_projection's
+    # has_raw_data branch (which otherwise misses the adjustment).
+    if minimum_charge_enabled and Demand_charge_rate_monthly is not None:
+        from samapy.pricing.demand_charge import compute_monthly_peak_demand as _cpd, compute_minimum_charge_adjustment as _cma
+        _, _, _dc_no_sell = _cpd(Pbuy_no_sell, daysInMonth, demand_charge_enabled,
+                                  Demand_charge_rate_monthly, demand_charge_type,
+                                  Demand_charge_offpeak_rate_monthly, demand_tou_onpeak_hours,
+                                  demand_tou_season, demand_ratchet_enabled, demand_ratchet_rate,
+                                  nem_demand_netting=0, Psell=None, **_cal)
+        _, _, _dc_sell   = _cpd(Pbuy_with_sell, daysInMonth, demand_charge_enabled,
+                                  Demand_charge_rate_monthly, demand_charge_type,
+                                  Demand_charge_offpeak_rate_monthly, demand_tou_onpeak_hours,
+                                  demand_tou_season, demand_ratchet_enabled, demand_ratchet_rate,
+                                  nem_demand_netting, Psell, **_cal)
+        mc_no_sell, _ = _cma(Pbuy_no_sell, None, Cbuy, None, daysInMonth, Service_charge,
+                              Grid_Tax, Grid_Tax_amount, Annual_expenses, Grid_credit,
+                              minimum_charge_enabled, minimum_charge_monthly, _dc_no_sell, Grid,
+                              credit_carryover=minimum_charge_credit_carryover)
+        mc_sell, _    = _cma(Pbuy_with_sell, Psell, Cbuy, Csell, daysInMonth, Service_charge,
+                              Grid_Tax, Grid_Tax_amount, Annual_expenses, Grid_credit,
+                              minimum_charge_enabled, minimum_charge_monthly, _dc_sell, Grid,
+                              credit_carryover=minimum_charge_credit_carryover)
+    else:
+        mc_no_sell = 0.0
+        mc_sell    = 0.0
 
     # Scenario 1: WITHOUT selling
     results_no_sell = calculate_electricity_bills(daysInMonth,
                                                   Pbuy_no_sell, Cbuy, Service_charge,
                                                   Grid_Tax, Grid_Tax_amount, Annual_expenses,
                                                   Grid_escalation, Grid_credit, NEM_fee,
-                                                  Grid, Psell=None, Csell=None
+                                                  Grid, Psell=None, Csell=None,
+                                                  **_dc_kwargs
                                                   )
 
     projection_no_sell = calculate_nyear_projection(
@@ -473,7 +666,10 @@ def compare_scenarios(daysInMonth, Pbuy_no_sell, Pbuy_with_sell, Cbuy, Service_c
         Grid, n=n, ir=ir,
         Pbuy=Pbuy_no_sell, Cbuy=Cbuy, Service_charge=Service_charge,
         Grid_Tax=Grid_Tax, Grid_Tax_amount=Grid_Tax_amount, Annual_expenses=Annual_expenses,
-        Psell=None, Csell=None
+        Psell=None, Csell=None,
+        daysInMonth=daysInMonth,
+        min_charge_adj_year1=mc_no_sell,
+        **_dc_kwargs
     )
 
     # Scenario 2: WITH selling
@@ -481,7 +677,8 @@ def compare_scenarios(daysInMonth, Pbuy_no_sell, Pbuy_with_sell, Cbuy, Service_c
                                                     Pbuy_with_sell, Cbuy, Service_charge,
                                                     Grid_Tax, Grid_Tax_amount, Annual_expenses,
                                                     Grid_escalation, Grid_credit, NEM_fee,
-                                                    Grid=Grid, Psell=Psell, Csell=Csell
+                                                    Grid=Grid, Psell=Psell, Csell=Csell,
+                                                    **_dc_kwargs
                                                     )
 
     projection_with_sell = calculate_nyear_projection(
@@ -491,7 +688,10 @@ def compare_scenarios(daysInMonth, Pbuy_no_sell, Pbuy_with_sell, Cbuy, Service_c
         Grid=Grid, n=n, ir=ir,
         Pbuy=Pbuy_with_sell, Cbuy=Cbuy, Service_charge=Service_charge,
         Grid_Tax=Grid_Tax, Grid_Tax_amount=Grid_Tax_amount, Annual_expenses=Annual_expenses,
-        Psell=Psell, Csell=Csell
+        Psell=Psell, Csell=Csell,
+        daysInMonth=daysInMonth,
+        min_charge_adj_year1=mc_sell,
+        **_dc_kwargs
     )
 
     # Calculate Natural Gas costs if heat pump is present
@@ -544,6 +744,12 @@ def compare_scenarios(daysInMonth, Pbuy_no_sell, Pbuy_with_sell, Cbuy, Service_c
     yearly_savings_pv = (projection_no_sell_adjusted['yearly_net_costs_pv'] -
                          projection_with_sell_adjusted['yearly_net_costs_pv'])
 
+    # ---- Demand charge breakdown ----------------------------------------
+    # Year-1 demand charges for both scenarios
+    dc_no_sell_year1   = results_no_sell['breakdown'].get('total_demand_charges', 0.0)
+    dc_with_sell_year1 = results_with_sell['breakdown'].get('total_demand_charges', 0.0)
+    dc_savings_year1   = dc_no_sell_year1 - dc_with_sell_year1
+
     return {
         'no_sell': {
             'results': results_no_sell,
@@ -560,7 +766,8 @@ def compare_scenarios(daysInMonth, Pbuy_no_sell, Pbuy_with_sell, Cbuy, Service_c
             'Grid_Tax': Grid_Tax,
             'Service_charge': Service_charge,
             'Annual_expenses': Annual_expenses,
-            'Grid_credit': Grid_credit
+            'Grid_credit': Grid_credit,
+            'demand_charge_enabled': demand_charge_enabled,
         },
         'savings': {
             'monthly_savings': monthly_savings,
@@ -574,6 +781,10 @@ def compare_scenarios(daysInMonth, Pbuy_no_sell, Pbuy_with_sell, Cbuy, Service_c
             'annual_sell_revenue': results_with_sell['breakdown']['total_sell_revenue'],
             'ng_savings_pv': ng_costs['total_ng_cost_pv'] if ng_costs['has_ng_savings'] else 0,
             'ng_savings_nominal': ng_costs['total_ng_cost_nominal'] if ng_costs['has_ng_savings'] else 0,
+            # Demand charge savings (Year 1, nominal)
+            'demand_charge_no_hes_year1':  dc_no_sell_year1,
+            'demand_charge_with_hes_year1': dc_with_sell_year1,
+            'demand_charge_savings_year1':  dc_savings_year1,
             'percent_savings_year0': (
                 (annual_savings_year0 / results_no_sell['annual_cost']) * 100
                 if results_no_sell['annual_cost'] > 0 else 0),
@@ -711,6 +922,18 @@ def print_comparison(comparison, show_plot, save_path=None):
     print(f"║ {'25-Year Savings %':<50} "
           f"{'-':>20} {savings['percent_savings_25year']:>19.1f}% ║")
 
+    # ---- Demand charge rows (only shown when enabled) --------------------
+    demand_charge_enabled_flag = params.get('demand_charge_enabled', 0)
+    if demand_charge_enabled_flag:
+        print("╠" + "-" * 98 + "╣")
+        dc_no_hes  = savings.get('demand_charge_no_hes_year1', 0.0)
+        dc_hes     = savings.get('demand_charge_with_hes_year1', 0.0)
+        dc_sav     = savings.get('demand_charge_savings_year1', 0.0)
+        print(f"║ {'Demand Charge Year 1 (Nominal)':<50} "
+              f"${dc_no_hes:>19,.2f} ${dc_hes:>19,.2f} ║")
+        print(f"║ {'  - Demand Charge Savings Year 1':<50} "
+              f"{'-':>20} ${dc_sav:>19,.2f} ║")
+
     print("╠" + "-" * 98 + "╣")
     print("╠" + "-" * 98 + "╣")
 
@@ -844,6 +1067,28 @@ def print_comparison(comparison, show_plot, save_path=None):
         print(f"      Natural Gas costs are included in 'Without HES' scenario (grid electricity + gas furnace)")
         print(f"      'With HES' uses heat pump instead of gas furnace")
         print(f"      Monthly NG costs derived from hourly heating load profile (accurate seasonal distribution)")
+
+    # ---- Demand charge monthly detail (commercial/industrial only) --------
+    if demand_charge_enabled_flag:
+        print("\n" + "-" * 80)
+        print("DEMAND CHARGE DETAIL - YEAR 1  ($/kW/month × monthly peak kW)")
+        print("-" * 80)
+        dc_no  = results_no_sell.get('monthly_demand_charges', np.zeros(12))
+        dc_hes = results_with_sell.get('monthly_demand_charges', np.zeros(12))
+        pk_no  = results_no_sell.get('monthly_peak_kw', np.zeros(12))
+        pk_hes = results_with_sell.get('monthly_peak_kw', np.zeros(12))
+        print(f"{'Month':<6} {'Peak No-HES kW':>16} {'DC No-HES $':>13} "
+              f"{'Peak w/HES kW':>15} {'DC w/HES $':>12} {'DC Savings $':>13}")
+        print("-" * 80)
+        for i in range(12):
+            print(f"{months[i]:<6} {pk_no[i]:>16.1f} {dc_no[i]:>13.2f} "
+                  f"{pk_hes[i]:>15.1f} {dc_hes[i]:>12.2f} {dc_no[i]-dc_hes[i]:>13.2f}")
+        print("-" * 80)
+        print(f"{'TOTAL':<6} {np.sum(pk_no)/12:>16.1f} {np.sum(dc_no):>13.2f} "
+              f"{np.sum(pk_hes)/12:>15.1f} {np.sum(dc_hes):>12.2f} "
+              f"{np.sum(dc_no)-np.sum(dc_hes):>13.2f}")
+        print(f"       (avg monthly peak)       (annual DC)   "
+              f"(avg monthly peak)  (annual DC)   (annual savings)")
     print(f"      Monthly elec sums should match Year 1 Elec (PV) from the year-by-year table")
 
     # 25-year projection comparison summary
