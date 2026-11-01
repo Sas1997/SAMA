@@ -8,3 +8,4 @@ seaborn>=0.13.2
 numpy-financial>=1.0.0
 questionary>=2.0
 PyYAML>=6.0
+pymoo>=0.6.2

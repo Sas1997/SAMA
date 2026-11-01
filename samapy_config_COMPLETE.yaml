@@ -1,4 +1,11 @@
 optimization_algorithm: ade
+optimization_mode: single
+MOO_objectives:
+- npc
+- re
+MOO_selection: compromise
+NPC_weight: 1.0e-05
+EM_weight: 100.0
 Cash_Flow_adv: 0
 VarMin:
 - 0.0

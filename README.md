@@ -31,6 +31,7 @@ Developed by the **[FAST Research Group](https://github.com/Sas1997/SAMA)** at *
   - [Method 2: Python Package (pip)](#method-2-python-package-pip)
   - [Method 3: Windows .exe (Alpha)](#method-3-windows-exe-alpha)
 - [Quick Start](#quick-start)
+- [Optimization Modes](#optimization-modes)
 - [Optimization Algorithms](#optimization-algorithms)
 - [Output Examples](#output-examples)
 - [Documentation](#documentation)
@@ -48,7 +49,7 @@ Proprietary tools like HOMER Pro and HOMER Grid are closed-source and license-re
 
 - **Free and open-source**: AGPL-3.0
 - **Transparent algorithms**: read, modify, and extend every line
-- **Validated**: cross-validated against HOMER Pro across multiple U.S. climate zones
+- **Validated**: the 2023 version was compared with HOMER Pro for residential systems in Sacramento, California and New Bern, North Carolina ([Sadat et al., 2023](https://doi.org/10.1016/j.enconman.2023.117686)); that comparison has not been repeated for the current version
 - **No cost barriers**: designed for researchers, students, and resource-constrained institutions worldwide
 
 ---
@@ -65,7 +66,7 @@ SAMA finds the optimal combination of five system design variables by minimizing
 | `N_DG` | Number / size of diesel generator units |
 | `Cn_I` | Inverter capacity (kW) |
 
-Constraints include reliability (LPSP), renewable energy fraction, capital budget, and rooftop area limits. Multi-objective mode (`EM=1`) adds **Levelized Emissions (LEM)** as a second objective.
+Constraints include reliability (LPSP), renewable energy fraction, capital budget, and rooftop area limits. SAMA can also return the trade-off between objectives such as cost, emissions and renewable fraction as a Pareto front (see [Optimization Modes](#optimization-modes)).
 
 ---
 
@@ -161,9 +162,35 @@ samapy-run
 
 ---
 
+## Optimization Modes
+
+SAMA can be run in two modes:
+
+**Single-objective mode** (default, `optimization_mode: single`). One of the four algorithms below minimizes a scalar fitness:
+
+```
+fitness = NPC_weight * NPC + EM_weight * EM * LEM + constraint penalties
+```
+
+With `EM = 0` (default) this is net present cost alone. With `EM = 1` levelized emissions are added with the weight `EM_weight`. `NPC_weight` (default `1e-5`) and `EM_weight` (default `1e2`) only put the two quantities on comparable numerical scales; both can be set in the configuration file. A weighted sum with fixed weights returns one design, and it can only reach designs on the convex part of the cost-emissions trade-off.
+
+**Multi-objective mode** (`optimization_mode: multi`, or `samapy-run --mode multi`). NSGA-II from the [pymoo](https://pymoo.org) library searches for the Pareto front: the set of designs for which no objective can be improved without worsening another. Choose two or more objectives in `MOO_objectives` from `npc`, `lcoe`, `lem` (emissions), `lpsp` (unmet demand) and `re` (renewable fraction, maximized). Reliability, minimum renewable fraction, budget and the capacity limits are handled as constraints, so the trade-off is explored within those limits.
+
+```yaml
+optimization_mode: multi
+MOO_objectives: [npc, re]       # cost versus renewable fraction
+MOO_selection: compromise       # or min_npc, min_re, ..., or weights such as [2, 1]
+MOO_n_pop: 50                   # optional, default nPop
+MOO_n_gen: 200                  # optional, default MaxIt
+```
+
+The run writes `pareto_front.csv` (every Pareto-optimal design with its NPC, LCOE, LEM, LPSP, renewable fraction and capital cost) and `pareto_front.png`. One design is then selected for the full SAMA results: `compromise` takes the design closest to the ideal point with equal weight on each normalized objective, `min_<objective>` takes the best design for one objective, and a list of weights favours the objectives with larger weights. Grid emission factors (`E_CO2`, `E_SO2`, `E_NOx`) are zero in the example configuration, so set them before using `lem` as an objective.
+
+---
+
 ## Optimization Algorithms
 
-All four algorithms optimize the same 5-variable design space. Choose based on your preference for convergence speed vs. exploration depth:
+In single-objective mode, all four algorithms optimize the same 5-variable design space. Choose based on your preference for convergence speed vs. exploration depth:
 
 | Algorithm | Key Behavior | Best For |
 |-----------|-------------|----------|
