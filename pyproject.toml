@@ -50,6 +50,7 @@ dependencies = [
     "questionary>=2.0",
     "PyYAML>=6.0",
     "pymoo>=0.6.1",
+    "pvlib>=0.10",
 ]
 
 [project.scripts]

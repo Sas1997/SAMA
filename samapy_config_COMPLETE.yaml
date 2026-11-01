@@ -49,6 +49,18 @@ azimuth: 180.0
 tilt: 33.0
 soiling: 5.0
 weather_url: METEO.csv
+# PV modules: Mono-facial or Bi-facial. Bi-facial adds rear irradiance (pvlib infinite sheds):
+# G_eff = G_front + bifaciality * (1 + shade_factor) * G_rear. Rear geometry: ground coverage
+# ratio, row-centre height and row pitch (same length unit). PV_subarrays: null for one array
+# with tilt and azimuth above, or a list such as [{tilt: 90, azimuth: 90, share: 0.5},
+# {tilt: 90, azimuth: 270, share: 0.5}] (shares sum to 1).
+PV_module_type: Mono-facial
+bifaciality: 0.7
+shade_factor: -0.02
+pv_gcr: 0.35
+pv_height: 1.5
+pv_pitch: 6.0
+PV_subarrays: null
 T_type: 1
 WS_type: 1
 LPSP_max_rate: 0.0999
@@ -243,6 +255,33 @@ Grid_escalation:
 - 0.02
 Monthly_fixed_charge_system: 1
 SC_flat: 27.16
+# Demand charges (commercial / industrial), $/kW of the monthly peak grid purchase.
+# demand_charge_type: 1 flat, 2 seasonal [summer, winter], 3 monthly, 4 TOU on/off-peak
+demand_charge_enabled: 0
+demand_charge_type: 1
+demand_flat_rate: 15.03
+demand_seasonal_rates: [18.0, 12.0]
+demand_season: [0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0]
+demand_monthly_rates: [12.0, 12.0, 14.0, 14.0, 16.0, 18.0, 18.0, 18.0, 16.0, 14.0, 12.0, 12.0]
+demand_tou_onpeak_rate: [20.0, 15.0]
+demand_tou_offpeak_rate: [0.0, 0.0]
+demand_tou_season: [0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0]
+demand_tou_onpeak_hours: [[16, 17, 18, 19, 20], [16, 17, 18, 19, 20]]
+# 1 = on-peak demand hours on weekdays only (weekends and holidays off-peak)
+demand_tou_weekdays_only: 0
+# Ratchet: bill at least this fraction of the year's highest monthly peak
+demand_ratchet_enabled: 0
+demand_ratchet_rate: 0.85
+# NEM options: netting = peak of max(Pbuy - Psell, 0); override = NEM demand rates below
+nem_demand_netting: 0
+nem_demand_rate_override: 0
+nem_demand_rate_monthly: [10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0]
+nem_demand_offpeak_rate_monthly: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+# Minimum charge rule: monthly bill >= max(minimum charge, service charge + demand charge)
+minimum_charge_enabled: 0
+minimum_charge_monthly: [33.71, 33.71, 33.71, 33.71, 33.71, 33.71, 33.71, 33.71, 33.71, 33.71, 33.71, 33.71]
+# 1 = export credit a month cannot use because of its floor carries to later months
+minimum_charge_credit_carryover: 0
 rateStructure: 7
 onPrice:
 - 0.151

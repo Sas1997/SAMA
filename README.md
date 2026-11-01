@@ -74,10 +74,10 @@ Constraints include reliability (LPSP), renewable energy fraction, capital budge
 
 | Category | Details |
 |----------|---------|
-| **System Components** | Solar PV, wind turbines, battery storage (Li-ion or lead-acid), diesel generator, utility grid, air-source heat pump (Bosch or Goodman), electric vehicle with V2X |
+| **System Components** | Solar PV (mono- or bi-facial modules, one or more sub-arrays), wind turbines, battery storage (Li-ion or lead-acid), diesel generator, utility grid, air-source heat pump (Bosch or Goodman), electric vehicle with V2X |
 | **Optimization Algorithms** | Particle Swarm Optimization (PSO), Advanced Differential Evolution (ADE), Artificial Bee Colony (ABC), Grey Wolf Optimizer (GWO) |
 | **Energy Simulation** | 8,760-hour hourly dispatch with marginal-cost-based EMS, EV smart charging and V2X lookahead arbitrage, heat pump thermal-electric coupling |
-| **Electricity Tariffs** | 8 structures: flat, seasonal, monthly, tiered, seasonal tiered, monthly tiered, Time-of-Use (TOU), Ultra-Low TOU (ULO) |
+| **Electricity Tariffs** | 8 structures: flat, seasonal, monthly, tiered, seasonal tiered, monthly tiered, Time-of-Use (TOU), Ultra-Low TOU (ULO); commercial and industrial demand charges (flat, seasonal, monthly or TOU, with optional ratchet) and a minimum charge rule |
 | **Natural Gas Tariffs** | 8 structures including PG&E G-1 therms-based and Enbridge EGD 4-tier m³-based |
 | **Financial Analysis** | 25-year NPC, LCOE, levelized emissions, price escalation, RE incentives (30% ITC), net metering reconciliation |
 | **Load Inputs** | 10 electrical load input modes (CSV, monthly/annual averages, generic profiles), thermal load from Excel |
