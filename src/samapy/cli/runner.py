@@ -447,6 +447,10 @@ def main():
     parser.add_argument('-a', '--algorithm', default=None,
                         choices=['pso', 'ade', 'gwo', 'abc'],
                         help='Override algorithm (default: read from config)')
+    parser.add_argument('-m', '--mode', default=None, choices=['single', 'multi'],
+                        help="'single': one design minimizing the scalar fitness with the chosen "
+                             "algorithm; 'multi': Pareto front of MOO_objectives with NSGA-II "
+                             "(default: optimization_mode in the config, else single)")
     parser.add_argument('--output',  default=None,
                         help='Override output directory')
     parser.add_argument('--dry-run', action='store_true',
@@ -532,8 +536,27 @@ def main():
         _print_summary(indata, algo)
 
     # ── Run optimization ───────────────────────────────────────────────────────
-    print(f"\n🚀 Starting {algo.upper()} optimization...")
+    mode = (args.mode or str(config.get('optimization_mode', 'single'))).lower()
+    if mode not in ('single', 'multi'):
+        print(f"❌ optimization_mode must be 'single' or 'multi', got '{mode}'")
+        sys.exit(1)
     t0 = time.time()
+    if mode == 'multi':
+        print(f"\n🚀 Starting multi-objective optimization (NSGA-II), objectives: "
+              f"{', '.join(indata.MOO_objectives)}...")
+        try:
+            from samapy.optimizers.multiobjective import MultiObjectiveOptimizer
+            MultiObjectiveOptimizer().optimize()
+        except Exception as e:
+            import traceback
+            print(f"\n❌ Optimization failed: {e}")
+            traceback.print_exc()
+            sys.exit(1)
+        print(f"\n✅ Optimization completed in {time.time() - t0:.1f}s")
+        print(f"📁 Results saved to: {os.path.abspath(out_dir)}")
+        return
+
+    print(f"\n🚀 Starting {algo.upper()} optimization...")
 
     try:
         if algo == 'ade':

@@ -899,6 +899,8 @@ _SCALAR_FIELDS = {
     'LPSP_max_rate':('LPSP_max_rate',float),
     'RE_min_rate':('RE_min_rate',float),
     'EM':('EM',int),
+    'NPC_weight':('NPC_weight',float), 'EM_weight':('EM_weight',float),
+    'MOO_n_gen':('MOO_n_gen',int), 'MOO_n_pop':('MOO_n_pop',int),
     # Component toggles
     'PV':('PV',int), 'WT':('WT',int), 'DG':('DG',int), 'Bat':('Bat',int),
     'Grid':('Grid',int), 'HP':('HP',int), 'EV':('EV',int),
@@ -1063,7 +1065,7 @@ _OBJECT_ARRAY_FIELDS = {
 
 # Keys whose YAML values must NOT be applied raw — derived or unit-converted
 _SKIP_KEYS = {
-    'input_directory', 'output_directory', 'optimization_algorithm',
+    'input_directory', 'output_directory', 'optimization_algorithm', 'optimization_mode',
     # Always recalculated from primary inputs
     'ir', 'System_Tax', 'RE_incentives',
     'LPSP_max', 'RE_min',
@@ -1132,6 +1134,15 @@ def apply_config(config):
                 applied += 1
             except Exception as e:
                 issues.append(f"{k}: {e}")
+
+    # Multi-objective settings (lists, so not handled as scalars above)
+    if 'MOO_objectives' in config:
+        d.MOO_objectives = [str(o).strip().lower() for o in config['MOO_objectives']]
+        applied += 1
+    if 'MOO_selection' in config:
+        sel = config['MOO_selection']
+        d.MOO_selection = [float(w) for w in sel] if isinstance(sel, (list, tuple)) else str(sel)
+        applied += 1
 
     # ── Step 2: 1-D numpy arrays ──────────────────────────────────────────────
     for k, (attr, dtype) in _ARRAY_FIELDS.items():
