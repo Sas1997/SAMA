@@ -160,8 +160,27 @@ generation_cap = InData.generation_cap
 
 
 
-#@jit(nopython=True, fastmath=True)
 def fitness(X):
+    """Scalar objective minimized by the single-objective optimizers.
+
+    Equal to evaluate(X)["fitness"]; see evaluate() for the components.
+    """
+    return evaluate(X)["fitness"]
+
+
+#@jit(nopython=True, fastmath=True)
+def evaluate(X):
+    """Simulate design X and return its objectives, constraints and fitness.
+
+    X = [PV modules, wind turbines, batteries, generator kW, inverter kW].
+
+    Returns a dict with
+        fitness      scalar value minimized by PSO, ADE, ABC and GWO:
+                     NPC_weight * NPC + EM_weight * EM * LEM + constraint penalties
+        NPC, LCOE, LEM, LPSP, RE, I_Cost   performance measures of the design
+        constraints  dict of constraint values g, feasible when g <= 0,
+                     each scaled by its limit (used by the multi-objective mode)
+    """
     
     HP_brand = InData.HP_brand
     power_hp_heating = InData.power_hp_heating
@@ -415,10 +434,12 @@ def fitness(X):
             return scale * (normalized_violation ** smoothness)
 
 
-    # Normalize objective components to similar scales
-    # Scale factors (adjust based on your typical values)
-    NPC_scale = 1e-5  # Assuming NPC is in range 1e6-1e7
-    EM_scale = 1e2  # Assuming EM is in range 0.001-0.1
+    # Weights of the scalarized single-objective function. They put NPC
+    # (typically 1e5-1e7) and LEM (typically 0.01-1 kg/kWh) on comparable
+    # scales. Set NPC_weight and EM_weight in the configuration to change them;
+    # use the multi-objective mode to see the full cost-emissions trade-off.
+    NPC_scale = getattr(InData, "NPC_weight", 1e-5)
+    EM_scale = getattr(InData, "EM_weight", 1e2)
 
     # Main objective (normalized)
     objective = NPC_scale * NPC + EM_scale * EM * LEM
@@ -468,8 +489,35 @@ def fitness(X):
     # Total fitness with balanced scaling
     Z = objective + violations
 
+    # Constraint values for the multi-objective mode, g <= 0 when satisfied,
+    # each divided by its limit so that violations are comparable.
+    constraints = {
+        "lpsp": (LPSP - LPSP_max) / max(LPSP_max, 1e-9),
+        "re_min": RE_min - RE,
+        "budget": (I_Cost - Budget) / max(Budget, 1e-9),
+    }
+    if NEM == 1:
+        constraints["nem_grid_cost"] = -np.sum(Grid_Cost_net) / max(abs(NPC), 1.0)
+    if cap_option == 3:
+        constraints["roof_area"] = ((Npv * PVPanel_surface_per_rated_capacity - available_roof_surface)
+                                    / max(available_roof_surface, 1e-9))
+    if cap_option == 1 and NEM == 1:
+        constraints["pv_cap"] = (Pn_PV - cap_size) / max(cap_size, 1e-9)
+    if cap_option == 2 and NEM == 1:
+        constraints["generation_cap"] = ((total_generation - max_allowed_generation)
+                                         / max(max_allowed_generation, 1e-9))
 
-    return Z
+    return {
+        "fitness": Z,
+        "NPC": float(NPC),
+        "LCOE": float(LCOE),
+        "LEM": float(LEM),
+        "LPSP": float(LPSP),
+        "RE": float(RE),
+        "I_Cost": float(I_Cost),
+        "Edump": float(np.sum(Edump)),
+        "constraints": {k: float(v) for k, v in constraints.items()},
+    }
 
 
 

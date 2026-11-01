@@ -386,6 +386,21 @@ class Input_Data:
 
         self.EM = 0  # 0: NPC, 1:NPC+LEM
 
+        # Weights of the scalarized single-objective function
+        # fitness = NPC_weight * NPC + EM_weight * EM * LEM + penalties
+        self.NPC_weight = 1e-5
+        self.EM_weight = 1e2
+
+        # Multi-objective mode (samapy-run --mode multi): objectives to
+        # minimize, chosen from 'npc', 'lcoe', 'lem', 'lpsp' and 're'
+        # (renewable fraction, maximized), and how one design is chosen from
+        # the Pareto front for the detailed results: 'compromise', 'min_npc',
+        # 'min_lem', ... or a list of weights, one per objective.
+        self.MOO_objectives = ['npc', 're']
+        self.MOO_selection = 'compromise'
+        self.MOO_n_pop = None   # None: use nPop
+        self.MOO_n_gen = None   # None: use MaxIt
+
         # PV
         self.fpv = 0.9       # the PV derating factor [%]
         self.Tcof = -0.3       # temperature coefficient [%/C]
