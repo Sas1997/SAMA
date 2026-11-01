@@ -17,6 +17,8 @@ import matplotlib.dates as mdates
 from matplotlib.gridspec import GridSpec
 import os
 from datetime import datetime as dt_now
+from samapy.models.pv_model import pv_power
+from samapy.pricing.demand_charge import compute_monthly_peak_demand, demand_charge_npc, compute_minimum_charge_adjustment
 
 # Loading all inputs
 WT=InData.WT
@@ -252,8 +254,11 @@ def Gen_Results(X, output_dir=None):
 
     # PV Power Calculation
     #Tc = T + (((Tc_noct - 20) / 800) * G)  # Module Temprature
-    Tc = (T + 273.15 + (Tc_noct - Ta_noct) * (G / G_noct) * (1 - ((n_PV * (1 - (Tcof / 100) * (Tref + 273.15))) / gama))) / (1 + (Tc_noct - Ta_noct) * (G / G_noct) * (((Tcof / 100) * n_PV) / gama))
-    Ppv = fpv * Pn_PV * (G / Gref) * (1 + (Tcof / 100) * (Tc - 273.15 - Tref))  # output power(kw)_hourly
+    # Mono- or bi-facial modules in one or more sub-arrays (samapy.models.pv_model);
+    # for one mono-facial array this is SAMA's PV equation with the irradiance G
+    Ppv = pv_power(Pn_PV, InData.G_list, InData.G_rear_list, InData.PV_shares,
+                   InData.bifaciality, InData.shade_factor, T, fpv, Gref, Tcof, Tref,
+                   Tc_noct, Ta_noct, G_noct, n_PV, gama)  # output power(kw)_hourly
 
     # Wind turbine Power Calculation
     v1 = Vw  # hourly wind speed
@@ -461,6 +466,59 @@ def Gen_Results(X, output_dir=None):
     Eload_served_p = Eload - Ens
     P_RE_served = pd.Series(np.select([P_RE > Eload, P_RE <= Eload], [Eload, P_RE]))
 
+    # ---- Demand charges (commercial / industrial tariffs) ------------------
+    demand_charge_enabled              = InData.demand_charge_enabled
+    demand_charge_type                 = InData.demand_charge_type
+    Demand_charge_rate_monthly         = InData.Demand_charge_rate_monthly
+    Demand_charge_offpeak_rate_monthly = InData.Demand_charge_offpeak_rate_monthly
+    demand_tou_onpeak_hours            = InData.demand_tou_onpeak_hours
+    demand_tou_season                  = InData.demand_tou_season
+    demand_ratchet_enabled             = InData.demand_ratchet_enabled
+    demand_ratchet_rate                = InData.demand_ratchet_rate
+    nem_demand_netting                 = InData.nem_demand_netting
+    minimum_charge_enabled             = InData.minimum_charge_enabled
+    minimum_charge_monthly             = InData.minimum_charge_monthly
+    demand_tou_weekdays_only           = InData.demand_tou_weekdays_only
+    minimum_charge_credit_carryover    = InData.minimum_charge_credit_carryover
+    _calendar = dict(tou_weekdays_only=demand_tou_weekdays_only, year=InData.year, holidays=InData.holidays)
+
+    # Demand charge of the optimized system, on the grid purchases after dispatch
+    # (Option B: net-import peak when nem_demand_netting = 1; Option C: the NEM
+    # rate is already in Demand_charge_rate_monthly)
+    demand_charge_year1, monthly_peak_demand_hes, monthly_demand_costs_hes = \
+        compute_monthly_peak_demand(
+            Pbuy, daysInMonth,
+            demand_charge_enabled, Demand_charge_rate_monthly,
+            demand_charge_type, Demand_charge_offpeak_rate_monthly,
+            demand_tou_onpeak_hours, demand_tou_season,
+            demand_ratchet_enabled, demand_ratchet_rate,
+            nem_demand_netting, Psell, **_calendar)
+    # Baseline without the system: the whole load (including EV demand) is bought
+    # from the grid and nothing is exported, as in Grid_Cost_onlyG
+    demand_charge_baseline_year1, monthly_peak_demand_baseline, monthly_demand_costs_baseline = \
+        compute_monthly_peak_demand(
+            Eload + EV_dem, daysInMonth,
+            demand_charge_enabled, Demand_charge_rate_monthly,
+            demand_charge_type, Demand_charge_offpeak_rate_monthly,
+            demand_tou_onpeak_hours, demand_tou_season,
+            demand_ratchet_enabled, demand_ratchet_rate,
+            nem_demand_netting=0, Psell=None, **_calendar)
+    demand_charge_savings_year1 = demand_charge_baseline_year1 - demand_charge_year1
+
+    # Minimum charge rule (monthly bill floor regardless of NEM exports)
+    min_charge_adj_year1, monthly_min_charge_adj = compute_minimum_charge_adjustment(
+        Pbuy, Psell, Cbuy, Csell,
+        daysInMonth, Service_charge,
+        Grid_Tax, Grid_Tax_amount, Annual_expenses, Grid_credit,
+        minimum_charge_enabled, minimum_charge_monthly,
+        monthly_demand_costs_hes, Grid, credit_carryover=minimum_charge_credit_carryover)
+    min_charge_adj_baseline_year1, _ = compute_minimum_charge_adjustment(
+        Eload + EV_dem, None, Cbuy, None,
+        daysInMonth, Service_charge,
+        Grid_Tax, Grid_Tax_amount, Annual_expenses, Grid_credit,
+        minimum_charge_enabled, minimum_charge_monthly,
+        monthly_demand_costs_baseline, Grid, credit_carryover=minimum_charge_credit_carryover)
+
     ## Installation and operation cost
 
     # Total Investment cost ($)
@@ -600,26 +658,36 @@ def Gen_Results(X, output_dir=None):
     Total_grid_credits = (Grid_credit * (cumulative_escalation / ((1 + ir) ** np.arange(1, n + 1)))) * (Grid > 0)
 
     # Compute Bought Electricity for the property load (rather than HP)
-    Bought_electricity_p = ((Annual_expenses + np.sum(Service_charge) + np.sum(Pbuy_p * Cbuy) + Grid_Tax_amount * np.sum(Pbuy_p)) * (cumulative_escalation / ((1 + ir) ** np.arange(1, n + 1)))) * (1 + Grid_Tax) * (Grid > 0)
+    # the demand charge is billed on the total grid purchase and included here
+    Bought_electricity_p = ((Annual_expenses + np.sum(Service_charge) + np.sum(Pbuy_p * Cbuy) + Grid_Tax_amount * np.sum(Pbuy_p) + demand_charge_year1) * (cumulative_escalation / ((1 + ir) ** np.arange(1, n + 1)))) * (1 + Grid_Tax) * (Grid > 0)
 
 
     Grid_Cost_p = Bought_electricity_p
-    eHeating_Cost = ((((np.sum(Pbuy_eH * Cbuy) + Grid_Tax_amount * np.sum(Pbuy_eH)) * (1 + Grid_Tax)) * (cumulative_escalation / ((1 + ir) ** np.arange(1, n + 1)))))
+    # heat pump grid costs only exist with a grid connection, as in Fitness.py
+    eHeating_Cost = ((((np.sum(Pbuy_eH * Cbuy) + Grid_Tax_amount * np.sum(Pbuy_eH)) * (1 + Grid_Tax)) * (cumulative_escalation / ((1 + ir) ** np.arange(1, n + 1))))) * (Grid > 0)
     gHeating_Cost = (((Annual_expenses_NG + np.sum(Service_charge_NG) + np.sum(Pbuy_NG * Cbuy_NG) + Grid_Tax_amount_NG * np.sum(Pbuy_NG)) * (cumulative_escalation_NG / ((1 + ir) ** np.arange(1, n + 1)))) * (1 + Grid_Tax_NG) - ((Grid_credit_NG) * (cumulative_escalation_NG / ((1 + ir) ** np.arange(1, n + 1))))) * (NG_Grid > 0)
-    Cooling_Cost = (((np.sum(Pbuy_C * Cbuy) + Grid_Tax_amount * np.sum(Pbuy_C)) * (cumulative_escalation / ((1 + ir) ** np.arange(1, n + 1)))) * (1 + Grid_Tax))
+    Cooling_Cost = (((np.sum(Pbuy_C * Cbuy) + Grid_Tax_amount * np.sum(Pbuy_C)) * (cumulative_escalation / ((1 + ir) ** np.arange(1, n + 1)))) * (1 + Grid_Tax)) * (Grid > 0)
     Grid_Cost_HP = eHeating_Cost + Cooling_Cost
 
     Grid_Cost_net = Grid_Cost_p + Grid_Cost_HP - Sold_electricity - Total_grid_credits
+    # Minimum charge rule: post-tax adjustment, escalated and discounted like the other grid costs
+    if min_charge_adj_year1 > 0:
+        Grid_Cost_net = Grid_Cost_net + min_charge_adj_year1 * (cumulative_escalation / ((1 + ir) ** np.arange(1, n + 1))) * (Grid > 0)
     #print(np.sum(Grid_Cost_HP))
     #print(np.sum(Grid_Cost_p))
 
-    Grid_Cost_onlyG = (((Annual_expenses + np.sum(Service_charge) + np.sum((Eload + EV_dem) * Cbuy) + Grid_Tax_amount * np.sum((Eload + EV_dem))) * (cumulative_escalation / ((1 + ir) ** np.arange(1, n + 1)))) * (1 + Grid_Tax) - ((Grid_credit) * (cumulative_escalation / ((1 + ir) ** np.arange(1, n + 1)))))
+    Grid_Cost_onlyG = (((Annual_expenses + np.sum(Service_charge) + np.sum((Eload + EV_dem) * Cbuy) + Grid_Tax_amount * np.sum((Eload + EV_dem)) + demand_charge_baseline_year1) * (cumulative_escalation / ((1 + ir) ** np.arange(1, n + 1)))) * (1 + Grid_Tax) - ((Grid_credit) * (cumulative_escalation / ((1 + ir) ** np.arange(1, n + 1)))))
+    # baseline minimum charge adjustment is post-tax, added outside the (1 + Grid_Tax) bracket
+    if min_charge_adj_baseline_year1 > 0:
+        Grid_Cost_onlyG = Grid_Cost_onlyG + min_charge_adj_baseline_year1 * (cumulative_escalation / ((1 + ir) ** np.arange(1, n + 1)))
     NG_Grid_Cost_onlyG = (((Annual_expenses_NG + np.sum(Service_charge_NG) + np.sum(Hload * Cbuy_NG) + Grid_Tax_amount_NG * np.sum(Hload)) * (cumulative_escalation_NG / ((1 + ir) ** np.arange(1, n + 1)))) * (1 + Grid_Tax_NG) - ((Grid_credit_NG) * (cumulative_escalation_NG / ((1 + ir) ** np.arange(1, n + 1))))) * (HP > 0)
 
     Solar_Cost = (Solar_Cost_Initial + np.sum(Solar_Cost_replacement) + np.sum(Solar_Cost_MO) - np.sum(Salvage_Solar)) * (1 + System_Tax)
 
-    # Compute Grid Avoidable Cost
-    Grid_avoidable_cost = ((np.sum((Eload + EV_dem) * Cbuy) + Grid_Tax_amount * np.sum((Eload + EV_dem))) * (cumulative_escalation / ((1 + ir) ** np.arange(1, n + 1)))) * (1 + Grid_Tax)
+    # Compute Grid Avoidable Cost (energy charges, demand charges and the minimum charge floor)
+    Grid_avoidable_cost = ((np.sum((Eload + EV_dem) * Cbuy) + Grid_Tax_amount * np.sum((Eload + EV_dem)) + demand_charge_baseline_year1) * (cumulative_escalation / ((1 + ir) ** np.arange(1, n + 1)))) * (1 + Grid_Tax)
+    if min_charge_adj_baseline_year1 > 0:
+        Grid_avoidable_cost = Grid_avoidable_cost + min_charge_adj_baseline_year1 * (cumulative_escalation / ((1 + ir) ** np.arange(1, n + 1)))
 
     # Compute Grid Unavoidable Cost
     Grid_unavoidable_cost = (((Annual_expenses + np.sum(Service_charge)) * (cumulative_escalation / ((1 + ir) ** np.arange(1, n + 1)))) * (1 + Grid_Tax) - (Grid_credit * (cumulative_escalation / ((1 + ir) ** np.arange(1, n + 1)))))
@@ -676,7 +744,9 @@ def Gen_Results(X, output_dir=None):
     # Avoided costs calc
     P_served_other_than_grid = Eload - Ens * (Eload > Ens) + Pev_ch / n_I - Pbuy
 
-    avoided_costs_e = ((np.sum(Eload_served * Cbuy) + Annual_expenses + np.sum(Service_charge) + Grid_Tax_amount * np.sum(Eload_served)) * (cumulative_escalation / ((1 + ir) ** np.arange(1, n + 1))) * (1 + Grid_Tax)) - (Grid_credit * (cumulative_escalation / ((1 + ir) ** np.arange(1, n + 1))))
+    avoided_costs_e = ((np.sum(Eload_served * Cbuy) + Annual_expenses + np.sum(Service_charge) + Grid_Tax_amount * np.sum(Eload_served) + demand_charge_baseline_year1) * (cumulative_escalation / ((1 + ir) ** np.arange(1, n + 1))) * (1 + Grid_Tax)) - (Grid_credit * (cumulative_escalation / ((1 + ir) ** np.arange(1, n + 1))))
+    if min_charge_adj_baseline_year1 > 0:
+        avoided_costs_e = avoided_costs_e + min_charge_adj_baseline_year1 * (cumulative_escalation / ((1 + ir) ** np.arange(1, n + 1)))
     avoided_costs_ng = (((np.sum(Hload * Cbuy_NG) + Annual_expenses_NG + np.sum(Service_charge_NG) + Grid_Tax_amount_NG * np.sum(Hload)) * (cumulative_escalation_NG / ((1 + ir) ** np.arange(1, n + 1))) * (1 + Grid_Tax_NG)) - (Grid_credit_NG * (cumulative_escalation_NG / ((1 + ir) ** np.arange(1, n + 1))))) * (HP > 0)
 
     Eev_travel = compute_ev_travel_energy(Eev, EV_p, SOC_dep, SOC_arr, C_ev) if EV > 0 else np.zeros(NT)
@@ -728,7 +798,9 @@ def Gen_Results(X, output_dir=None):
     print('LCOE  =', round(LCOE, 2), '$/kWh')
     print('LCOE without incentives =', round(LCOE_without_incentives, 2), '$/kWh')
     print('LCOE for only Grid connected system =', round(LCOE_Grid, 2), '$/kWh')
-    print('Grid avoidable cost per kWh =', round(Grid_avoidable_cost_perkWh, 2), '$/kWh')
+    _avoidable_label = ('Grid avoidable cost per kWh (incl. demand charges)'
+                        if demand_charge_enabled else 'Grid avoidable cost per kWh')
+    print(_avoidable_label, '=', round(Grid_avoidable_cost_perkWh, 2), '$/kWh')
     print('Grid unavoidable cost per kWh =', round(Grid_unavoidable_cost_perkWh, 2), '$/kWh')
     print('Solar Cost per kWh =', round(Solar_Cost_perkWh, 2), '$/kWh')
     print('Operating Cost  = $', round(Operating_Cost, 2))
@@ -740,6 +812,50 @@ def Gen_Results(X, output_dir=None):
     print('Total Salvage cost  = $', round(np.sum(Salvage_S), 2))
     if Grid == 1:
         print('Total Money paid to the Grid= $', round(np.sum(Grid_Cost_net), 2))
+
+    if demand_charge_enabled:
+        print(' ')
+        text = "Demand Charge Results (Commercial/Industrial)"
+        line = text.center(60, "-")
+        print(line)
+        months_names = ['Jan','Feb','Mar','Apr','May','Jun',
+                        'Jul','Aug','Sep','Oct','Nov','Dec']
+        nem_tag = " [NEM net-import peak]" if nem_demand_netting else " [gross import peak]"
+        print(f"Peak demand measurement:{nem_tag}")
+        print(f"{'Month':<6} {'Peak w/ HES [kW]':>18} {'Peak Baseline [kW]':>20} "
+              f"{'DC w/ HES [$]':>15} {'DC Baseline [$]':>16}")
+        for m in range(12):
+            print(f"{months_names[m]:<6} {monthly_peak_demand_hes[m]:>18.2f} "
+                  f"{monthly_peak_demand_baseline[m]:>20.2f} "
+                  f"{monthly_demand_costs_hes[m]:>15.2f} "
+                  f"{monthly_demand_costs_baseline[m]:>16.2f}")
+        print(f"{'Annual demand charge (with HES)':>40} = $ {demand_charge_year1:,.2f}")
+        print(f"{'Annual demand charge (baseline, no HES)':>40} = $ {demand_charge_baseline_year1:,.2f}")
+        print(f"{'Annual demand charge savings (Year 1)':>40} = $ {demand_charge_savings_year1:,.2f}")
+        dc_npc_total = np.sum(demand_charge_npc(demand_charge_year1, cumulative_escalation, ir, n, Grid_Tax, Grid))
+        dc_baseline_npc_total = np.sum(demand_charge_npc(demand_charge_baseline_year1, cumulative_escalation, ir, n, Grid_Tax, Grid))
+        print(f"{'Lifecycle demand charge NPC (with HES)':>40} = $ {dc_npc_total:,.2f}")
+        print(f"{'Lifecycle demand charge NPC (baseline)':>40} = $ {dc_baseline_npc_total:,.2f}")
+        print(f"{'Lifecycle demand charge savings (NPC)':>40} = $ {dc_baseline_npc_total - dc_npc_total:,.2f}")
+
+    if minimum_charge_enabled:
+        print(' ')
+        text = "Minimum Charge Rule Results"
+        print(text.center(60, "-"))
+        months_names = ['Jan','Feb','Mar','Apr','May','Jun',
+                        'Jul','Aug','Sep','Oct','Nov','Dec']
+        print(f"{'Month':<6} {'Min Charge $':>13} {'Floor $ (base+DC)':>19} "
+              f"{'Applied Floor $':>17} {'Adjustment $':>14}")
+        for m in range(12):
+            base_plus_dc  = float(Service_charge[m]) + float(monthly_demand_costs_hes[m])
+            floor_m       = max(float(minimum_charge_monthly[m]), base_plus_dc)
+            applied_floor = floor_m * (1 + Grid_Tax)
+            print(f"{months_names[m]:<6} {minimum_charge_monthly[m]:>13.2f} "
+                  f"{base_plus_dc:>19.2f} "
+                  f"{applied_floor:>17.2f} "
+                  f"{monthly_min_charge_adj[m]:>14.2f}")
+        print(f"{'Annual minimum charge adjustment (with HES)':>45} = $ {min_charge_adj_year1:,.2f}")
+        print(f"{'Annual minimum charge adjustment (baseline)':>45} = $ {min_charge_adj_baseline_year1:,.2f}")
 
     print('Total Money paid by the user= $', round(np.sum(NPC), 2))
 
@@ -1104,7 +1220,21 @@ def Gen_Results(X, output_dir=None):
                                    Grid, n, ir, Psell, Csell,
                                    HP, Hload, Cbuy_NG, Service_charge_NG,
                                    Grid_Tax_NG, Grid_Tax_amount_NG, Annual_expenses_NG,
-                                   Grid_escalation_NG, Grid_credit_NG)
+                                   Grid_escalation_NG, Grid_credit_NG,
+                                   demand_charge_enabled=demand_charge_enabled,
+                                   Demand_charge_rate_monthly=Demand_charge_rate_monthly,
+                                   Demand_charge_offpeak_rate_monthly=Demand_charge_offpeak_rate_monthly,
+                                   demand_charge_type=demand_charge_type,
+                                   demand_tou_onpeak_hours=demand_tou_onpeak_hours,
+                                   demand_tou_season=demand_tou_season,
+                                   demand_ratchet_enabled=demand_ratchet_enabled,
+                                   demand_ratchet_rate=demand_ratchet_rate,
+                                   nem_demand_netting=nem_demand_netting,
+                                   minimum_charge_enabled=minimum_charge_enabled,
+                                   minimum_charge_monthly=minimum_charge_monthly,
+                                   demand_tou_weekdays_only=demand_tou_weekdays_only,
+                                   year=InData.year, holidays=InData.holidays,
+                                   minimum_charge_credit_carryover=minimum_charge_credit_carryover)
     # Print comparison
     print_comparison(comparison, show_plot=True, save_path=os.path.join(figs_dir, 'electricity_comparison.png'))
 
