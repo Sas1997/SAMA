@@ -15,6 +15,10 @@ MODULES = [
     "samapy.optimizers.GreyWolfOptimizer",
     "samapy.cli.runner",
     "samapy.cli.config_loader",
+    "samapy.pricing.demand_charge",
+    "samapy.models.pv_model",
+    "samapy.models.bifacial_rear",
+    "samapy.optimizers.multiobjective",
 ]
 
 
