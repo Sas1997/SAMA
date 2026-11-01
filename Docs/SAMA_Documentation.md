@@ -45,6 +45,7 @@
   - [7.3 Improved Artificial Bee Colony (ABC)](#73-improved-artificial-bee-colony-abc)
   - [7.4 Grey Wolf Optimizer (GWO)](#74-grey-wolf-optimizer-gwo)
   - [7.5 Choosing an Algorithm](#75-choosing-an-algorithm)
+  - [7.6 Multi-Objective Mode](#76-multi-objective-mode)
 - [8. Energy Management System (EMS)](#8-energy-management-system-ems)
   - [8.1 Base Dispatch (EMS.py)](#81-base-dispatch-emspy)
   - [8.2 EV Smart Charging and V2X (EMS_EV.py)](#82-ev-smart-charging-and-v2x-ems_evpy)
@@ -158,7 +159,7 @@ SAMA finds the optimal combination of five design variables:
 | `N_DG` | Number (size) of diesel generator units |
 | `Cn_I` | Inverter capacity (kW) |
 
-The search space is bounded by `VarMin` and `VarMax` (default: 0 to 60 for each variable). The optimizer explores this space to minimize the primary objective, **Net Present Cost (NPC)**, while satisfying reliability, renewable fraction, budget, and rooftop-area constraints. When `EM` is set to `1`, emissions (Levelized Emissions, LEM) are included as a second objective.
+The search space is bounded by `VarMin` and `VarMax` (default: 0 to 60 for each variable). In single-objective mode the optimizer minimizes **Net Present Cost (NPC)**, optionally with weighted Levelized Emissions (LEM) when `EM = 1`, while satisfying reliability, renewable fraction, budget, and rooftop-area constraints. In multi-objective mode SAMA returns the Pareto front between objectives such as NPC, emissions and renewable fraction (Section 7.6).
 
 ### 1.2 Key Capabilities
 
@@ -177,7 +178,7 @@ The search space is bounded by `VarMin` and `VarMax` (default: 0 to 60 for each 
 
 ### 1.3 Comparison to HOMER Pro
 
-SAMA has been validated against HOMER Pro in diverse climatic zones (Sacramento, California and New Bern, North Carolina) and achieves close agreement in optimal system configurations and performance metrics. SAMA additionally supports constraint scenarios such as rooftop area limits, net-metering caps, renewable fraction requirements, and loss-of-power-supply probability, which are handled more flexibly than in proprietary tools.
+The 2023 version of SAMA was validated against HOMER Pro in two climatic zones (Sacramento, California and New Bern, North Carolina) and achieved close agreement in optimal system configurations and performance metrics; this comparison has not been repeated for the current version. SAMA additionally supports constraint scenarios such as rooftop area limits, net-metering caps, renewable fraction requirements, and loss-of-power-supply probability, which are handled more flexibly than in proprietary tools.
 
 ---
 
@@ -366,7 +367,7 @@ When `HP = 1` and a natural gas furnace baseline is being compared, set `rateStr
 |-----------|---------|-------------|
 | `LPSP_max_rate` | 0.000999 | Maximum Loss of Power Supply Probability (LPSP) as a percentage. The system must meet at least (100 minus `LPSP_max_rate`)% of demand. |
 | `RE_min_rate` | 50 | Minimum renewable energy fraction required (%). System must have at least this fraction from PV and WT. |
-| `EM` | 0 | Objective mode. 0 = minimize NPC only. 1 = minimize NPC + Levelized Emissions (LEM). |
+| `EM` | 0 | Single-objective mode only. 0 = minimize NPC. 1 = minimize the weighted sum `NPC_weight * NPC + EM_weight * LEM`. For the full trade-off, use the multi-objective mode (Section 7.6). |
 | `Budget` | 2,000,000 | Maximum total capital cost ($). Infeasible solutions above this are penalized. |
 | `cap_option` | 2 | Capacity sizing constraint. 1 = explicit cap in kW (`cap_size`). 2 = size to annual load. 3 = rooftop area limit. 4 = no limit. |
 
@@ -717,7 +718,9 @@ holidays: [1, 51, 97, ...]  # day-of-year numbers for public holidays
 |----------|------|---------|-------------|
 | `LPSP_max_rate` | float | 0.000999 | Maximum LPSP (% of annual demand that can be unmet) |
 | `RE_min_rate` | float | 50.0 | Minimum renewable energy fraction required (%) |
-| `EM` | int | 0 | 0 = minimize NPC; 1 = minimize NPC + LEM (emissions) |
+| `EM` | int | 0 | Single-objective mode: 0 = minimize NPC; 1 = minimize weighted NPC + LEM |
+| `NPC_weight` | float | 1e-5 | Weight of NPC in the single-objective fitness |
+| `EM_weight` | float | 1e2 | Weight of LEM in the single-objective fitness (when `EM = 1`) |
 | `Budget` | float | 2,000,000 | Maximum allowable capital cost ($) |
 | `cap_option` | int | 1 | 1=size cap (kW), 2=annual load, 3=rooftop area, 4=no limit |
 | `cap_size` | float | 15.0 | PV system size cap in kW (used when `cap_option=1`) |
@@ -763,7 +766,7 @@ holidays: [1, 51, 97, ...]  # day-of-year numbers for public holidays
 
 ## 7. Optimization Algorithms
 
-SAMA includes four metaheuristic optimization algorithms. All four optimize the same objective (NPC, or NPC+LEM when `EM=1`) over the same 5-variable design space. The choice of algorithm does not affect *what* is being optimized, only *how* the search space is explored.
+SAMA includes four single-objective metaheuristic optimization algorithms and a multi-objective mode (Section 7.6). The four algorithms optimize the same scalar fitness (NPC, or weighted NPC and LEM when `EM=1`) over the same 5-variable design space. The choice of algorithm does not affect *what* is being optimized, only *how* the search space is explored.
 
 ### 7.1 Particle Swarm Optimization (PSO)
 
@@ -807,6 +810,49 @@ GWO mimics the social hierarchy and hunting behavior of grey wolves. Solutions a
 ### 7.5 Choosing an Algorithm
 
 All four algorithms are suitable for this problem. In practice, for the default 5-variable search space with `MaxIt=200` and `nPop=50`, any algorithm will find good solutions. ADE and ABC tend to explore more thoroughly; PSO and GWO converge faster. For a rigorous comparison, use `Run_Time > 1` to average across multiple independent runs.
+
+### 7.6 Multi-Objective Mode
+
+The four algorithms above are single-objective: they minimize the scalar fitness
+
+```
+fitness = NPC_weight * NPC + EM_weight * EM * LEM + constraint penalties
+```
+
+where `NPC_weight` (default `1e-5`) and `EM_weight` (default `1e2`) put NPC and LEM on comparable scales and can be set in the configuration file. A weighted sum with fixed weights returns a single design and cannot reach designs on non-convex parts of a trade-off.
+
+To see the trade-off itself, run the multi-objective mode (`optimization_mode: multi` in the configuration, or `samapy-run --mode multi`). It uses NSGA-II from the pymoo library [Blank and Deb, 2020] to approximate the Pareto front of the objectives listed in `MOO_objectives`:
+
+| Name | Quantity | Direction |
+|------|----------|-----------|
+| `npc` | Net present cost | minimize |
+| `lcoe` | Levelized cost of energy | minimize |
+| `lem` | Levelized emissions (kg/kWh) | minimize |
+| `lpsp` | Loss of power supply probability | minimize |
+| `re` | Renewable energy fraction | maximize |
+
+The reliability limit (`LPSP_max`), minimum renewable fraction (`RE_min`), budget and, where configured, the roof area, PV capacity, generation cap and net-metering conditions are treated as constraints rather than penalties. A design on the front satisfies all of them. To explore, for example, cost against reliability, relax `LPSP_max` and add `lpsp` to the objectives.
+
+| YAML key | Default | Description |
+|----------|---------|-------------|
+| `optimization_mode` | `single` | `single` or `multi` |
+| `MOO_objectives` | `[npc, re]` | Two or more objectives from the table above |
+| `MOO_selection` | `compromise` | Design used for the detailed results: `compromise`, `min_<objective>`, or a list of weights, one per objective |
+| `MOO_n_pop` | `nPop` | NSGA-II population size |
+| `MOO_n_gen` | `MaxIt` | Number of generations |
+| `NPC_weight`, `EM_weight` | `1e-5`, `1e2` | Weights of the single-objective fitness |
+
+Outputs: `pareto_front.csv` lists every Pareto-optimal design (design variables, NPC, LCOE, LEM, LPSP, renewable fraction, capital cost, and which design was selected), and `pareto_front.png` plots the front. The selected design is then passed to the normal results generation. With `compromise`, the selected design minimizes the achievement scalarizing function max_i(f_i') over the front, where f_i' are the objectives normalized between their best and worst values on the front; a list of weights multiplies f_i', so a larger weight favours that objective. Differences smaller than 0.1% of an objective's range on the front, and below each objective's resolution (0.01% of NPC or LCOE, 0.1 percentage point of renewable fraction), are not reported as separate trade-offs.
+
+The same mode is available from Python:
+
+```python
+from samapy.optimizers.multiobjective import MultiObjectiveOptimizer
+result = MultiObjectiveOptimizer(objectives=['npc', 're'], seed=1).optimize()
+result.front_X, result.front_F, result.selected_X
+```
+
+Grid emission factors (`E_CO2`, `E_SO2`, `E_NOx`) are zero in the example configuration; set them before using `lem` as an objective.
 
 ---
 
@@ -1839,7 +1885,7 @@ $$Z = NPC + EM \times LE + penalties \quad (23)$$
 
 ### 19.8 Validation Against HOMER Pro
 
-SAMA results have been cross-validated against HOMER Pro across two geographically distinct U.S. locations: Sacramento, California and New Bern, North Carolina [A1]. Validation used identical input data (same load profiles from OpenEI [2], meteorological data from NSRDB [1], and equivalent pricing). The PSO optimizer was run with `MaxIt = 101` and `nPop = 100`, repeated 10 times to assess convergence.
+The 2023 version of SAMA was cross-validated against HOMER Pro across two geographically distinct U.S. locations: Sacramento, California and New Bern, North Carolina [A1]. The comparison has not been repeated for the current version. Validation used identical input data (same load profiles from OpenEI [2], meteorological data from NSRDB [1], and equivalent pricing). The PSO optimizer was run with `MaxIt = 101` and `nPop = 100`, repeated 10 times to assess convergence.
 
 Convergence was achieved by iteration 70 on the first run and as early as iteration 20 on subsequent runs. Final system configurations, LCOE, NPC, energy distribution, and battery state-of-charge profiles from SAMA showed close agreement with HOMER Pro across all tested system types (PV+Grid, PV+BT+Grid, PV+BT+DG+Grid, PV+BT+DG, PV+BT).
 
