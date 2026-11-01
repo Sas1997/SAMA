@@ -27,6 +27,22 @@ Open an issue describing the use case, the component or tariff structure involve
 4. Install pytest (`pip install pytest`) and run the test suite with `pytest`. It takes about a minute and must pass before a pull request is merged. If your change affects energy management, results or the optimizers, also run the slow tests with `pytest -m slow` (a few minutes).
 5. Open a pull request that explains what changed and why, and link the related issue. The test suite runs automatically on every pull request.
 
+## Commit messages
+
+SAMA follows the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) format, so that each change can be traced to its issue or pull request:
+
+```
+<type>(<optional scope>): <short summary> (#<issue or PR number>)
+```
+
+Common types are `feat` (new feature), `fix` (bug fix), `docs` (documentation only), `test` (tests), `refactor` (code change that neither fixes a bug nor adds a feature), `perf` (performance), `build` (packaging and dependencies) and `ci` (continuous integration). The scope is optional and names the part of SAMA affected, for example `ems`, `pricing`, `optimizers` or `paper`. Examples:
+
+```
+fix(ems): correct the AC energy balance (#6)
+feat(optimizers): add multi-objective mode with NSGA-II (#14)
+docs(paper): qualify HOMER Pro validation (#14)
+```
+
 Changes to energy management, component models or economic calculations should explain the physical or financial reasoning and, where possible, include a small example showing the result before and after the change.
 
 ## License
