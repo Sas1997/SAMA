@@ -61,6 +61,7 @@
   - [10.2 Levelized Cost of Energy (LCOE)](#102-levelized-cost-of-energy-lcoe)
   - [10.3 Levelized Emissions (LEM)](#103-levelized-emissions-lem)
   - [10.4 25-Year Cash Flow Projection](#104-25-year-cash-flow-projection)
+  - [10.5 Demand Charges and Minimum Charge](#105-demand-charges-and-minimum-charge)
 - [11. Bundled Data Files (content/ folder)](#11-bundled-data-files-content-folder)
 - [12. Input Data Formats](#12-input-data-formats)
   - [12.1 Electrical Load CSV (Eload.csv)](#121-electrical-load-csv-eloadcsv)
@@ -165,10 +166,10 @@ The search space is bounded by `VarMin` and `VarMax` (default: 0 to 60 for each 
 
 | Capability | Detail |
 |------------|--------|
-| **System components** | Solar PV, wind turbines, battery storage (lead-acid or lithium-ion), diesel generator, utility grid, air-source heat pump (Bosch or Goodman), electric vehicle (V2X) |
+| **System components** | Solar PV (mono- or bi-facial modules, one or more sub-arrays), wind turbines, battery storage (lead-acid or lithium-ion), diesel generator, utility grid, air-source heat pump (Bosch or Goodman), electric vehicle (V2X) |
 | **Optimization algorithms** | Particle Swarm Optimization (PSO), Advanced Differential Evolution (ADE), Artificial Bee Colony (ABC), Grey Wolf Optimizer (GWO) |
 | **Energy management** | 8,760-hour hourly dispatch with EMS, EV smart charging/discharging with V2X lookahead arbitrage, heat pump thermal-electric coupling |
-| **Electricity tariffs** | 8 rate structures: flat, seasonal, monthly, tiered, seasonal tiered, monthly tiered, Time-of-Use (TOU), Ultra-Low TOU (ULO) |
+| **Electricity tariffs** | 8 rate structures: flat, seasonal, monthly, tiered, seasonal tiered, monthly tiered, Time-of-Use (TOU), Ultra-Low TOU (ULO); demand charges for commercial and industrial tariffs (flat, seasonal, monthly or TOU, with optional ratchet) and a minimum charge rule |
 | **Natural gas tariffs** | 8 rate structures for NG: flat, seasonal, monthly, tiered, seasonal tiered, monthly tiered, PG&E G-1 therms-based, Enbridge EGD 4-tier m³-based |
 | **Financial analysis** | 25-year Net Present Cost, LCOE, levelized emissions, escalation rates, RE incentives (e.g. 30% federal tax credit), net metering reconciliation |
 | **Load inputs** | 10 electrical load input modes (CSV, monthly/annual averages, generic profiles), thermal load from Excel |
@@ -711,6 +712,13 @@ holidays: [1, 51, 97, ...]  # day-of-year numbers for public holidays
 | `tilt` | float | 33.0 | PV panel tilt angle (degrees) |
 | `soiling` | float | 5.0 | PV soiling losses (%) |
 | `weather_url` | str | METEO.csv | Path to NSRDB/SAM meteorological CSV file |
+| `PV_module_type` | str | Mono-facial | `Mono-facial` or `Bi-facial` (rear irradiance from pvlib, Section 9.1) |
+| `bifaciality` | float | 0.7 | Rear/front efficiency ratio of bi-facial modules (datasheet value) |
+| `shade_factor` | float | -0.02 | Rear-side shading derate (pvlib default); 0 to ignore |
+| `pv_gcr` | float | 0.35 | Ground coverage ratio (module width / row pitch), bi-facial only |
+| `pv_height` | float | 1.5 | Height of the row centre above the ground, bi-facial only |
+| `pv_pitch` | float | 6.0 | Row-to-row spacing (same unit as `pv_height`), bi-facial only |
+| `PV_subarrays` | list or null | null | Sub-arrays as `{tilt, azimuth, share}` (optionally `gcr`, `height`, `pitch`); shares sum to 1; null = one array with `tilt` and `azimuth` |
 
 #### Constraints
 
@@ -751,6 +759,33 @@ holidays: [1, 51, 97, ...]  # day-of-year numbers for public holidays
 | `sellStructure` | int | 1 | Grid sell price structure (1=flat, 2=monthly, 3=same as buy) |
 | `Pbuy_max` | float | 50.0 | Maximum grid import power (kW) |
 | `Psell_max` | float | 50.0 | Maximum grid export power (kW) |
+
+#### Demand charges and minimum charge
+
+Demand charges apply to commercial and industrial tariffs and are off by default. The billed demand of a month is the highest hourly grid purchase in that month (a 1-hour demand interval), and the charge is that peak times the $/kW/month rate (Section 10.5).
+
+| YAML key | Type | Default | Description |
+|----------|------|---------|-------------|
+| `demand_charge_enabled` | int | 0 | 1 = bill demand charges |
+| `demand_charge_type` | int | 1 | 1 = flat, 2 = seasonal, 3 = monthly, 4 = TOU on-peak and off-peak |
+| `demand_flat_rate` | float | 15.03 | Type 1 rate ($/kW/month) |
+| `demand_seasonal_rates` | list[2] | [18, 12] | Type 2 rates [summer, winter] ($/kW/month) |
+| `demand_season` | list[12] | Jun to Sep = 1 | Type 2 season of each month (1 = summer) |
+| `demand_monthly_rates` | list[12] | | Type 3 rates, January to December ($/kW/month) |
+| `demand_tou_onpeak_rate` | list[2] | [20, 15] | Type 4 on-peak rates [summer, winter] ($/kW/month) |
+| `demand_tou_offpeak_rate` | list[2] | [0, 0] | Type 4 off-peak rates [summer, winter] ($/kW/month) |
+| `demand_tou_season` | list[12] | Jun to Sep = 1 | Type 4 season of each month (1 = summer) |
+| `demand_tou_onpeak_hours` | list[2] of lists | 16 to 20 h | Type 4 on-peak hours of the day [summer, winter] |
+| `demand_tou_weekdays_only` | int | 0 | Type 4: 1 = on-peak hours apply on weekdays only; Saturdays, Sundays and `holidays` are off-peak all day |
+| `demand_ratchet_enabled` | int | 0 | 1 = bill at least `demand_ratchet_rate` times the year's highest monthly peak |
+| `demand_ratchet_rate` | float | 0.85 | Ratchet fraction |
+| `nem_demand_netting` | int | 0 | 1 = measure the peak on the hourly net import max(Pbuy − Psell, 0) |
+| `nem_demand_rate_override` | int | 0 | 1 = use the NEM demand rates below instead of the rates above |
+| `nem_demand_rate_monthly` | list[12] | 10.0 | NEM demand rates ($/kW/month) |
+| `nem_demand_offpeak_rate_monthly` | list[12] | 0.0 | NEM off-peak demand rates, type 4 ($/kW/month) |
+| `minimum_charge_enabled` | int | 0 | 1 = each monthly bill is at least max(minimum charge, service charge + demand charge) |
+| `minimum_charge_monthly` | list[12] | 33.71 | Monthly minimum charge ($) |
+| `minimum_charge_credit_carryover` | int | 0 | 1 = export credit that a month cannot use because of its floor is carried to later months |
 
 #### Natural Gas
 
@@ -913,6 +948,16 @@ Hourly PV power output uses a temperature-dependent efficiency model with NOCT-b
 - Output is multiplied by the derating factor `fpv` (default 0.9) for real-world losses.
 - The default module rated power is `Ppv_r = 1 kW`; the optimizer returns the number of modules `Npv`.
 
+**Bi-facial modules.** With `PV_module_type: Bi-facial`, the rear-side plane-of-array irradiance `G_rear` is computed once from the weather file with the infinite sheds view-factor model of pvlib, using the array tilt, azimuth, ground coverage ratio (`pv_gcr`), row height (`pv_height`), row pitch (`pv_pitch`) and the hourly surface albedo of the NSRDB file. The effective irradiance
+
+```
+G_eff = G_front + bifaciality * (1 + shade_factor) * G_rear
+```
+
+(the same combination as pvlib's `poa_global`) replaces `G` in both the output and the cell temperature equations, since NOCT coefficients are measured for front-side irradiance only. For the bundled Boston weather file, a south-facing array at 33° tilt gains about 6% of annual energy with the default geometry and `bifaciality = 0.7`.
+
+**Sub-arrays.** `PV_subarrays` splits the PV capacity into sub-arrays with their own orientation (for example east- and west-facing vertical bi-facial rows). Each sub-array k receives `share_k × Pn_PV`, its front irradiance is computed with SAMA's POA model for its tilt and azimuth, and the outputs are added.
+
 ### 9.2 Wind Turbine
 
 - Hub-height wind speed is calculated from anemometer height `h0` to hub height `h_hub` using a power-law profile with friction coefficient `alfa_wind_turbine` (default 0.14).
@@ -961,6 +1006,8 @@ NPC = (I_Cost + sum(R_Cost) + sum(MO_Cost) + sum(C_Fu) - sum(Salvage)) * (1 + Sy
       + sum(Grid_Cost_net) + sum(gHeating_Cost)
 ```
 
+When demand charges are enabled, the year-1 demand charge is added to the grid purchases inside `Grid_Cost_net`, taxed with `Grid_sale_tax_rate` and escalated and discounted like the energy charges (Section 10.5).
+
 ### 10.2 Levelized Cost of Energy (LCOE)
 
 `LCOE = CRF * NPC / E_tot`, where CRF is the capital recovery factor derived from the real discount rate `ir` and project lifetime `n`, and `E_tot` is the total discounted energy supplied over the project lifetime (including EV charging and thermal energy from the heat pump).
@@ -972,6 +1019,23 @@ LEM is computed when `EM = 1`. It is the total lifecycle emissions (from diesel 
 ### 10.4 25-Year Cash Flow Projection
 
 The financial model projects cash flows year by year over the `n`-year project lifetime. Grid electricity prices are escalated using `Grid_escalation_rate` (array of 25 annual percentages). Natural gas prices are escalated using `Grid_escalation_rate_NG`. Component replacements are scheduled at multiples of their lifetimes (`L_PV`, `L_WT`, `L_B`, `L_I`, `L_CH`, `L_HP`, `L_EV`). The `Advanced_multi_cashflow` module generates multi-run comparison charts when `Cash_Flow_adv = 1` and `Run_Time > 1`.
+
+### 10.5 Demand Charges and Minimum Charge
+
+For commercial and industrial tariffs (`demand_charge_enabled: 1`), SAMA bills each month m
+
+```
+DC_m = peak_m × rate_m                                  (types 1 to 3)
+DC_m = peak_on,m × rate_on,m + peak_off,m × rate_off,m  (type 4, TOU)
+```
+
+where `peak_m` is the highest hourly grid purchase of the month after dispatch (on-peak and off-peak hours separately for type 4; with `demand_tou_weekdays_only: 1`, weekends and holidays count as off-peak, as in the TOU energy rates). With the ratchet clause, a month whose peak is below `demand_ratchet_rate` times the year's highest monthly peak is billed at that floor (for type 4, the on-peak demand). With NEM demand netting, the peak is measured on the hourly net import max(Pbuy − Psell, 0). The year-1 demand charge is added to the grid purchases before sales tax and escalated and discounted over the project lifetime like the energy charges, so the optimizer sizes the system with the demand charge included. The dispatch rules themselves do not target peak shaving.
+
+With the minimum charge rule (`minimum_charge_enabled: 1`), each monthly bill after net-metering credits is at least `max(minimum_charge_monthly[m], Service_charge[m] + DC_m)`, with sales tax; the year-1 shortfall is added to the grid cost and escalated and discounted in the same way. By default, export credit that a month cannot use because of its floor is lost. With `minimum_charge_credit_carryover: 1`, that credit is carried forward and reduces later monthly bills down to their floors; credit left after December is lost, the conservative assumption for an annual true-up.
+
+**Simplifications.** The demand interval is one hour (utilities often meter 15- or 30-minute peaks, which are higher). Demand rates escalate with `Grid_escalation_rate`. The ratchet compares each month with the highest peak of the same simulated year. The hourly data have 8,760 hours, so the calendar `year` should not be a leap year.
+
+The results report the monthly peaks and demand charges with and without the system, the annual and lifecycle demand charge savings, and the monthly minimum charge adjustments.
 
 ---
 
@@ -1109,6 +1173,8 @@ samapy-run
 | `EMS_HP.py` | Heat pump energy attribution post-processor |
 | **`src/samapy/models/`** | |
 | `Battery_Model.py` | Battery discharge and degradation models (lead-acid KiBaM and Li-ion) |
+| `pv_model.py` | PV array output for mono- and bi-facial modules and sub-arrays |
+| `bifacial_rear.py` | Rear-side irradiance of bi-facial arrays (pvlib infinite sheds) |
 | `BB_HP_Goodman.py` | Goodman air-source heat pump black-box model |
 | `BB_HP_Bosch.py` | Bosch air-source heat pump black-box model |
 | **`src/samapy/pricing/`** | |
@@ -1122,6 +1188,7 @@ samapy-run
 | `calcMonthlyTieredRate4.py` | Monthly tiered rate calculator (4-tier, for Enbridge EGD) |
 | `calcTouRate.py` | Time-of-Use (TOU) rate calculator |
 | `calcULTouRate.py` | Ultra-Low TOU (ULO) rate calculator |
+| `demand_charge.py` | Commercial demand charges (flat, seasonal, monthly, TOU, ratchet) and the minimum charge rule |
 | `service_charge.py` | Monthly utility service charge calculator (flat or tiered) |
 | `Advanced_multi_cashflow.py` | Advanced multi-run cash flow analysis and comparison plots |
 | **`src/samapy/results/`** | |
