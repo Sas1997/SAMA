@@ -1,6 +1,12 @@
 import os
 from pathlib import Path
 
+try:  # version of the installed package, from pyproject.toml
+    from importlib.metadata import version as _version, PackageNotFoundError
+    __version__ = _version("samapy")
+except PackageNotFoundError:  # running from a source tree that is not installed
+    __version__ = "unknown"
+
 
 def get_content_path(filename):
     """

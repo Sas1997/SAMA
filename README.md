@@ -229,20 +229,20 @@ samapy_outputs/
 
 Full documentation is available in this repository:
 
-- **[SAMA_Documentation.md](./Docs/SAMA_Documentation.md)**: Complete user guide covering all parameters, algorithms, financial models, input formats, troubleshooting, and mathematical formulations
+- **[SAMA_Documentation.md](https://github.com/Sas1997/SAMA/blob/main/Docs/SAMA_Documentation.md)**: Complete user guide covering all parameters, algorithms, financial models, input formats, troubleshooting, and mathematical formulations
 
 Key documentation sections:
 
 | Topic | Location |
 |-------|----------|
-| All configuration parameters | [Section 6: Configuration File](./Docs/SAMA_Documentation.md#6-the-configuration-file-sama_config_completeyaml) |
-| Optimization algorithms (detail) | [Section 7](./Docs/SAMA_Documentation.md#7-optimization-algorithms) |
-| Energy management system | [Section 8](./Docs/SAMA_Documentation.md#8-energy-management-system-ems) |
-| Component models | [Section 9](./Docs/SAMA_Documentation.md#9-component-models) |
-| Financial model | [Section 10](./Docs/SAMA_Documentation.md#10-financial-model) |
-| Troubleshooting | [Section 13](./Docs/SAMA_Documentation.md#13-troubleshooting) |
-| Mathematical formulations | [Section 19](./Docs/SAMA_Documentation.md#19-technical-framework-and-mathematical-formulation) |
-| Where to find input data | [Appendix A](./Docs/SAMA_Documentation.md#appendix-a-where-to-find-input-data-for-sama) |
+| All configuration parameters | [Section 6: Configuration File](https://github.com/Sas1997/SAMA/blob/main/Docs/SAMA_Documentation.md#6-the-configuration-file-sama_config_completeyaml) |
+| Optimization algorithms (detail) | [Section 7](https://github.com/Sas1997/SAMA/blob/main/Docs/SAMA_Documentation.md#7-optimization-algorithms) |
+| Energy management system | [Section 8](https://github.com/Sas1997/SAMA/blob/main/Docs/SAMA_Documentation.md#8-energy-management-system-ems) |
+| Component models | [Section 9](https://github.com/Sas1997/SAMA/blob/main/Docs/SAMA_Documentation.md#9-component-models) |
+| Financial model | [Section 10](https://github.com/Sas1997/SAMA/blob/main/Docs/SAMA_Documentation.md#10-financial-model) |
+| Troubleshooting | [Section 13](https://github.com/Sas1997/SAMA/blob/main/Docs/SAMA_Documentation.md#13-troubleshooting) |
+| Mathematical formulations | [Section 19](https://github.com/Sas1997/SAMA/blob/main/Docs/SAMA_Documentation.md#19-technical-framework-and-mathematical-formulation) |
+| Where to find input data | [Appendix A](https://github.com/Sas1997/SAMA/blob/main/Docs/SAMA_Documentation.md#appendix-a-where-to-find-input-data-for-sama) |
 
 ---
 
@@ -256,7 +256,7 @@ pytest            # default suite, about one minute
 pytest -m slow    # full SAMA runs with result generation, a few minutes
 ```
 
-The default suite checks installation, imports, bundled data, input data, the command-line runner, and the convergence of all four optimizers on benchmark functions with known optima (shifted sphere and Rosenbrock), using fixed random seeds. The test settings and pass criteria are documented in [`tests/test_optimizer_convergence.py`](./tests/test_optimizer_convergence.py).
+The default suite checks installation, imports, bundled data, input data, the command-line runner, and the convergence of all four optimizers on benchmark functions with known optima (shifted sphere and Rosenbrock), using fixed random seeds. The test settings and pass criteria are documented in [`tests/test_optimizer_convergence.py`](https://github.com/Sas1997/SAMA/blob/main/tests/test_optimizer_convergence.py).
 
 ---
 
@@ -296,7 +296,7 @@ If you use SAMA in academic work, please cite the primary paper:
 
 ## License
 
-SAMA is released under the **[GNU Affero General Public License v3.0 (AGPL-3.0)](./LICENSE)**. You are free to use, copy, modify, and distribute SAMA. Any derivative works must also be released under AGPL-3.0, including modified versions that are offered to users over a network.
+SAMA is released under the **[GNU Affero General Public License v3.0 (AGPL-3.0)](https://github.com/Sas1997/SAMA/blob/main/LICENSE)**. You are free to use, copy, modify, and distribute SAMA. Any derivative works must also be released under AGPL-3.0, including modified versions that are offered to users over a network.
 
 ---
 
@@ -306,7 +306,7 @@ SAMA is released under the **[GNU Affero General Public License v3.0 (AGPL-3.0)]
 
 - GitHub: https://github.com/Sas1997/SAMA
 - Issues and bug reports: [Open an issue](https://github.com/Sas1997/SAMA/issues)
-- Contributing, questions and feature requests: see [CONTRIBUTING.md](./CONTRIBUTING.md)
+- Contributing, questions and feature requests: see [CONTRIBUTING.md](https://github.com/Sas1997/SAMA/blob/main/CONTRIBUTING.md)
 - For the Windows `.exe` alpha version or reprint requests, contact the developers through the GitHub repository.
 
 ---

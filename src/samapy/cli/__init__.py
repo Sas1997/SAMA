@@ -19,7 +19,7 @@ Entry points (defined in setup.py)
 
 from .config_loader import load_config, apply_config, merge_configs, save_config
 
-__version__ = '1.0.0'
+from samapy import __version__
 __all__ = [
     'load_config',
     'apply_config',
