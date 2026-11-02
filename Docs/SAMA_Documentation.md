@@ -439,23 +439,25 @@ The wizard launches an interactive terminal interface with **18 sections** that 
 | Wizard Section | Parameters Covered |
 |----------------|-------------------|
 | **Section 1:** System Components | Which components to include: PV, WT, DG, Battery (lead-acid or Li-ion), Grid, Heat Pump (Bosch or Goodman), EV |
-| **Section 2:** Optimization Settings | Algorithm (PSO/ADE/ABC/GWO), population size, iterations, run count, design variable bounds (VarMin, VarMax) |
+| **Section 2:** Optimization Settings | Algorithm (PSO/ADE/ABC/GWO), population size, iterations, run count, design variable bounds (VarMin, VarMax), optimization mode (single-objective, or multi-objective with the objectives, the rule that selects the design used for the detailed results, and the NSGA-II population and generations) |
 | **Section 3:** Project and Calendar | Project lifetime (n), simulation year, public holiday list |
 | **Section 4:** Electrical Load | Load type selection (1–10), CSV file paths or manual values, previous-year load for NEM calculations |
 | **Section 5:** Thermal Load | Heat pump thermal load source (house_load.xlsx or manual) |
 | **Section 6:** Weather and Irradiance | METEO.csv path or manual weather input, PV tilt/azimuth/soiling |
 | **Section 7:** Constraints | LPSP maximum, renewable energy minimum fraction, budget limit, capacity constraint type |
 | **Section 8:** Financial | Discount rates, inflation rate, tax rate, RE incentives/federal tax credit |
-| **Section 9:** PV and Inverter | Pricing method, module efficiency, NOCT parameters, lifetimes, capital/replacement/O&M costs |
+| **Section 9:** PV and Inverter | Pricing method, module efficiency, NOCT parameters, lifetimes, capital/replacement/O&M costs, module type (mono-facial, or bi-facial with bifaciality, rear shading factor, ground coverage ratio, row height and row pitch) and optional sub-arrays with their own tilt, azimuth and share of the capacity |
 | **Section 10:** Wind Turbine | Hub height, cut-in/rated/cut-out speeds, power law coefficient, costs |
 | **Section 11:** Diesel Generator | Rated capacity, fuel curve (a, b), minimum load ratio, emissions, fuel cost, lifetime |
 | **Section 12:** Battery Storage | Li-ion or lead-acid selection, SOC limits, round-trip efficiency, capacity, lifetime throughput, costs |
 | **Section 13:** Heat Pump | HP brand (Bosch or Goodman), rated size, lifetime, costs |
 | **Section 14:** Electric Vehicle | Battery capacity, SOC limits, charging power, range, daily trip, departure/arrival times, degradation |
 | **Section 15:** Grid and NEM | Net metering flag, capacity option (cap_size), grid tax, annual service charge, sell structure |
-| **Section 16:** Electricity Rate Structure | Rate type (1–8), prices, TOU hours, seasons, holidays treatment |
+| **Section 16:** Electricity Rate Structure | Rate type (1–8), prices, TOU hours, seasons, holidays treatment, demand charges (flat, seasonal, monthly or TOU, weekday-only on-peak hours, ratchet, NEM netting and NEM demand rates) and the minimum monthly charge with optional credit carry-over |
 | **Section 17:** Natural Gas Rate Structure | NG unit (m³/therms/kWh), rate type (1–8), NG prices, escalation |
 | **Section 18:** Output Settings | Output directory, compare-with-grid scenario flag |
+
+The multi-objective mode, bi-facial modules, PV sub-arrays, demand charges and the minimum charge are optional and off by default: accepting the default answers to their questions gives SAMA's standard single-objective, mono-facial calculation without demand or minimum charges. Bi-facial modules and sub-arrays are offered only with irradiance method 1 (POA computed from METEO.csv), and the NEM demand options and the minimum charge only for grid-connected systems.
 
 When the wizard completes, it saves a file called `samapy_config_COMPLETE.yaml` in your working directory. This YAML file contains all your parameters and can be edited manually or re-run through the wizard at any time.
 

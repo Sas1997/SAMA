@@ -110,6 +110,304 @@ def load_yaml_config(filename, directory=None):
     return {}
 
 
+# ============================================================================
+# Input helpers for the optional features (multi-objective mode, bi-facial PV
+# and PV sub-arrays, demand charges, minimum charge). Every answer is checked
+# before it is accepted, so the YAML file always matches what the backend
+# (config_loader.apply_config) expects.
+# ============================================================================
+
+def _parse_list(text, kind=float):
+    return [kind(x.strip()) for x in str(text).split(',') if x.strip() != '']
+
+
+def _check_number(kind=float, lo=None, hi=None, lo_open=False):
+    """Validator for one number in [lo, hi] (or (lo, hi] when lo_open)."""
+    def check(text):
+        try:
+            v = kind(str(text).strip())
+        except ValueError:
+            return "Enter a whole number" if kind is int else "Enter a number"
+        if lo is not None and (v <= lo if lo_open else v < lo):
+            return f"Enter a number {'above' if lo_open else 'of at least'} {lo}"
+        if hi is not None and v > hi:
+            return f"Enter a number of at most {hi}"
+        return True
+    return check
+
+
+def _check_list(n=None, kind=float, lo=None, hi=None):
+    """Validator for a comma-separated list of n numbers in [lo, hi]."""
+    def check(text):
+        try:
+            values = _parse_list(text, kind)
+        except ValueError:
+            return "Enter whole numbers separated by commas" if kind is int else "Enter numbers separated by commas"
+        if not values:
+            return "Enter at least one value"
+        if n is not None and len(values) != n:
+            return f"Enter exactly {n} values separated by commas (got {len(values)})"
+        if lo is not None and any(v < lo for v in values):
+            return f"All values must be at least {lo}"
+        if hi is not None and any(v > hi for v in values):
+            return f"All values must be at most {hi}"
+        return True
+    return check
+
+
+def _ask_number(message, default, kind=float, lo=None, hi=None, lo_open=False):
+    answer = questionary.text(message, default=str(default),
+                              validate=_check_number(kind, lo, hi, lo_open)).ask()
+    return kind(answer.strip())
+
+
+def _ask_list(message, default, n=None, kind=float, lo=None, hi=None):
+    answer = questionary.text(message, default=default, validate=_check_list(n, kind, lo, hi)).ask()
+    return _parse_list(answer, kind)
+
+
+MOO_OBJECTIVE_CHOICES = [
+    ('npc', 'NPC  - net present cost (minimized)'),
+    ('lcoe', 'LCOE - levelized cost of energy (minimized)'),
+    ('lem', 'LEM  - levelized emissions (minimized)'),
+    ('lpsp', 'LPSP - loss of power supply probability (minimized)'),
+    ('re', 'RE   - renewable energy fraction (maximized)'),
+]
+
+
+def ask_optimization_mode(config):
+    """Single- or multi-objective optimization (keys read by runner.py and multiobjective.py)."""
+    print("\n→ Optimization Mode:")
+    print("""
+single = one design with the lowest value of the cost function, found with
+         the algorithm selected above (default)
+multi  = the Pareto front of two or more objectives, found with NSGA-II; one
+         design from the front is used for the detailed results
+         (the algorithm selected above is then not used)
+""")
+    mode = questionary.select("Optimization mode", choices=[
+        questionary.Choice('1 - Single-objective (default)', value='single'),
+        questionary.Choice('2 - Multi-objective (Pareto front, NSGA-II)', value='multi'),
+    ]).ask()
+    config['optimization_mode'] = mode
+
+    if mode != 'multi':
+        # Kept in the file so that 'samapy-run -m multi' also works later
+        config['MOO_objectives'] = ['npc', 're']
+        config['MOO_selection'] = 'compromise'
+        return
+
+    objectives = questionary.checkbox(
+        "Objectives (space to select, enter to confirm; at least two)",
+        choices=[questionary.Choice(label, value=name, checked=name in ('npc', 're'))
+                 for name, label in MOO_OBJECTIVE_CHOICES],
+        validate=lambda chosen: True if len(chosen) >= 2 else "Select at least two objectives",
+    ).ask()
+    config['MOO_objectives'] = list(objectives)
+    if 'lpsp' in objectives:
+        print("   Note: designs must still meet the maximum LPSP set in Section 7. To explore\n"
+              "   cost against reliability, set that limit high enough to allow the trade-off.")
+
+    choices = [questionary.Choice('compromise - balanced design closest to the ideal point', value='compromise')]
+    choices += [questionary.Choice(f'min_{o} - the design with the best {o.upper()}', value=f'min_{o}')
+                for o in objectives]
+    choices.append(questionary.Choice('weights - compromise with one weight per objective', value='weights'))
+    selection = questionary.select("Design from the Pareto front used for the detailed results",
+                                   choices=choices).ask()
+    if selection == 'weights':
+        weights = _ask_list(f"Weights for {', '.join(objectives)} (positive, comma-separated; "
+                            f"a larger weight favours that objective)",
+                            ",".join("1" for _ in objectives), n=len(objectives))
+        while any(w <= 0 for w in weights):
+            print("   All weights must be greater than 0.")
+            weights = _ask_list("Weights (positive, comma-separated)",
+                                ",".join("1" for _ in objectives), n=len(objectives))
+        config['MOO_selection'] = weights
+    else:
+        config['MOO_selection'] = selection
+
+    config['MOO_n_pop'] = _ask_number("NSGA-II population size", config['nPop'], int, lo=2)
+    config['MOO_n_gen'] = _ask_number("NSGA-II number of generations", config['MaxIt'], int, lo=1)
+
+
+PV_GEOMETRY_DEFAULTS = {'bifaciality': 0.7, 'shade_factor': -0.02,
+                        'pv_gcr': 0.35, 'pv_height': 1.5, 'pv_pitch': 6.0}
+
+
+def _set_pv_module_defaults(config):
+    config['PV_module_type'] = 'Mono-facial'
+    config.update(PV_GEOMETRY_DEFAULTS)
+    config['PV_subarrays'] = None
+
+
+def ask_pv_module(config):
+    """Mono-/bi-facial modules and PV sub-arrays (keys read by models/pv_model.py)."""
+    print("\n→ PV Module Type and Array Layout:")
+    _set_pv_module_defaults(config)
+    if config.get('G_type') != 1:
+        print("   Bi-facial modules and PV sub-arrays need irradiance input method 1\n"
+              "   (POA calculator from METEO.csv). One mono-facial array is used.")
+        return
+
+    module = questionary.select("PV module type", choices=[
+        questionary.Choice('1 - Mono-facial (default)', value='Mono-facial'),
+        questionary.Choice('2 - Bi-facial (adds rear-side irradiance)', value='Bi-facial'),
+    ]).ask()
+    config['PV_module_type'] = module
+
+    if module == 'Bi-facial':
+        print("""
+   Rear irradiance is computed with the pvlib infinite-sheds model. The effective
+   irradiance is G_front + bifaciality * (1 + shade_factor) * G_rear.
+   Row height and row pitch must use the same length unit (for example metres).
+""")
+        config['bifaciality'] = _ask_number("Bifaciality factor (0-1)", 0.7, lo=0, hi=1)
+        config['shade_factor'] = _ask_number("Rear shading factor (-1 to 0, e.g. -0.02 = 2% loss)", -0.02, lo=-1, hi=0)
+        config['pv_gcr'] = _ask_number("Ground coverage ratio (module width / row pitch, 0-1)", 0.35, lo=0, hi=1, lo_open=True)
+        config['pv_height'] = _ask_number("Height of the row centre above the ground", 1.5, lo=0, lo_open=True)
+        config['pv_pitch'] = _ask_number("Row pitch (distance between rows)", 6.0, lo=0, lo_open=True)
+
+    split = questionary.confirm(
+        "Split the PV capacity into sub-arrays with different orientations (for example east-west)?",
+        default=False).ask()
+    if not split:
+        return
+
+    print("   Each sub-array gets a share of the total PV capacity; the shares must sum to 1.")
+    n_sub = _ask_number("Number of sub-arrays", 2, int, lo=2)
+    while True:
+        subs = []
+        for i in range(n_sub):
+            tilt = _ask_number(f"Sub-array {i + 1}: tilt (degrees, 0-90)", config['tilt'], lo=0, hi=90)
+            azimuth = _ask_number(f"Sub-array {i + 1}: azimuth (degrees, 180=south)", config['azimuth'], lo=0, hi=360)
+            share = _ask_number(f"Sub-array {i + 1}: share of the PV capacity (0-1)", round(1 / n_sub, 6), lo=0, hi=1)
+            subs.append({'tilt': tilt, 'azimuth': azimuth, 'share': share})
+        total = sum(s['share'] for s in subs)
+        if abs(total - 1.0) <= 1e-9:
+            break
+        print(f"   The shares sum to {total:g}, not 1. Please enter the sub-arrays again.")
+    config['PV_subarrays'] = subs
+
+
+DEMAND_DEFAULTS = {
+    'demand_charge_enabled': 0,
+    'demand_charge_type': 1,
+    'demand_flat_rate': 15.03,
+    'demand_seasonal_rates': [18.0, 12.0],
+    'demand_season': [0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0],
+    'demand_monthly_rates': [12.0, 12.0, 14.0, 14.0, 16.0, 18.0, 18.0, 18.0, 16.0, 14.0, 12.0, 12.0],
+    'demand_tou_onpeak_rate': [20.0, 15.0],
+    'demand_tou_offpeak_rate': [0.0, 0.0],
+    'demand_tou_season': [0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0],
+    'demand_tou_onpeak_hours': [[16, 17, 18, 19, 20], [16, 17, 18, 19, 20]],
+    'demand_tou_weekdays_only': 0,
+    'demand_ratchet_enabled': 0,
+    'demand_ratchet_rate': 0.85,
+    'nem_demand_netting': 0,
+    'nem_demand_rate_override': 0,
+    'nem_demand_rate_monthly': [10.0] * 12,
+    'nem_demand_offpeak_rate_monthly': [0.0] * 12,
+    'minimum_charge_enabled': 0,
+    'minimum_charge_monthly': [33.71] * 12,
+    'minimum_charge_credit_carryover': 0,
+}
+
+
+def _csv(values):
+    return ",".join(f"{v:g}" for v in values)
+
+
+def set_demand_defaults(config):
+    """Write the demand-charge and minimum-charge keys with the features off."""
+    for k, v in DEMAND_DEFAULTS.items():
+        config[k] = [list(x) for x in v] if k == 'demand_tou_onpeak_hours' else (list(v) if isinstance(v, list) else v)
+
+
+def ask_demand_and_minimum_charges(config):
+    """Demand charges and the minimum charge rule (keys read by pricing/demand_charge.py)."""
+    set_demand_defaults(config)
+
+    print("\n→ Demand Charges (commercial / industrial tariffs):")
+    print("   Billed in $/kW of the highest hourly grid purchase in each month,\n"
+          "   on top of the energy charges. Most residential tariffs have none.")
+    if questionary.confirm("Does the tariff include demand charges?", default=False).ask():
+        config['demand_charge_enabled'] = 1
+        t = questionary.select("Demand charge type", choices=[
+            questionary.Choice('1 - Flat ($/kW/month, all year)', value=1),
+            questionary.Choice('2 - Seasonal (summer and winter rates)', value=2),
+            questionary.Choice('3 - Monthly (12 rates)', value=3),
+            questionary.Choice('4 - Time of use (on-peak and off-peak rates)', value=4),
+        ]).ask()
+        config['demand_charge_type'] = t
+        d = DEMAND_DEFAULTS
+        if t == 1:
+            config['demand_flat_rate'] = _ask_number("Demand rate ($/kW/month)", d['demand_flat_rate'], lo=0)
+        elif t == 2:
+            summer = _ask_number("Demand rate - Summer ($/kW/month)", d['demand_seasonal_rates'][0], lo=0)
+            winter = _ask_number("Demand rate - Winter ($/kW/month)", d['demand_seasonal_rates'][1], lo=0)
+            config['demand_seasonal_rates'] = [summer, winter]
+            config['demand_season'] = _ask_list("12 season indicators (0=winter, 1=summer)",
+                                                _csv(d['demand_season']), n=12, kind=int, lo=0, hi=1)
+        elif t == 3:
+            config['demand_monthly_rates'] = _ask_list("12 monthly demand rates ($/kW/month, Jan-Dec)",
+                                                       _csv(d['demand_monthly_rates']), n=12, lo=0)
+        else:
+            on_s = _ask_number("On-peak demand rate - Summer ($/kW/month)", d['demand_tou_onpeak_rate'][0], lo=0)
+            on_w = _ask_number("On-peak demand rate - Winter ($/kW/month)", d['demand_tou_onpeak_rate'][1], lo=0)
+            off_s = _ask_number("Off-peak demand rate - Summer ($/kW/month, 0 = not charged)", d['demand_tou_offpeak_rate'][0], lo=0)
+            off_w = _ask_number("Off-peak demand rate - Winter ($/kW/month, 0 = not charged)", d['demand_tou_offpeak_rate'][1], lo=0)
+            config['demand_tou_onpeak_rate'] = [on_s, on_w]
+            config['demand_tou_offpeak_rate'] = [off_s, off_w]
+            config['demand_tou_season'] = _ask_list("12 season indicators (0=winter, 1=summer)",
+                                                    _csv(d['demand_tou_season']), n=12, kind=int, lo=0, hi=1)
+            hours_s = _ask_list("On-peak demand hours - Summer (0-23, comma-separated)",
+                                _csv(d['demand_tou_onpeak_hours'][0]), kind=int, lo=0, hi=23)
+            hours_w = _ask_list("On-peak demand hours - Winter (0-23, comma-separated)",
+                                _csv(d['demand_tou_onpeak_hours'][1]), kind=int, lo=0, hi=23)
+            config['demand_tou_onpeak_hours'] = [hours_s, hours_w]
+            weekdays = questionary.confirm(
+                "Apply the on-peak demand hours on weekdays only (weekends and holidays off-peak)?",
+                default=False).ask()
+            config['demand_tou_weekdays_only'] = 1 if weekdays else 0
+
+        if questionary.confirm("Apply a demand ratchet (bill at least a fraction of the year's highest monthly peak)?",
+                               default=False).ask():
+            config['demand_ratchet_enabled'] = 1
+            config['demand_ratchet_rate'] = _ask_number("Ratchet fraction (0-1)", d['demand_ratchet_rate'], lo=0, hi=1)
+
+        if config.get('Grid') and config.get('NEM'):
+            netting = questionary.confirm(
+                "Measure the demand peak on the net import (purchase minus export in the same hour)?\n"
+                "  Most utilities use the gross purchase (answer No).", default=False).ask()
+            config['nem_demand_netting'] = 1 if netting else 0
+            if questionary.confirm("Does the utility apply separate demand rates to net-metered customers?",
+                                   default=False).ask():
+                config['nem_demand_rate_override'] = 1
+                label = "on-peak " if t == 4 else ""
+                config['nem_demand_rate_monthly'] = _ask_list(
+                    f"12 monthly NEM {label}demand rates ($/kW/month, Jan-Dec)",
+                    _csv(d['nem_demand_rate_monthly']), n=12, lo=0)
+                if t == 4:
+                    config['nem_demand_offpeak_rate_monthly'] = _ask_list(
+                        "12 monthly NEM off-peak demand rates ($/kW/month, Jan-Dec)",
+                        _csv(d['nem_demand_offpeak_rate_monthly']), n=12, lo=0)
+
+    if not config.get('Grid'):
+        return
+
+    print("\n→ Minimum Charge Rule:")
+    print("   Each monthly bill is at least max(minimum charge, service charge + demand charge),\n"
+          "   even when net-metering credits would bring it lower.")
+    if questionary.confirm("Does the tariff have a minimum monthly charge?", default=False).ask():
+        config['minimum_charge_enabled'] = 1
+        config['minimum_charge_monthly'] = _ask_list("12 monthly minimum charges ($, Jan-Dec)",
+                                                     _csv(DEMAND_DEFAULTS['minimum_charge_monthly']), n=12, lo=0)
+        carry = questionary.confirm(
+            "Carry export credit that a month cannot use (because of the minimum) to later months?\n"
+            "  Unused credit is lost after December.", default=False).ask()
+        config['minimum_charge_credit_carryover'] = 1 if carry else 0
+
+
 def main():
     from samapy.cli._console import use_utf8_output
     use_utf8_output()
@@ -211,6 +509,9 @@ def main():
     elif config['optimization_algorithm'] == 'gwo':
         print("\n→ GWO Algorithm Parameters:")
         print("   (GWO uses standard parameters from common optimization settings)")
+
+    # Single- or multi-objective optimization
+    ask_optimization_mode(config)
 
     # ============================================================================
     # SECTION 2: CALENDAR & SYSTEM LIFETIME
@@ -754,6 +1055,11 @@ Select which components to include in your hybrid energy system:
         # Rated capacity
         pv_rated = {'ppv_r': questionary.text("PV module rated power (kW)", default="1").ask()}
         config['Ppv_r'] = float(pv_rated['ppv_r'])
+
+        # Mono-/bi-facial modules and PV sub-arrays
+        ask_pv_module(config)
+    else:
+        _set_pv_module_defaults(config)
 
     # ============================================================================
     # SECTION 12: WIND TURBINE CONFIGURATION
@@ -1319,6 +1625,11 @@ Rate Structure Options:
         config['E_NOx'] = float(grid_emissions['e_nox'])
         config['Pbuy_max'] = float(grid_emissions['pbuy_max'])
         config['Psell_max'] = float(grid_emissions['psell_max'])
+
+        # Demand charges and minimum charge rule
+        ask_demand_and_minimum_charges(config)
+    else:
+        set_demand_defaults(config)
 
     # ============================================================================
     # SECTION 18: NATURAL GAS CONFIGURATION (ONLY IF HP SELECTED)

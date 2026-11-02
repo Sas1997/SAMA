@@ -432,12 +432,34 @@ def _patch_optimizer(algo, indata, verbose=False):
         print(f"  ⚠️  {algo.upper()} patch warning: {e}")
 
 
-def _print_summary(d, algo):
+def _feature_summary(d, mode):
+    """Lines describing the optional features, for the configuration summary."""
+    if mode == 'multi':
+        lines = [f"  Mode        : multi-objective (NSGA-II)",
+                 f"  Objectives  : {', '.join(d.MOO_objectives)}",
+                 f"  Selection   : {d.MOO_selection}",
+                 f"  MOO pop/gen : {d.MOO_n_pop or d.nPop} / {d.MOO_n_gen or d.MaxIt}"]
+    else:
+        lines = ["  Mode        : single-objective"]
+    subs = getattr(d, 'PV_subarrays', None)
+    lines.append(f"  PV modules  : {getattr(d, 'PV_module_type', 'Mono-facial')}"
+                 + (f", {len(subs)} sub-arrays" if subs else ""))
+    if getattr(d, 'demand_charge_enabled', 0):
+        types = {1: 'flat', 2: 'seasonal', 3: 'monthly', 4: 'time of use'}
+        lines.append(f"  Demand chg  : on ({types.get(int(d.demand_charge_type), d.demand_charge_type)})")
+    else:
+        lines.append("  Demand chg  : off")
+    lines.append(f"  Minimum chg : {'on' if getattr(d, 'minimum_charge_enabled', 0) else 'off'}")
+    return "\n".join(lines)
+
+
+def _print_summary(d, algo, mode='single'):
     print(f"""
 {'─'*60}
 CONFIGURATION SUMMARY
 {'─'*60}
-  Algorithm   : {algo.upper()}
+{_feature_summary(d, mode)}
+  Algorithm   : {algo.upper()}{' (not used in multi-objective mode)' if mode == 'multi' else ''}
   MaxIt       : {d.MaxIt}
   nPop        : {d.nPop}
   Run_Time    : {d.Run_Time}
@@ -546,28 +568,38 @@ def main():
     # Redirect Gen_Results to user's chosen directory (no changes to Results.py)
     _redirect_gen_results(out_dir)
 
-    # ── Dry run ────────────────────────────────────────────────────────────────
-    if args.dry_run:
-        print("✅ Config valid — dry run complete.")
-        if args.verbose:
-            _print_summary(indata, algo)
-        return
-
-    if args.verbose:
-        _print_summary(indata, algo)
-
-    # ── Run optimization ───────────────────────────────────────────────────────
+    # ── Optimization mode: CLI flag > config value > single ───────────────────
     mode = (args.mode or str(config.get('optimization_mode', 'single'))).lower()
     if mode not in ('single', 'multi'):
         print(f"❌ optimization_mode must be 'single' or 'multi', got '{mode}'")
         sys.exit(1)
+    moo = None
+    if mode == 'multi':
+        # Checks the objectives and the selection rule before any run
+        try:
+            from samapy.optimizers.multiobjective import MultiObjectiveOptimizer
+            moo = MultiObjectiveOptimizer()
+        except ValueError as e:
+            print(f"❌ Multi-objective settings: {e}")
+            sys.exit(1)
+
+    # ── Dry run ────────────────────────────────────────────────────────────────
+    if args.dry_run:
+        print("✅ Config valid — dry run complete.")
+        if args.verbose:
+            _print_summary(indata, algo, mode)
+        return
+
+    if args.verbose:
+        _print_summary(indata, algo, mode)
+
+    # ── Run optimization ───────────────────────────────────────────────────────
     t0 = time.time()
     if mode == 'multi':
         print(f"\n🚀 Starting multi-objective optimization (NSGA-II), objectives: "
               f"{', '.join(indata.MOO_objectives)}...")
         try:
-            from samapy.optimizers.multiobjective import MultiObjectiveOptimizer
-            MultiObjectiveOptimizer().optimize()
+            moo.optimize()
         except Exception as e:
             import traceback
             print(f"\n❌ Optimization failed: {e}")

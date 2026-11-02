@@ -138,27 +138,37 @@ def _epsilon_nondominated(F_min, epsilon, resolution=None):
     return keep or [int(np.argmin(F_min[:, 0]))]
 
 
+def check_selection(selection, objectives):
+    """Raise ValueError if MOO_selection is not valid for these objectives."""
+    if isinstance(selection, str):
+        if selection == 'compromise':
+            return
+        if selection.startswith('min_'):
+            name = selection[4:]
+            if name not in objectives:
+                raise ValueError(f"MOO_selection '{selection}': '{name}' is not one of the objectives {objectives}")
+            return
+        raise ValueError(f"unknown MOO_selection '{selection}'")
+    weights = np.asarray(selection, dtype=float)
+    if weights.shape != (len(objectives),) or np.any(weights <= 0):
+        raise ValueError("MOO_selection weights need one positive value per objective")
+
+
 def select_from_front(F_min, objectives, selection):
     """Index of the design chosen from a front given as minimization values.
 
     F_min holds the objective values as minimized (RE negated).
     """
     F_min = np.asarray(F_min, dtype=float)
+    check_selection(selection, objectives)
     if len(F_min) == 1:
         return 0
     if isinstance(selection, str) and selection.startswith('min_'):
-        name = selection[4:]
-        if name not in objectives:
-            raise ValueError(f"MOO_selection '{selection}': '{name}' is not one of the objectives {objectives}")
-        return int(np.argmin(F_min[:, objectives.index(name)]))
+        return int(np.argmin(F_min[:, objectives.index(selection[4:])]))
     if isinstance(selection, str):
-        if selection != 'compromise':
-            raise ValueError(f"unknown MOO_selection '{selection}'")
         weights = np.ones(len(objectives))
     else:
         weights = np.asarray(selection, dtype=float)
-        if weights.shape != (len(objectives),) or np.any(weights <= 0):
-            raise ValueError("MOO_selection weights need one positive value per objective")
     ideal, nadir = F_min.min(axis=0), F_min.max(axis=0)
     span = np.where(nadir - ideal > 0, nadir - ideal, 1.0)
     normalized = (F_min - ideal) / span
@@ -206,6 +216,7 @@ class MultiObjectiveOptimizer:
         (self.VarMin, self.VarMax, self.n_pop, self.n_gen,
          _) = resolve_settings(InData, var_min, var_max, n_pop, n_gen, 1)
         self.selection = InData.MOO_selection if selection is None else selection
+        check_selection(self.selection, self.objectives)
         self.seed = seed
         if not 0 <= epsilon < 1:
             raise ValueError("epsilon must be in [0, 1)")
