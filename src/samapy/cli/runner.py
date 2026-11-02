@@ -458,6 +458,8 @@ CONFIGURATION SUMMARY
 
 
 def main():
+    from samapy.cli._console import use_utf8_output
+    use_utf8_output()
     parser = argparse.ArgumentParser(
         prog='samapy-run',
         description='Run SAMAPy optimization from a wizard-generated YAML config')

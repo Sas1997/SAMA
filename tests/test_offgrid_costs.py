@@ -51,7 +51,7 @@ def _run(tmp_path, grid, design):
     cfg = tmp_path / "config.yaml"
     cfg.write_text(text, encoding="utf-8")
     result = subprocess.run([sys.executable, "-c", SCRIPT, str(cfg), design], cwd=tmp_path,
-                            capture_output=True, text=True, timeout=900)
+                            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=900)
     assert result.returncode == 0, result.stdout + result.stderr
     g, hp, base, taxed = result.stdout.strip().splitlines()[-1].split()
     assert (int(g), int(hp)) == (grid, 1)

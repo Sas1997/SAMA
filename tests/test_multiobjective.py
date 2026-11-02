@@ -143,7 +143,7 @@ def test_cli_multi_mode_writes_pareto_front(tmp_path):
     text = re.sub(r"(?m)^nPop: \d+", "nPop: 12", text)
     (tmp_path / "samapy_config_COMPLETE.yaml").write_text(text, encoding="utf-8")
     result = subprocess.run([sys.executable, "-c", "from samapy.cli.runner import main; main()",
-                             "--mode", "multi"], cwd=tmp_path, capture_output=True, text=True,
+                             "--mode", "multi"], cwd=tmp_path, capture_output=True, text=True, encoding="utf-8", errors="replace",
                             timeout=1800)
     assert result.returncode == 0, result.stdout[-3000:] + result.stderr[-3000:]
     front = pd.read_csv(tmp_path / "samapy_outputs" / "pareto_front.csv")

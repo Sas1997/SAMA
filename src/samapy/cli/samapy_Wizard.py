@@ -111,6 +111,8 @@ def load_yaml_config(filename, directory=None):
 
 
 def main():
+    from samapy.cli._console import use_utf8_output
+    use_utf8_output()
     print("""
 ╔═══════════════════════════════════════════════════════════════════════════╗
 ║                   SAMAPy MASTER CONFIGURATION WIZARD                      ║

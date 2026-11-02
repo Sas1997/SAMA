@@ -32,6 +32,8 @@ def _check_questionary():
 
 
 def main():
+    from samapy.cli._console import use_utf8_output
+    use_utf8_output()
     print("""
 ╔═══════════════════════════════════════════════════════════════════════════╗
 ║                 SAMAPy - Hybrid Energy System Optimization                ║

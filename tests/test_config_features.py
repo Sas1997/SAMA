@@ -40,7 +40,7 @@ def run_config(tmp_path, changes):
     path = tmp_path / "config.yaml"
     path.write_text(text, encoding="utf-8")
     out = subprocess.run([sys.executable, "-c", SCRIPT, str(path)], cwd=tmp_path,
-                         capture_output=True, text=True, timeout=900)
+                         capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=900)
     assert out.returncode == 0, out.stderr[-3000:]
     return json.loads(out.stdout.strip().splitlines()[-1])
 
