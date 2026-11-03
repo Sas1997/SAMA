@@ -1,11 +1,11 @@
-"""The command-line runner accepts the example configuration shipped with the repository."""
+"""The command-line runner accepts the example configuration (tests/data/example_config.yaml)."""
 import subprocess
 import sys
 from pathlib import Path
 
 import pytest
 
-CONFIG = Path(__file__).resolve().parents[1] / "samapy_config_COMPLETE.yaml"
+CONFIG = Path(__file__).resolve().parent / "data" / "example_config.yaml"
 
 
 @pytest.mark.skipif(not CONFIG.is_file(), reason="example configuration not found")
@@ -23,7 +23,7 @@ def test_runner_output_works_with_a_non_utf8_code_page(tmp_path):
     """Redirected output on Windows uses the system code page (e.g. cp1252)."""
     import os
     env = dict(os.environ, PYTHONIOENCODING="cp1252")
-    config = Path(__file__).resolve().parents[1] / "samapy_config_COMPLETE.yaml"
+    config = Path(__file__).resolve().parent / "data" / "example_config.yaml"
     result = subprocess.run([sys.executable, "-c", "from samapy.cli.runner import main; main()",
                              "--config", str(config), "--dry-run"],
                             cwd=tmp_path, capture_output=True, env=env, timeout=600)

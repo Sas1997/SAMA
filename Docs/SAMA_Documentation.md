@@ -144,7 +144,7 @@ python -m ensurepip --upgrade
 
 ## 1. Overview
 
-SAMA (Solar Alone Multi-Objective Advisor) is an open-source Python platform for the design, sizing, and operation optimization of hybrid renewable energy microgrids. It performs location-specific techno-economic assessment using site-dependent electrical and thermal load profiles, meteorological data, component degradation models, and utility-specific billing structures.
+SAMA (Solar Alone Multi-Objective Advisor) is an open-source Python platform for the design, sizing, and operation optimization of hybrid renewable energy microgrids. "Multi-Objective" in the name refers to the range of goals SAMA is applied to, such as off-grid system design, lower energy costs and sustainability; SAMA also offers a multi-objective optimization mode that returns the Pareto front between objectives (Section 7.6). It performs location-specific techno-economic assessment using site-dependent electrical and thermal load profiles, meteorological data, component degradation models, and utility-specific billing structures.
 
 Unlike proprietary tools such as HOMER Pro and HOMER Grid, which are now closed-source and license-restricted, SAMA provides **transparent optimization algorithms**, **fully extensible architecture**, and **no cost barriers** for researchers, practitioners, and resource-constrained institutions.
 
@@ -374,20 +374,21 @@ When `HP = 1` and a natural gas furnace baseline is being compared, set `rateStr
 
 ### 3.4 Running the Optimization
 
-After configuring `Input_Data.py`, run one of the optimizer scripts directly. In PyCharm, right-click the script and choose Run, or use the terminal.
+There are three ways to run SAMA from the repository. They differ in where the input values come from; `examples/README.md` maps each route to its inputs, configuration and outputs.
 
-#### 3.4.1 Using `run_samapy_optimized.py` (recommended for raw-code users)
+#### 3.4.1 With a YAML configuration: `run_samapy_optimized.py` (recommended)
 
 ```bash
-python run_samapy_optimized.py --algorithm pso
-python run_samapy_optimized.py --algorithm ade
-python run_samapy_optimized.py --algorithm abc
-python run_samapy_optimized.py --algorithm gwo
+python run_samapy_optimized.py                         # uses samapy_config_COMPLETE.yaml in the current folder
+python run_samapy_optimized.py -c examples/reference_config.yaml --seed 1 --no-gui
+python run_samapy_optimized.py -a pso                   # override the algorithm
+python run_samapy_optimized.py --mode multi             # multi-objective mode
 ```
 
-This script loads `samapy_config_COMPLETE_HYBRID.yaml` (if present) and applies it to `InData` at runtime, then runs the chosen algorithm.
+This script is the same as the `samapy-run` command of the pip package (Section 4) and accepts the same options (`--help`). The configuration file sets the values it contains, with all derived quantities recalculated; parameters that are not in the file keep their defaults from `Input_Data.py`.
 
-#### 3.4.2 Running optimizer modules directly
+#### 3.4.2 With the defaults in `Input_Data.py`: optimizer launcher scripts
+
 ```bash
 python src/samapy/optimizers/pso.py        # Particle Swarm Optimization
 python src/samapy/optimizers/ade.py        # Advanced Differential Evolution
@@ -395,12 +396,22 @@ python src/samapy/optimizers/run_abc.py    # Artificial Bee Colony
 python src/samapy/optimizers/gwo.py        # Grey Wolf Optimizer
 ```
 
-#### 3.4.3 Using the `examples/` folder
+These short scripts run one algorithm with the values set in `src/samapy/core/Input_Data.py`, without a configuration file. The ABC launcher is named `run_abc.py` because a file named `abc.py` would hide Python's standard `abc` module when the script is run from its own folder.
 
-The `examples/optimization_case.py` file contains a complete working example with all 8 electricity rate structures and all 6 natural gas rate structures fully commented. It defines a `Config` class with all parameters and runs the full optimization workflow.
+#### 3.4.3 With parameters set in Python: `examples/optimization_case.py`
 
 ```bash
 python examples/optimization_case.py
+```
+
+This script defines all parameters in a `Config` class, including all electricity and natural gas rate structures, writes them to `InData` and runs the optimization. Edit the class to change the case.
+
+#### 3.4.4 Reference example
+
+`examples/reference_config.yaml` is the reference case of Section 18 (Boston, MA). Run it with a fixed seed to compare your installation with the documented results:
+
+```bash
+python run_samapy_optimized.py -c examples/reference_config.yaml --seed 1 --no-gui --output reference_run
 ```
 
 ---
@@ -921,7 +932,15 @@ The base EMS uses Numba JIT compilation for fast execution. In each hour it perf
 
 ### 8.2 EV Smart Charging and V2X (`EMS_EV.py`)
 
-When `EV = 1`, the `EMS_EV` module adds vehicle-to-home (V2H) and vehicle-to-grid (V2G) capabilities. Key behaviors:
+When `EV = 1`, the `EMS_EV` module adds vehicle-to-home (V2H) and vehicle-to-grid (V2G) capabilities.
+
+**The EV is part of the optimization.** `EMS_EV` replaces the base EMS in the evaluation of every candidate design (`Fitness.py`), so the EV is dispatched hour by hour together with PV, wind, battery, generator and grid for each design the optimizer tries. As a result:
+
+- EV charging, V2H and V2G discharge and price arbitrage change each design's grid purchases and sales, and so its bills and NPC.
+- The EV charger cost (`Cost_EV`) and the EV battery replacements (`R_EVB`) are included in the lifecycle cost.
+- Energy the EV is missing at departure (below `SOC_dep`) counts toward LPSP, so the reliability constraint covers the EV as well as the house.
+
+The EV itself is specified by its inputs (battery capacity, charger power, driving and schedule); the optimizer sizes the PV array, wind turbines, battery, generator and inverter for the system with the EV integrated. Key behaviors of the EV dispatch:
 
 - EV is only available to charge or discharge when it is at home (`EV_p = 1`, determined by departure time `Tout`, arrival time `Tin`, and holiday schedule).
 - **Departure planning:** the EV must reach `SOC_dep` before `Tout` each day.
@@ -1158,7 +1177,7 @@ samapy-run
 > **Expected Runtime:**
 > - The first run always takes longer because numba compiles the EMS functions on first call.
 > - After the first run, subsequent runs are significantly faster.
-> - A typical run with `MaxIt=200`, `nPop=50` takes **5–30 minutes** depending on hardware and which components are enabled.
+> - A run with `MaxIt=200`, `nPop=50` takes about 1 to 5 minutes on a recent computer, depending on hardware and which components are enabled (the reference case of Section 18 took about 1.5 minutes in our tests).
 
 ---
 
@@ -1173,13 +1192,22 @@ samapy-run
 | `wizard.py` | Entry point for `samapy-config` command: launches `samapy_Wizard.py` |
 | `samapy_Wizard.py` | Interactive 18-section configuration wizard using questionary |
 | `runner.py` | Entry point for `samapy-run` command: loads YAML, applies config, runs selected algorithm |
-| `config_loader.py` | `load_config()`, `apply_config()`, `save_config()`, `merge_configs()` functions |
+| `config_loader.py` | `load_config()`, `apply_config()`, `save_config()`, `merge_configs()` functions; finds input files (Section 4.6) |
+| `_console.py` | Writes console output as UTF-8 (needed on Windows when output is redirected) |
+| **Repository root** | |
+| `run_samapy_optimized.py` | Same as `samapy-run`, for running from a checkout (Section 3.4.1) |
+| `samapy-config`, `samapy-config.py`, `samapy-config.bat` | Start the configuration wizard from a checkout on Linux/macOS, any system, and Windows |
+| `samapy_config_COMPLETE.yaml` | Default configuration read by `samapy-run` in the repository root; the wizard writes a file with this name in the folder it is run from |
+| **`examples/`** | `reference_config.yaml` (reference case, Section 18), `optimization_case.py` (Python route, Section 3.4.3) and `README.md` (map of all routes) |
+| **`tests/`** | pytest suite; `tests/data/example_config.yaml` is its fixed test configuration |
 | **`src/samapy/optimizers/`** | |
-| `swarm.py` | Particle Swarm Optimization (`Swarm` class) |
-| `AdvancedDifferentialEvolution.py` | Advanced Differential Evolution (`AdvancedDifferentialEvolution` class) |
-| `ArtificialBeeColony.py` | Improved Artificial Bee Colony (`ImprovedArtificialBeeColony` class) |
-| `GreyWolfOptimizer.py` | Grey Wolf Optimizer (`GreyWolfOptimizer` and `ParallelGreyWolfOptimizer` classes) |
-| `pso.py` / `ade.py` / `run_abc.py` / `gwo.py` | Thin wrapper scripts for running each algorithm directly from command line |
+| `swarm.py` | Algorithm module: Particle Swarm Optimization (`Swarm` class) |
+| `AdvancedDifferentialEvolution.py` | Algorithm module: Advanced Differential Evolution (`AdvancedDifferentialEvolution` class) |
+| `ArtificialBeeColony.py` | Algorithm module: Improved Artificial Bee Colony (`ImprovedArtificialBeeColony` class) |
+| `GreyWolfOptimizer.py` | Algorithm module: Grey Wolf Optimizer (`GreyWolfOptimizer` and `ParallelGreyWolfOptimizer` classes) |
+| `multiobjective.py` | Multi-objective mode: NSGA-II from pymoo, Pareto front filtering and design selection (`MultiObjectiveOptimizer`) |
+| `_common.py` | Shared settings, bounds and random-seed helpers used by all optimizers |
+| `pso.py` / `ade.py` / `run_abc.py` / `gwo.py` | Launcher scripts: run one algorithm with the `Input_Data.py` defaults (Section 3.4.2). The algorithm modules keep their class-based names and the launchers their short names, so existing scripts and imports keep working; `run_abc.py` avoids the name of Python's standard `abc` module |
 | **`src/samapy/ems/`** | |
 | `EMS.py` | Base hourly dispatch engine (Numba JIT compiled) |
 | `EMS_EV.py` | Extended dispatch engine with EV smart charging and V2X lookahead arbitrage |
@@ -1235,15 +1263,15 @@ SAMA is released under the **GNU Affero General Public License v3.0 (AGPL-3.0)**
 
 ### 16.3 Citing SAMAPy
 
-If you use SAMA in academic work, please cite the primary published paper [A1]. A Journal of Open Source Software (JOSS) paper is currently pending submission; once published, that citation should also be included. In the meantime, please cite the GitHub repository and acknowledge the FAST Research Group at Western University.
+If you use SAMA in academic work, please cite the primary published paper [A1]. A Journal of Open Source Software (JOSS) paper is under review ([openjournals/joss-reviews#11403](https://github.com/openjournals/joss-reviews/issues/11403)); once published, that citation should also be included. In the meantime, please cite the GitHub repository and acknowledge the FAST Research Group at Western University.
 
 **Primary citation (published):**
 
 > Sadat, S.A., Takahashi, J. and Pearce, J.M., 2023. A Free and open source microgrid optimization tool: SAMA the solar alone Multi-Objective Advisor. *Energy Conversion and Management*, 298, p.117686. https://doi.org/10.1016/j.enconman.2023.117686
 
-**JOSS paper (pending submission):**
+**JOSS paper (under review):**
 
-> Sadat, S.A. and Pearce, J.M. SAMA: Solar Alone Multi-Objective Advisor. *Journal of Open Source Software (JOSS)*. Pending submission.
+> Sadat, S.A. and Pearce, J.M. SAMA: Open-Source Multi-Objective Optimization Platform for Hybrid Renewable Energy Microgrid Design. *Journal of Open Source Software (JOSS)*. Under review.
 
 **Additional SAMA publications (see Section 19 for full list):**
 
@@ -1547,135 +1575,152 @@ print(f"Grid sales     : {df['Psell'].sum():.0f} kWh")
 
 ## 18. Sample Optimization Output
 
-This section shows the complete terminal output and generated figures from a real SAMAPy run using the ADE optimizer with a PV + grid + Bosch heat pump + EV configuration for a Boston, MA residential property.
+This section is a reference run that you can reproduce. It uses the configuration `examples/reference_config.yaml` and SAMA's bundled example data for a residential property in Boston, MA. The same configuration is also shipped as `samapy_config_COMPLETE.yaml` in the repository root.
 
-### 18.1 Configuration Used
+### 18.1 Configuration and Inputs
 
-- **Components:** Solar PV, Grid (ULO tariff), Bosch heat pump (48,000 BTU), EV
-- **Algorithm:** ADE, MaxIt = 200, nPop = 50
-- **Location:** San Francisco, CA (TMY 2024)
-- **Project lifetime:** 25 years
+| Item | Reference case |
+|------|----------------|
+| Location and weather | Boston, MA (42.37° N, 71.06° W): bundled `METEO.csv` (NSRDB), PV tilt 33°, azimuth 180°, soiling 5% |
+| Electrical load | Generic July-peak profile scaled to 9,500 kWh/yr (`load_type: 8`, `Generic_load_JulyP.csv`), plus the heat pump load |
+| Thermal load | Bundled `house_load.xlsx` (hourly heating and cooling loads) with the Bosch heat pump models |
+| EV | One EV, at home on weekends and holidays (`treat_special_days_as_home: true`) |
+| Components the optimizer may size | PV, Li-ion battery, generator and inverter; wind turbines off; grid connection with net metering capped at 12 kW of PV |
+| Tariffs | Time-of-use electricity rates (`rateStructure: 7`), flat sell price, flat natural gas rate for the gas furnace baseline |
+| Optimization | Single-objective, ADE, `MaxIt = 200`, `nPop = 50`, 25-year lifetime |
+
+All other values are in the configuration file. Run it with a fixed random seed:
+
+```bash
+# pip package
+samapy-run -c examples/reference_config.yaml --seed 1 --no-gui --output reference_run
+
+# repository checkout
+python run_samapy_optimized.py -c examples/reference_config.yaml --seed 1 --no-gui --output reference_run
+```
+
+Run the command from the repository root, or give the full path of `reference_config.yaml`. `samapy-run -c examples/reference_config.yaml --dry-run --verbose` lists the input files that will be read; for the reference case they are SAMA's bundled example files.
 
 ### 18.2 Optimizer Convergence
 
-The following shows the ADE convergence as printed to the terminal during a run:
-
 ```
 🚀 Starting ADE optimization...
-Run 0, Iteration   1, Best Cost = 14400001.689, Mean Cost = 24670212999328560.000, Success Rate = 0.000
-Run 0, Iteration  10, Best Cost =   900002.731, Mean Cost =       215268420911.605, Success Rate = 0.276
-Run 0, Iteration  20, Best Cost =   900001.255, Mean Cost =       109192315109.214, Success Rate = 0.256
-Run 0, Iteration  30, Best Cost =   100000.767, Mean Cost =         1667996892.145, Success Rate = 0.241
-Run 0, Iteration  40, Best Cost =        0.764, Mean Cost =            7407633.818, Success Rate = 0.244
-Run 0, Iteration  50, Best Cost =        0.764, Mean Cost =             557501.670, Success Rate = 0.242
-Run 0, Iteration  60, Best Cost =        0.764, Mean Cost =               2000.765, Success Rate = 0.226
-Run 0, Iteration  70, Best Cost =        0.764, Mean Cost =                  0.764, Success Rate = 0.215
+Run 0, Iteration 1, Best Cost = 1.6726, Mean Cost = 105961733216335136.0000, Success Rate = 0.000
+Run 0, Iteration 10, Best Cost = 0.6823, Mean Cost = 521765767650747.5000, Success Rate = 0.333
+Run 0, Iteration 30, Best Cost = 0.6757, Mean Cost = 2952000.7364, Success Rate = 0.279
+Run 0, Iteration 50, Best Cost = 0.6726, Mean Cost = 0.6772, Success Rate = 0.242
+Run 0, Iteration 70, Best Cost = 0.6726, Mean Cost = 0.6726, Success Rate = 0.215
 ...
-Run 0, Iteration 200, Best Cost =        0.764, Mean Cost =                  0.764, Success Rate = 0.090
-✓ Saved: samapy_outputs/Optimization.png
-
-✅ Optimization completed in 165.4s
-📁 Results saved to: samapy_outputs/
+Run 0, Iteration 200, Best Cost = 0.6726, Mean Cost = 0.6726, Success Rate = 0.091
 ```
 
-The sharp drop from iteration 30 to 40 is characteristic of ADE finding the feasible region (solutions satisfying LPSP, RE, and budget constraints). Once all particles converge to feasible space, the mean cost collapses to match the best cost.
+The best cost is `NPC_weight × NPC` (here 10⁻⁵ × $67,259) plus penalties for violated constraints. The very large mean cost in the first iterations comes from infeasible designs and their penalties; once the population is feasible, the mean cost converges to the best cost.
 
 ### 18.3 System Size Results
 
 ```
 -------------------System Size--------------------
-Cpv  (kW)       = 12.0
-Cbat (kWh)      = 0
-Cdg  (kW)       = 0
-Cinverter (kW)  = 9.77
-
-Selected heat pump: Bosch 1×48000 BTU  (capacity: 48,000 BTU/hr)
+Cpv  (kW) = 12.0
+Cbat (kWh) = 0
+Cdg  (kW) = 0
+Cinverter (kW) = 10.66
+Selected heat pump based on the maximum thermal load: Heat Pump Model  Bosch: 1x48000BTU  with the capacity of  48000.0  BTU/hr
 ```
+
+The PV array reaches the 12 kW net-metering cap; no battery or generator is selected.
 
 ### 18.4 Economic Results
 
 ```
 *****************Economic Results*****************
-NPC                                  = $ 79,492.41
-NPC without incentives               = $ 80,459.92
-Total Solar Cost                     = $ 10,549.67
-NPC for only Grid connected system   = $ 84,719.59
-Total Heating Cost                   = $ 15,313.37
-Total Cooling Cost                   = $  2,301.36
-Total Heat Pump Cost                 = $ 17,614.72
-NPC for only Natural Gas Grid        = $ 30,081.34
-Total Grid avoidable cost            = $ 73,847.16
-Total Grid unavoidable cost          = $ 10,872.43
-Total avoided costs                  = $ 84,688.58
-Total net avoided costs by HES       = $ 70,736.99
-Total grid earning                   = $ 11,375.60
-Total grid costs                     = $ 44,032.92
-Total grid costs for the property    = $ 37,793.80
-LCOE                                 = 0.16 $/kWh
-LCOE (grid-only)                     = 0.25 $/kWh
-Operating Cost                       = $  3,162.43
-Initial Cost                         = $  7,513.51
-Total replacement cost               = $ 19,198.61
-Total O&M cost                       = $  8,747.37
-Total incentives received            = $    967.51
-The IRR of the project               = 22.18%
-The Payback Period                   = 4 years
-The ROI of the project               = 469.52%
+NPC  = $ 67259.19
+NPC without incentives = $ 68235.29
+Total Solar Cost = $ 10569.73
+NPC for only Grid connected system = $ 89719.19
+Total Heating Cost = $ 14699.32
+Total Cooling Cost = $ 4148.6
+Total Heat Pump Cost = $ 18847.92
+NPC for only Natural Gas Grid connection = $ 30081.34
+Total grid earning = $ 20333.14
+Total grid costs = $ 31779.64
+LCOE  = 0.11 $/kWh
+LCOE for only Grid connected system = 0.24 $/kWh
+Operating Cost  = $ 2624.08
+Initial Cost  = $ 7533.58
+Total incentives received= $ 976.1
+Total replacement cost  = $ 19198.61
+Total operation and maintenance cost  = $ 8747.37
+Total Salvage cost  = $ 0.0
+Total Money paid by the user= $ 67259.19
+The IRR of the project is: 31.31%
+The Payback Period is: 3 years
+The ROI of the project is: 697.42%
 ```
+
+NPC is the sum of the initial, replacement, operation and maintenance and grid costs: 7,533.58 + 19,198.61 + 8,747.37 + 31,779.64 = 67,259.20 (the last digit differs by rounding). The replacement cost is that of the heat pump, whose lifetime is 5 years.
 
 ### 18.5 Technical Results
 
 ```
 ================Technical Results=================
-PV Power              = 11,335.6 kWh/yr
-RE fraction           = 50.14%
-LPSP (property)       = 0.06%
-Annual Property Load  = 14,999.7 kWh
-Annual EV Load        = 2,811.1 kWh
-Annual Total Load     = 17,810.8 kWh
-Annual Heating Load   = 17,682.4 kWh/yr
-Annual Cooling Load   = 13,201.6 kWh/yr
-HP Average heating COP = 4.16
-HP Average cooling COP = 5.23
-Annual grid purchased  = 11,018.2 kWh
-Annual grid sold       = 3,853.3 kWh
+PV Power  = 16585.62 kWh
+RE  = 61.32 %
+LPSP Total  = 0.0 %
+Annual Property Load = 16219.13 kWh
+Annual EV Load = 2811.11 kWh
+Annual Total Load = 19030.25 kWh
+Annual Heating Load = 17682.42 kWh
+Annual Cooling Load = 13201.59 kWh
+HP Average heating COP = 3.88
+HP Average cooling COP = 5.13
+Annual power bought from Grid=  10200.92 kWh
+Annual Power sold to Grid=  6887.59 kWh
 ```
+
+The property load is the 9,500 kWh/yr electrical load plus the heat pump's 5,118.67 kWh for heating and 1,600.46 kWh for cooling. (SAMA prints these values with more decimals.)
 
 ### 18.6 Scenario Comparison: With vs Without Hybrid Energy System
 
-The table below compares the 25-year costs with and without the hybrid energy system (HES):
+The baseline without the hybrid energy system (HES) buys all electricity from the grid and heats with a natural gas furnace.
 
-| Metric | Without HES | With HES | Savings |
-|--------|-------------|----------|---------|
-| Year 1 Electricity Cost (PV) | $2,905.80 | $1,510.29 | $1,395.51 |
-| Year 1 Natural Gas Cost (PV) | $1,031.76 | $0.00 | $1,031.76 |
-| **Year 1 Total (PV)** | **$3,937.56** | **$1,510.29** | **$2,427.27 (61.6%)** |
-| 25-Year Electricity (Nominal) | $93,757.94 | $48,730.60 | $45,027.34 |
-| 25-Year Natural Gas (Nominal) | $33,290.58 | $0.00 | $33,290.58 |
-| **25-Year Total (Nominal)** | **$127,048.51** | **$48,730.60** | **$78,317.92 (61.6%)** |
-| 25-Year Total (Present Value) | $114,800.92 | $44,032.92 | $70,768.00 |
+| Metric | Without HES | With HES |
+|--------|-------------|----------|
+| Year 1 Electricity Cost (PV) | $3,077.28 | $1,090.01 |
+| Year 1 Natural Gas Cost (PV) | $1,031.76 | $0.00 |
+| **Year 1 Total (PV)** | **$4,109.04** | **$1,090.01** (73.5% saved) |
+| 25-Year Electricity (Nominal) | $99,290.92 | $35,170.06 |
+| 25-Year Natural Gas (Nominal) | $33,290.58 | $0.00 |
+| **25-Year Total (Nominal)** | **$132,581.50** | **$35,170.06** |
+| 25-Year Total (Present Value) | $119,800.52 | $31,779.64 |
 
-**Monthly bill comparison, Year 1 (Present Value):**
+**Monthly bills, Year 1 (Present Value):**
 
-| Month | Without HES | With HES | Total Savings | % Saved |
-|-------|-------------|----------|---------------|---------|
-| January | $476.95 | $263.09 | $213.86 | 44.8% |
-| February | $397.22 | $187.66 | $209.56 | 52.8% |
-| March | $353.53 | $135.85 | $217.67 | 61.6% |
-| April | $279.43 | $44.35 | $235.08 | 84.1% |
-| May | $229.01 | $7.18 | $221.83 | 96.9% |
-| June | $281.37 | $49.31 | $232.06 | 82.5% |
-| July | $374.63 | $122.23 | $252.41 | 67.4% |
-| August | $322.09 | $113.45 | $208.64 | 64.8% |
-| September | $256.66 | $80.61 | $176.05 | 68.6% |
-| October | $244.37 | $119.61 | $124.76 | 51.1% |
-| November | $288.41 | $148.70 | $139.71 | 48.4% |
-| December | $433.89 | $238.25 | $195.63 | 45.1% |
-| **Total** | **$3,937.56** | **$1,510.29** | **$2,427.27** | **61.6%** |
+| Month | Without HES (electricity + gas) | With HES | Savings | % Saved |
+|-------|---------------------------------|----------|---------|---------|
+| January | $510.84 | $206.63 | $304.21 | 59.6% |
+| February | $417.60 | $125.56 | $292.04 | 69.9% |
+| March | $366.15 | $75.71 | $290.43 | 79.3% |
+| April | $278.43 | $17.01 | $261.42 | 93.9% |
+| May | $235.88 | $7.85 | $228.02 | 96.7% |
+| June | $293.73 | $55.92 | $237.81 | 81.0% |
+| July | $393.61 | $131.12 | $262.49 | 66.7% |
+| August | $355.67 | $103.33 | $252.35 | 70.9% |
+| September | $267.02 | $47.83 | $219.19 | 82.1% |
+| October | $249.16 | $49.06 | $200.10 | 80.3% |
+| November | $290.46 | $89.17 | $201.29 | 69.3% |
+| December | $450.49 | $180.81 | $269.68 | 59.9% |
+| **Total** | **$4,109.04** | **$1,090.01** | **$3,019.03** | **73.5%** |
 
-### 18.7 Output Figures
+### 18.7 Comparing Your Results
 
-All figures are saved to `samapy_outputs/figs/`. Below are the actual sample outputs from this example run.
+- **Same seed.** With `--seed 1` the run is reproducible: the system size and the results in Sections 18.3 to 18.6 should match to the cent. Small differences in the last digits can come from different hardware or library versions.
+- **Other seeds.** The optimizers are stochastic, so without `--seed`, or with another seed, the search takes a different path. For this case, runs with seeds 1 to 4 and a run without a seed all ended at the same design (12 kW PV, 10.66 kW inverter, no battery) with the same NPC. In other cases a run may end at a slightly different design, typically with a different inverter size and an NPC within a fraction of a percent. Repeat the run with another seed, or set `Run_Time` above 1 to keep the best of several runs.
+- **Large differences** usually mean different inputs. Check the `→ Input file` lines of `samapy-run --dry-run --verbose`, and that the configuration file is unchanged.
+- **Consistency checks** that hold for any run: NPC equals "Total Money paid by the user", the two `Verification:` lines of the monthly bill table match, LPSP is at most `LPSP_max_rate`, and RE is at least `RE_min_rate`.
+
+### 18.8 Output Figures
+
+All figures are saved to `<output folder>/figs/` (and the convergence plot `Optimization.png` to the output folder). The figures below are from this reference run.
 
 ---
 
@@ -1683,7 +1728,7 @@ All figures are saved to `samapy_outputs/figs/`. Below are the actual sample out
 
 ![Optimization convergence curve](https://raw.githubusercontent.com/Sas1997/SAMA/main/Docs/SAMA%20results%20example%20outputs/Optimization.png)
 
-*ADE convergence: best cost (blue) and mean cost (orange) vs. iteration. The sharp drop around iteration 40 marks the point where all particles enter the feasible region.*
+*ADE convergence: cost of the best design vs. iteration.*
 
 ---
 
@@ -1691,7 +1736,7 @@ All figures are saved to `samapy_outputs/figs/`. Below are the actual sample out
 
 ![25-year cash flow breakdown](https://raw.githubusercontent.com/Sas1997/SAMA/main/Docs/SAMA%20results%20example%20outputs/Cash_Flow.svg)
 
-*25-year lifecycle cost breakdown: capital, replacement, O&M, grid costs, and NEM export earnings.*
+*Annual cash flows over the 25-year lifetime: initial investment, replacements, operation and maintenance and grid costs (below zero), and avoided electricity and natural gas costs (above zero). The line, labelled Total Cost, is the cumulative net cash flow.*
 
 ---
 
@@ -1699,7 +1744,7 @@ All figures are saved to `samapy_outputs/figs/`. Below are the actual sample out
 
 ![Energy Balance](https://raw.githubusercontent.com/Sas1997/SAMA/main/Docs/SAMA%20results%20example%20outputs/Energy%20Balance.png)
 
-*Hourly energy supply and demand balance across all 8,760 hours of the year.*
+*Hourly dumped energy and power shortages (property load and EV) over the year.*
 
 ---
 
@@ -1707,7 +1752,7 @@ All figures are saved to `samapy_outputs/figs/`. Below are the actual sample out
 
 ![Energy Distribution](https://raw.githubusercontent.com/Sas1997/SAMA/main/Docs/SAMA%20results%20example%20outputs/Energy%20Distribution.png)
 
-*Annual energy supply by source and demand by use category.*
+*Hourly served load and the power from the generator, battery and renewable sources over the year.*
 
 ---
 
@@ -1715,7 +1760,7 @@ All figures are saved to `samapy_outputs/figs/`. Below are the actual sample out
 
 ![Annual electricity cost comparison](https://raw.githubusercontent.com/Sas1997/SAMA/main/Docs/SAMA%20results%20example%20outputs/electricity_comparison_annual.png)
 
-*Annual electricity cost: optimised HES vs. grid-only baseline over the 25-year project lifetime.*
+*Yearly and cumulative utility costs (electricity and natural gas) and savings with and without the system over the 25-year lifetime (present value).*
 
 ---
 
@@ -1723,7 +1768,7 @@ All figures are saved to `samapy_outputs/figs/`. Below are the actual sample out
 
 ![Monthly electricity cost comparison](https://raw.githubusercontent.com/Sas1997/SAMA/main/Docs/SAMA%20results%20example%20outputs/electricity_comparison_monthly.png)
 
-*Monthly electricity cost breakdown for Year 1: HES system vs. grid-only.*
+*Monthly utility costs (electricity and natural gas) and savings in Year 1, with and without the system.*
 
 ---
 
@@ -1747,7 +1792,7 @@ All figures are saved to `samapy_outputs/figs/`. Below are the actual sample out
 
 ![Average hourly grid cost](https://raw.githubusercontent.com/Sas1997/SAMA/main/Docs/SAMA%20results%20example%20outputs/Daily-Monthly-Yearly%20average%20hourly%20cost%20of%20connecting%20to%20the%20grid.png)
 
-*Hourly grid cost patterns broken down by season and time of day (ULO tariff structure visible).*
+*Daily and monthly average grid electricity price per kWh, including taxes, under the selected tariff (time-of-use in the reference case).*
 
 ---
 
@@ -1763,7 +1808,7 @@ All figures are saved to `samapy_outputs/figs/`. Below are the actual sample out
 
 ![Grid hourly cost profile](https://raw.githubusercontent.com/Sas1997/SAMA/main/Docs/SAMA%20results%20example%20outputs/Grid%20Hourly%20Cost.png)
 
-*Hourly grid electricity cost profile across the full year, showing ULO pricing patterns.*
+*Hourly grid electricity price per kWh, including taxes, over the year (time-of-use in the reference case).*
 
 ---
 
@@ -1811,7 +1856,7 @@ All figures are saved to `samapy_outputs/figs/`. Below are the actual sample out
 
 ![EV energy profile](https://raw.githubusercontent.com/Sas1997/SAMA/main/Docs/SAMA%20results%20example%20outputs/EV%20Energy.png)
 
-*Annual EV battery SOC, charging, and discharging profile. (EV = 1 only)*
+*EV battery energy at home and away, and EV charging and discharging power, over the year. (EV = 1 only)*
 
 ---
 
@@ -1819,7 +1864,7 @@ All figures are saved to `samapy_outputs/figs/`. Below are the actual sample out
 
 ![EV detailed results 1](https://raw.githubusercontent.com/Sas1997/SAMA/main/Docs/SAMA%20results%20example%20outputs/EV%20Sp%20Results%201.png)
 
-*48-hour detailed EV power flow for a representative summer weekday showing V2G arbitrage against peak ULO prices. (EV = 1 only)*
+*EV state of charge and charging, discharging and travel power on days 160 and 161 (9 and 10 June), with the grid purchase price. (EV = 1 only)*
 
 ---
 
@@ -1827,7 +1872,7 @@ All figures are saved to `samapy_outputs/figs/`. Below are the actual sample out
 
 ![EV detailed results 2](https://raw.githubusercontent.com/Sas1997/SAMA/main/Docs/SAMA%20results%20example%20outputs/EV%20Sp%20Results%202.png)
 
-*48-hour detailed EV power flow for a representative winter weekend. (EV = 1 only)*
+*The same for days 10 and 11 (10 and 11 January). (EV = 1 only)*
 
 ---
 
@@ -1950,7 +1995,7 @@ When `EM = 1`, SAMA also minimizes Levelized Emission (LE) [34]:
 
 $$LE = \frac{\sum_{0}^{8760} Non\ Grid\ Emissions(t) + \sum_{0}^{8760} Grid_{Emissions}(t)}{\sum_{0}^{8760}\left(E_{load}(t) - Ens(t)\right)} \quad (22)$$
 
-The multi-objective function combines NPC and LE, with penalties applied when constraints are violated [A1]:
+The single-objective fitness combines NPC and LE in a weighted sum, with penalties applied when constraints are violated [A1]. In the code the weights are the configuration parameters `NPC_weight` and `EM_weight` (Section 7.6); the multi-objective mode treats the objectives separately instead (Section 7.6):
 
 $$Z = NPC + EM \times LE + penalties \quad (23)$$
 

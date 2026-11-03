@@ -76,7 +76,7 @@ Constraints include reliability (LPSP), renewable energy fraction, capital budge
 |----------|---------|
 | **System Components** | Solar PV (mono- or bi-facial modules, one or more sub-arrays), wind turbines, battery storage (Li-ion or lead-acid), diesel generator, utility grid, air-source heat pump (Bosch or Goodman), electric vehicle with V2X |
 | **Optimization Algorithms** | Particle Swarm Optimization (PSO), Advanced Differential Evolution (ADE), Artificial Bee Colony (ABC), Grey Wolf Optimizer (GWO) |
-| **Energy Simulation** | 8,760-hour hourly dispatch with marginal-cost-based EMS, EV smart charging and V2X lookahead arbitrage, heat pump thermal-electric coupling |
+| **Energy Simulation** | 8,760-hour hourly dispatch with marginal-cost-based EMS, EV smart charging and V2X lookahead arbitrage, heat pump thermal-electric coupling. The EV and heat pump are simulated within every design the optimizer evaluates, so the system is sized with them integrated |
 | **Electricity Tariffs** | 8 structures: flat, seasonal, monthly, tiered, seasonal tiered, monthly tiered, Time-of-Use (TOU), Ultra-Low TOU (ULO); commercial and industrial demand charges (flat, seasonal, monthly or TOU, with optional ratchet) and a minimum charge rule |
 | **Natural Gas Tariffs** | 8 structures including PG&E G-1 therms-based and Enbridge EGD 4-tier m³-based |
 | **Financial Analysis** | 25-year NPC, LCOE, levelized emissions, price escalation, RE incentives (30% ITC), net metering reconciliation |
@@ -126,6 +126,14 @@ samapy-run --algorithm ade          # override algorithm
 samapy-run --output results/run1    # override output directory
 samapy-run --dry-run --verbose      # validate config without running
 samapy-run --no-gui                 # headless / server mode
+samapy-run --seed 1                 # reproducible run (fixed random seed)
+samapy-run --mode multi             # multi-objective mode (Pareto front)
+```
+
+**Reference example.** [`examples/README.md`](https://github.com/Sas1997/SAMA/blob/main/examples/README.md) maps every way of running SAMA to its inputs, configuration and outputs, and [`examples/reference_config.yaml`](https://github.com/Sas1997/SAMA/blob/main/examples/reference_config.yaml) is the reference case whose full results are in [Section 18 of the documentation](https://github.com/Sas1997/SAMA/blob/main/Docs/SAMA_Documentation.md#18-sample-optimization-output):
+
+```bash
+samapy-run -c examples/reference_config.yaml --seed 1 --no-gui --output reference_run
 ```
 
 ### Method 3: Windows .exe (Alpha)
@@ -138,7 +146,7 @@ A point-and-click GUI for non-technical users. No Python installation required. 
 
 ## Quick Start
 
-Run SAMAPY in five steps using bundled sample data (London, Ontario):
+Run SAMAPY in five steps using bundled sample data (Boston, MA):
 
 ```bash
 # 1. Install
@@ -209,18 +217,20 @@ After `samapy-run` completes, results are organized in `samapy_outputs/`:
 
 ```
 samapy_outputs/
-├── Optimization.png                  ← convergence curve
+├── Optimization.png                         ← convergence curve
+├── pareto_front.csv, pareto_front.png       ← Pareto front (multi-objective mode)
 ├── figs/
-│   ├── Cash_Flow.svg                 ← 25-year lifecycle cost breakdown
-│   ├── Energy Distribution.png       ← annual energy supply by source
-│   ├── Battery State of Charge.png   ← hourly SOC profile
-│   ├── Grid Interconnection.png      ← hourly grid import/export
-│   ├── electricity_comparison.png    ← SAMAPY system vs. grid-only cost
-│   ├── hp_monthly_summary.png        ← heat pump COP and energy (if HP=1)
-│   └── EV Energy.png                 ← EV charge/discharge (if EV=1)
+│   ├── Cash_Flow.svg                        ← 25-year lifecycle cost breakdown
+│   ├── Energy Distribution.png              ← hourly served load and supply by source
+│   ├── Energy Balance.png                   ← hourly dumped energy and shortages
+│   ├── Grid Interconnection.png             ← hourly grid import/export
+│   ├── electricity_comparison_annual.png    ← system vs. grid-only cost, by year
+│   ├── electricity_comparison_monthly.png   ← system vs. grid-only cost, by month
+│   ├── Battery State of Charge.png          ← hourly SOC (if a battery is selected)
+│   ├── hp_monthly_summary.png               ← heat pump COP and energy (if HP=1)
+│   └── EV Energy.png                        ← EV charge/discharge (if EV=1)
 └── data/
-    ├── Outputforplotting.csv         ← full 8,760-hour time series
-    └── cash_flow_data.csv            ← annual 25-year cash flow table
+    └── Outputforplotting.csv                ← full 8,760-hour time series
 ```
 
 ---

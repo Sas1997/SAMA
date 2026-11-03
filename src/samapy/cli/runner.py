@@ -453,7 +453,7 @@ def _feature_summary(d, mode):
     return "\n".join(lines)
 
 
-def _print_summary(d, algo, mode='single'):
+def _print_summary(d, algo, mode='single', seed=None):
     print(f"""
 {'─'*60}
 CONFIGURATION SUMMARY
@@ -463,6 +463,7 @@ CONFIGURATION SUMMARY
   MaxIt       : {d.MaxIt}
   nPop        : {d.nPop}
   Run_Time    : {d.Run_Time}
+  Seed        : {seed if seed is not None else 'none (random start)'}
   PV          : {d.PV}
   WT          : {d.WT}
   DG          : {d.DG}
@@ -494,6 +495,9 @@ def main():
                         help="'single': one design minimizing the scalar fitness with the chosen "
                              "algorithm; 'multi': Pareto front of MOO_objectives with NSGA-II "
                              "(default: optimization_mode in the config, else single)")
+    parser.add_argument('--seed', type=int, default=None,
+                        help="Random seed for a reproducible run (default: seed in the config, "
+                             "else a different random start each run)")
     parser.add_argument('--output',  default=None,
                         help='Override output directory')
     parser.add_argument('--dry-run', action='store_true',
@@ -578,12 +582,21 @@ def main():
     if mode not in ('single', 'multi'):
         print(f"❌ optimization_mode must be 'single' or 'multi', got '{mode}'")
         sys.exit(1)
+    # ── Random seed: CLI flag > config value > none ─────────────────────────
+    seed = args.seed if args.seed is not None else config.get('seed')
+    if seed is not None:
+        try:
+            seed = int(seed)
+        except (TypeError, ValueError):
+            print(f"❌ seed must be a whole number, got '{seed}'")
+            sys.exit(1)
+
     moo = None
     if mode == 'multi':
         # Checks the objectives and the selection rule before any run
         try:
             from samapy.optimizers.multiobjective import MultiObjectiveOptimizer
-            moo = MultiObjectiveOptimizer()
+            moo = MultiObjectiveOptimizer(seed=seed)
         except ValueError as e:
             print(f"❌ Multi-objective settings: {e}")
             sys.exit(1)
@@ -592,11 +605,11 @@ def main():
     if args.dry_run:
         print("✅ Config valid — dry run complete.")
         if args.verbose:
-            _print_summary(indata, algo, mode)
+            _print_summary(indata, algo, mode, seed)
         return
 
     if args.verbose:
-        _print_summary(indata, algo, mode)
+        _print_summary(indata, algo, mode, seed)
 
     # ── Run optimization ───────────────────────────────────────────────────────
     t0 = time.time()
@@ -619,16 +632,16 @@ def main():
     try:
         if algo == 'ade':
             from samapy.optimizers.AdvancedDifferentialEvolution import AdvancedDifferentialEvolution
-            AdvancedDifferentialEvolution().optimize()
+            AdvancedDifferentialEvolution(seed=seed).optimize()
         elif algo == 'pso':
             from samapy.optimizers.swarm import Swarm
-            Swarm().optimize()
+            Swarm(seed=seed).optimize()
         elif algo == 'gwo':
             from samapy.optimizers.GreyWolfOptimizer import GreyWolfOptimizer
-            GreyWolfOptimizer().optimize()
+            GreyWolfOptimizer(seed=seed).optimize()
         elif algo == 'abc':
             from samapy.optimizers.ArtificialBeeColony import ImprovedArtificialBeeColony
-            ImprovedArtificialBeeColony().optimize()
+            ImprovedArtificialBeeColony(seed=seed).optimize()
     except Exception as e:
         import traceback
         print(f"\n❌ Optimization failed: {e}")

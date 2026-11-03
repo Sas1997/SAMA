@@ -15,7 +15,7 @@ import pytest
 from samapy.core.Input_Data import InData
 from samapy.optimizers.multiobjective import MultiObjectiveOptimizer, select_from_front
 
-CONFIG = Path(__file__).resolve().parents[1] / "samapy_config_COMPLETE.yaml"
+CONFIG = Path(__file__).resolve().parent / "data" / "example_config.yaml"
 
 
 def schaffer(x):

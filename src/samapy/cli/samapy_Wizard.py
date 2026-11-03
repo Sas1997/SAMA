@@ -1835,6 +1835,13 @@ Rate Structure Options:
     print("=" * 80)
 
     output_path = input_dir / 'samapy_config_COMPLETE.yaml'
+    if output_path.exists() and not questionary.confirm(
+            f"{output_path.name} already exists in {input_dir}. Overwrite it?", default=False).ask():
+        name = questionary.text(
+            "Save the new configuration as",
+            default='samapy_config_new.yaml',
+            validate=lambda t: True if str(t).strip().endswith(('.yaml', '.yml')) else "Use a .yaml file name").ask()
+        output_path = input_dir / str(name).strip()
 
     with open(output_path, 'w') as f:
         yaml.dump(config, f, default_flow_style=False, sort_keys=False)
@@ -1848,7 +1855,8 @@ Rate Structure Options:
         for key, value in files:
             where = value if Path(value).is_absolute() else f"{value} (SAMA example data)"
             print(f"     {key:<20} {where}")
-    print(f"\n   Run optimization:  samapy-run\n")
+    run_cmd = "samapy-run" if output_path.name == 'samapy_config_COMPLETE.yaml' else f"samapy-run -c {output_path.name}"
+    print(f"\n   Run optimization:  {run_cmd}\n")
 
     return config
 

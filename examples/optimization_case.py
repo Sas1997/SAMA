@@ -3,6 +3,16 @@
 SAMAPy OPTIMIZATION - COMPLETE WITH ALL ELECTRICITY & NATURAL GAS RATES
 ======================================================================
 ALL parameters, ALL 8 electricity rate structures, ALL 6 NG rate structures
+
+This script sets every parameter in the Config class below, writes them to
+InData and runs PSO (route 4 in examples/README.md).
+
+Note: Input_Data.py reads its input files from SAMA's content folder, so this
+script copies the files named in Config (Eload_csv_path, METEO_csv_path,
+house_load_xlsx_path) into that folder, replacing SAMA's example files there.
+With the default paths, which point to the example files themselves, nothing
+is copied. To keep SAMA's example data unchanged while using your own files,
+use a YAML configuration instead (samapy-config / samapy-run).
 """
 
 import os
@@ -1010,6 +1020,13 @@ def run_optimization(config):
 
         print(f"   ✓ HP load: {np.sum(InData.Eload_hp):.0f} kWh/year")
 
+    # Fitness and Results keep module-level copies of the InData values they
+    # use, taken when they are first imported. Refresh them now that all
+    # parameters are set, as samapy-run does.
+    from samapy.cli.runner import _patch_fitness, _patch_results
+    _patch_fitness(InData)
+    _patch_results(InData)
+
     start = datetime.now()
     from samapy.optimizers.swarm import Swarm
     optimizer = Swarm()
@@ -1017,14 +1034,18 @@ def run_optimization(config):
     duration = (datetime.now() - start).total_seconds() / 60
 
     best_idx = np.argmin(optimizer.solution_best_costs)
-    solution = optimizer.solution_best_positions[best_idx]
-    npc = optimizer.solution_best_costs[best_idx]
+    solution = np.asarray(optimizer.solution_best_positions[best_idx], dtype=float)
+    # solution_best_costs holds the scalar fitness (NPC_weight * NPC + penalties),
+    # so the design is evaluated again to report its NPC in dollars
+    from samapy.core.Fitness import evaluate
+    metrics = evaluate(solution)
 
     print(f"\n✓ Completed in {duration:.1f} minutes")
-    print(f"\nOptimal System:")
-    print(f"  PV: {solution[0]:.0f} panels")
-    print(f"  Battery: {solution[2]:.0f} units")
-    print(f"  NPC: ${npc:,.0f}")
+    print(f"\nBest design found by the optimizer (full results are printed above):")
+    print(f"  PV: {round(solution[0], 1) * InData.Ppv_r:.1f} kW")
+    print(f"  Battery: {round(solution[2]) * InData.Cbt_r:.1f} kWh")
+    print(f"  Inverter: {round(solution[4], 2):.2f} kW")
+    print(f"  NPC: ${metrics['NPC']:,.0f}")
     print("=" * 80)
 
 

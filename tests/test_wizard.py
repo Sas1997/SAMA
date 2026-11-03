@@ -79,7 +79,7 @@ def run_wizard(tmp_path, monkeypatch, answers):
     monkeypatch.chdir(tmp_path)
     W.main()
     assert used == set(answers), f"questions never asked: {set(answers) - used}"
-    path = tmp_path / "samapy_config_COMPLETE.yaml"
+    path = tmp_path / str(answers.get("Save the new configuration as", "samapy_config_COMPLETE.yaml"))
     return path, yaml.safe_load(path.read_text())
 
 
@@ -315,3 +315,11 @@ def test_weather_file_asked_when_temperature_or_heat_pump_needs_it(tmp_path, mon
         "Include Heat Pump?": True,
         "Weather file for the air pressure": "METEO.csv"})
     assert (cfg["T_type"], cfg["WS_type"], cfg["HP"]) == (4, 4, 1) and cfg["weather_url"] == "METEO.csv"
+
+
+def test_wizard_does_not_overwrite_an_existing_configuration_by_default(tmp_path, monkeypatch):
+    first = tmp_path / "samapy_config_COMPLETE.yaml"
+    first.write_text("existing: 1\n", encoding="utf-8")
+    run_wizard(tmp_path, monkeypatch, {"Save the new configuration as": "second.yaml"})
+    assert first.read_text(encoding="utf-8") == "existing: 1\n"
+    assert (tmp_path / "second.yaml").is_file()

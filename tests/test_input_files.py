@@ -21,7 +21,7 @@ import pytest
 from samapy import get_content_path
 from samapy.cli.config_loader import resolve_input_path
 
-CONFIG = Path(__file__).resolve().parents[1] / "samapy_config_COMPLETE.yaml"
+CONFIG = Path(__file__).resolve().parent / "data" / "example_config.yaml"
 pytestmark = pytest.mark.skipif(not CONFIG.is_file(), reason="example configuration not found")
 
 SCRIPT = r"""

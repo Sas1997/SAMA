@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-CONFIG = Path(__file__).resolve().parents[1] / "samapy_config_COMPLETE.yaml"
+CONFIG = Path(__file__).resolve().parent / "data" / "example_config.yaml"
 
 SCRIPT = r"""
 import io, contextlib, json, sys
