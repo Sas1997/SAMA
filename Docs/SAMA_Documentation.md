@@ -280,7 +280,7 @@ Set `load_type` to choose how the electrical load is provided:
 | `9` | Exact generic load profile (unscaled) | `peak_month`: `'July'` or `'January'` |
 | `10` | Generic profile scaled to user daily profile from CSV | `path_Eload_daily`: path to 24-row CSV |
 
-> **Note:** The `content/` folder contains a sample `Eload.csv` for Boston, MA. To use your own load, replace this file or set `path_Eload` to your file path.
+> **Note:** The `content/` folder contains a sample `Eload.csv` for Boston, MA. To use your own load, set `path_Eload` to your file (see Section 4.6 for how file names are found).
 
 #### 3.3.4 Weather Input
 
@@ -594,17 +594,27 @@ When searching for the package on the PyPI website, look for `samapy`. When writ
 
 ### 4.6 Using Your Own Custom Data Files
 
-SAMA ships with bundled default data files for Boston, MA (weather, electrical load, and heat pump data). When you run `samapy-config` and provide your own file paths, the wizard automatically copies those files into the installed `samapy` package's `content/` folder, overwriting the bundled defaults. This is not a folder inside your project directory, it is wherever `samapy` itself is installed (inside your repo's `src/samapy/content/` if you installed with `pip install -e .`, or inside your Python environment's `site-packages` if you installed with plain `pip install samapy`).
-You can find this location yourself by running `python -c "from samapy import get_content_path; print(get_content_path(''))"`. You can also copy your custom files directly into that folder, and SAMA will use them automatically when you run `samapy-run`.
+SAMA ships with example data files for Boston, MA (weather, electrical load, thermal load and heat pump data) in the installed `samapy` package's `content/` folder. Your own files stay where you keep them; nothing is copied into the package.
 
-The expected file names and formats are:
+**In the wizard.** `samapy-config` first asks for the **folder with your input files** (default: the folder you run it from). At each file question you can enter a file name in that folder, a relative path such as `inputs\Eload_2025.csv`, or a full path. The wizard checks that the file exists and asks again if it does not. If you keep the standard name (for example `Eload.csv`) and the folder has no such file, SAMA's example file is used and the wizard says so. The configuration file stores the full path of each file you chose, and the wizard lists all input files at the end.
 
-- **`Eload.csv`**, Hourly electrical load profile. One column, 8,760 rows, no header. Values in kW.
-- **`METEO.csv`**, SAM NSRDB weather file for your location. Two header rows followed by 8,760 hourly data rows. Must include columns: GHI, DNI, DHI, Temperature, Wind Speed, Pressure. Download from https://nsrdb.nrel.gov/
-- **`house_load.xlsx`**, Building thermal load. Excel file with heating load (Hload) in column 2 and cooling load (Cload) in column 3, 8,760 rows each, in kW.
-- **`Irradiance.csv`**, Only needed when `G_type = 2` (manual plane-of-array irradiance). One column, 8,760 rows, no header. Values in W/m².
+**In the configuration file.** The keys `path_Eload`, `path_Eload_daily`, `path_Eload_Previous`, `path_house_load`, `weather_url`, `path_G`, `path_T` and `path_WS` hold the input files. A full path is used as given. A relative name is looked up, in this order, in:
 
-If a file is not present in the installed package's `content/` folder, SAMA automatically falls back to the bundled default. You only need to provide files you want to customize.
+1. the folder in `input_data_directory` (written by the wizard),
+2. the folder that contains the configuration file,
+3. the folder you run `samapy-run` from,
+4. SAMA's example data (the `content/` folder).
+
+If a file is not found in any of these places, `samapy-run` stops with a message naming the file and the folders searched. It never replaces a missing file of yours with the example data. To see which files a run uses, run `samapy-run --dry-run --verbose`.
+
+The expected formats are:
+
+- **Electrical load** (`Eload.csv`): one column, 8,760 rows, no header, in kW.
+- **Weather** (`METEO.csv`): NSRDB weather file for your location, with two metadata rows and a row of column names before the 8,760 hourly rows. It must include GHI, DNI, DHI, Temperature, Wind Speed and Pressure. Download from https://nsrdb.nrel.gov/. The air pressure is used by the heat pump model, so the wizard also asks for a weather file when the heat pump is included.
+- **Thermal load** (`house_load.xlsx`): Excel file with the heating load in column 2 and the cooling load in column 3, 8,760 rows, in kW.
+- **Irradiance, temperature, wind speed** (`Irradiance.csv`, `Temperature.csv`, `WSPEED.csv`): only for input method 2 of each; one column, 8,760 rows, no header, in W/m², °C and m/s.
+
+> **Upgrading from 1.0.9 or earlier.** Older versions of the wizard copied your files into the package's `content/` folder under the standard names, and upgrading `samapy` replaces those copies with the example data. If you made a configuration with an older version, run `samapy-config` again or put the full paths of your files in the configuration file.
 
 ### 4.7 Typical Workflow for a New Project Location
 
@@ -612,14 +622,14 @@ If a file is not present in the installed package's `content/` folder, SAMA auto
 2. Download your `METEO.csv` weather file from https://nsrdb.nrel.gov/ for your project location.
 3. Prepare your `Eload.csv` file with 8,760 rows of hourly electrical load data in kW.
 4. If modeling a heat pump, prepare `house_load.xlsx` with Hload and Cload columns.
-5. Open a terminal in your project folder and run `samapy-config`. The wizard will ask for paths to your data files and copy them into the installed `samapy` package's `content/` folder (see Section 4.6 for how to find that location).
+5. Open a terminal in your project folder and run `samapy-config`. Give the folder with your data files when the wizard asks for it, then the name of each file (see Section 4.6).
 6. When the wizard finishes, `samapy_config_COMPLETE.yaml` is saved in your project folder. You can open it in any text editor to review or manually adjust settings.
 7. Run `samapy-run` to start the optimization. Results are saved in `samapy_outputs/` inside your project folder.
 
 ### 4.8 Understanding Where Your Files Go
 SAMA uses two different locations, and it helps to know the difference:
 - **Results** (`samapy_inputs/`, `samapy_outputs/`) are created relative to the folder where you run `samapy-config` and `samapy-run`. Always run both commands from the same project folder so your configuration file and results stay together.
-- **Input data overrides** (`Eload.csv`, `METEO.csv`, `house_load.xlsx`, `Irradiance.csv`) always go into the installed `samapy` package's own `content/` folder, regardless of which directory you run commands from. Providing new data files through the wizard replaces the bundled defaults for every project on your machine until you replace them again.
+- **Input data** (your load, weather and thermal load files) stays where you keep it. The configuration file records where each file is (Section 4.6), so different projects can use different data, and SAMA's example data in the package's `content/` folder is never changed.
 
 > **On Windows:** navigate to your project folder in File Explorer, click the address bar, type `cmd`, and press Enter. This opens a Command Prompt already pointed at that folder.
 
@@ -714,6 +724,7 @@ holidays: [1, 51, 97, ...]  # day-of-year numbers for public holidays
 | `tilt` | float | 33.0 | PV panel tilt angle (degrees) |
 | `soiling` | float | 5.0 | PV soiling losses (%) |
 | `weather_url` | str | METEO.csv | Path to NSRDB/SAM meteorological CSV file |
+| `input_data_directory` | str | folder of the wizard run | Folder searched first for input files given by a relative name (Section 4.6) |
 | `PV_module_type` | str | Mono-facial | `Mono-facial` or `Bi-facial` (rear irradiance from pvlib, Section 9.1) |
 | `bifaciality` | float | 0.7 | Rear/front efficiency ratio of bi-facial modules (datasheet value) |
 | `shade_factor` | float | -0.02 | Rear-side shading derate (pvlib default); 0 to ignore |
@@ -1504,7 +1515,7 @@ for r in results:
 
 ### Tips and common pitfalls
 
-**Using your own weather and load data:**
+**Using your own weather and load data:** with a configuration file, set the file paths in it (Section 4.6). When you use `Input_Data.py` directly, without a configuration file, it reads the files in the package's `content/` folder, which you can replace:
 ```python
 import shutil
 from samapy import get_content_path

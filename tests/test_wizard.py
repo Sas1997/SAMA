@@ -10,6 +10,7 @@ resulting InData values are compared with the answers.
 import json
 import subprocess
 import sys
+from pathlib import Path
 
 import pytest
 import yaml
@@ -26,6 +27,16 @@ class _Answer:
         return self.value
 
 
+class Seq:
+    """Answers given in turn when a question is asked more than once."""
+    def __init__(self, *answers):
+        self.answers = list(answers)
+
+    def next(self):
+        assert self.answers, "question asked more often than expected"
+        return self.answers.pop(0)
+
+
 def run_wizard(tmp_path, monkeypatch, answers):
     """Run the wizard in tmp_path; unanswered questions take their default."""
     used = set()
@@ -34,7 +45,7 @@ def run_wizard(tmp_path, monkeypatch, answers):
         for key, value in answers.items():
             if key in message:
                 used.add(key)
-                return True, value
+                return True, (value.next() if isinstance(value, Seq) else value)
         return False, None
 
     def text(message, default="", validate=None, **kw):
@@ -95,6 +106,8 @@ for k in keys:
         v = [list(map(int, x)) if isinstance(x, (list, np.ndarray)) else float(x) for x in v]
     out[k] = v
 out['rear'] = [None if r is None else float(np.sum(r)) for r in d.G_rear_list]
+out['Eload_eh'] = float(np.sum(d.Eload_eh))
+out['P'] = float(np.sum(d.P))
 out['NPC'] = m['NPC']
 out['dc'] = m['demand_charge_year1']
 print(json.dumps(out))
@@ -248,3 +261,57 @@ def test_runner_rejects_invalid_multiobjective_settings(tmp_path, monkeypatch):
     r = subprocess.run([sys.executable, "-m", "samapy.cli.runner", "-c", str(path), "--dry-run", "--no-gui"],
                        cwd=tmp_path, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=900)
     assert r.returncode == 1 and "Multi-objective settings" in r.stdout
+
+
+def _content_hashes():
+    import hashlib
+    from samapy import get_content_path
+    root = Path(get_content_path(""))
+    return {f: hashlib.sha256(f.read_bytes()).hexdigest() for f in root.rglob("*") if f.is_file()}
+
+
+def test_input_files_from_the_chosen_folder(tmp_path, monkeypatch):
+    import numpy as np
+    import pandas as pd
+    from samapy import get_content_path
+    data = tmp_path / "my inputs"
+    data.mkdir()
+    load = pd.read_csv(get_content_path("Eload.csv"), header=None).values[:, 0]
+    np.savetxt(data / "myload.csv", 2 * load, delimiter=",")
+    np.savetxt(data / "prev.csv", load, delimiter=",")
+    before = _content_hashes()
+    project = tmp_path / "project"
+    project.mkdir()
+    path, cfg = run_wizard(project, monkeypatch, {
+        "Folder with your input files": str(data),
+        "Select electrical load input type": 1,
+        # a wrong name is asked again; then the file in the chosen folder is used
+        "Hourly electrical load file": Seq("nope.csv", "myload.csv"),
+        "Select previous year load type": 2,
+        # SAMA has no example previous-year load, so the standard name is asked again too
+        "Previous-year hourly load file": Seq("Eload_previousyear.csv", "prev.csv"),
+    })
+    assert cfg["input_data_directory"] == str(data.resolve())
+    assert cfg["path_Eload"] == str((data / "myload.csv").resolve())
+    assert cfg["path_Eload_Previous"] == str((data / "prev.csv").resolve())
+    # files kept at their standard names use SAMA's example data
+    assert cfg["weather_url"] == "METEO.csv" and cfg["path_house_load"] == "house_load.xlsx"
+    assert _content_hashes() == before, "the wizard must not change SAMA's own files"
+    r = apply(path)
+    assert r["Eload_eh"] == pytest.approx(2 * load.sum())
+
+
+def test_weather_file_asked_when_temperature_or_heat_pump_needs_it(tmp_path, monkeypatch):
+    (tmp_path / "a").mkdir()
+    path, cfg = run_wizard(tmp_path / "a", monkeypatch, {
+        "Select irradiance input method": 2,
+        "Weather file for temperature / wind speed": "METEO.csv"})
+    assert cfg["G_type"] == 2 and cfg["weather_url"] == "METEO.csv"
+    (tmp_path / "b").mkdir()
+    path, cfg = run_wizard(tmp_path / "b", monkeypatch, {
+        "Select irradiance input method": 2,
+        "Select temperature input method": 4,
+        "Select wind speed input method": 4,
+        "Include Heat Pump?": True,
+        "Weather file for the air pressure": "METEO.csv"})
+    assert (cfg["T_type"], cfg["WS_type"], cfg["HP"]) == (4, 4, 1) and cfg["weather_url"] == "METEO.csv"

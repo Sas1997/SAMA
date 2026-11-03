@@ -15,37 +15,59 @@ import yaml
 import numpy as np
 from pathlib import Path
 import subprocess
-import shutil
 
 
-def copy_to_content(source_file, target_filename):
-    """Copy user file to the installed samapy package's content folder"""
+def ask_input_file(config, key, message, standard_name):
+    """
+    Ask for one input file and store its full path in config[key].
+
+    A name or relative path is looked up in the input data folder; a full path
+    is used as given. If the standard name (for example Eload.csv) is kept and
+    the folder has no such file, SAMA's example file of that name is used,
+    when SAMA has one. Any other name must be an existing file, otherwise the
+    question is asked again.
+    """
     from samapy import get_content_path
-    target = Path(get_content_path(target_filename))
-    target.parent.mkdir(parents=True, exist_ok=True)
+    folder = Path(config['input_data_directory'])
+    while True:
+        answer = questionary.text(message, default=standard_name).ask()
+        name = str(answer).strip().strip('"').strip("'")
+        path = Path(name).expanduser()
+        candidate = path if path.is_absolute() else folder / path
+        if candidate.is_file():
+            config[key] = str(candidate.resolve())
+            print(f"   ✅ Using {config[key]}")
+            return
+        if name == standard_name and Path(get_content_path(standard_name)).is_file():
+            config[key] = standard_name
+            print(f"   → No {standard_name} in {folder}: SAMA's example {standard_name} "
+                  f"(Boston, MA) will be used.")
+            return
+        print(f"   ❌ File not found: {candidate}\n"
+              f"      Enter a file name in {folder}, or a full path.")
 
-    source = Path(source_file)
-
-    if not source.exists():
-        print(f"❌ File not found: {source_file}")
-        return False
-
-    if source.resolve() == target.resolve():
-        print(f"✅ {target_filename} already in place at {target}")
-        return True
-
-    shutil.copy2(source, target)
-    print(f"✅ Copied {source_file} → {target}")
-    return True
 
 def setup_directories():
-    """Ask only where results should be saved. Config saves in cwd."""
+    """Ask where results are saved and where the input files are. Config saves in cwd."""
     print("\nOutput Directory Setup\n")
     dirs = {'output_dir': questionary.text("Where should results be saved?", default=str(Path.cwd() / 'samapy_outputs')).ask()}
     input_dir = Path.cwd()  # config YAML always saved in cwd
     output_dir = Path(dirs['output_dir'])
     output_dir.mkdir(parents=True, exist_ok=True)
-    return input_dir, output_dir
+
+    print("""
+Input Data Folder
+
+   SAMA reads your input files (electrical load, thermal load, weather) from
+   this folder. At each file question, enter a file name in this folder or a
+   full path. Keeping a standard name (e.g. Eload.csv) that is not in the
+   folder uses SAMA's example data (Boston, MA). Nothing is copied.
+""")
+    data_dir = questionary.text(
+        "Folder with your input files", default=str(Path.cwd()),
+        validate=lambda t: True if Path(str(t).strip().strip('"')).expanduser().is_dir() else "Folder not found").ask()
+    data_dir = Path(str(data_dir).strip().strip('"')).expanduser().resolve()
+    return input_dir, output_dir, data_dir
 
 
 # def top_down_pricing(Total_PV_price):
@@ -421,11 +443,12 @@ def main():
     # ============================================================================
     # STEP 0: FILE DESTINATION SETUP
     # ============================================================================
-    input_dir, output_dir = setup_directories()
+    input_dir, output_dir, data_dir = setup_directories()
 
     config = {}
     config['input_directory'] = str(input_dir)
     config['output_directory'] = str(output_dir)
+    config['input_data_directory'] = str(data_dir)
 
     # ============================================================================
     # SECTION 1: OPTIMIZATION PARAMETERS
@@ -567,10 +590,7 @@ Load Type Options:
 
     # Handle load type specific inputs
     if config['load_type'] == 1:
-        load_csv = {'eload_csv': questionary.text("Path to Eload.csv file", default="Eload.csv").ask()}
-        config['path_Eload'] = load_csv['eload_csv']
-        # Copy to content folder
-        copy_to_content(config['path_Eload'], 'Eload.csv')
+        ask_input_file(config, 'path_Eload', "Hourly electrical load file (8760 values, kW)", 'Eload.csv')
 
     elif config['load_type'] == 2:
         load_monthly_h = {'monthly_h_avg': questionary.text("12 monthly hourly averages (comma-separated)", default="1,2,3,4,5,6,7,8,9,10,11,12").ask()}
@@ -615,12 +635,10 @@ Load Type Options:
 
     elif config['load_type'] == 10:
         load_daily = {}
-        load_daily['eload_daily_csv'] = questionary.text("Path to Eload_daily.csv file", default="Eload_daily.csv").ask()
+        ask_input_file(config, 'path_Eload_daily', "Daily load profile file", 'Eload_daily.csv')
         load_daily['peak_month'] = questionary.select("Peak month for scaling", choices=['January', 'February', 'March', 'April', 'May', 'June',
                                    'July', 'August', 'September', 'October', 'November', 'December']).ask()
-        config['path_Eload_daily'] = load_daily['eload_daily_csv']
         config['peak_month'] = load_daily['peak_month']
-        copy_to_content(config['path_Eload_daily'], 'Eload_daily.csv')
 
     # Previous year load configuration
     print("\n→ Previous Year Electrical Load Configuration:")
@@ -643,9 +661,8 @@ Load Type Options:
 
     # Handle previous year load specific inputs
     if config['load_previous_year_type'] == 2:
-        prev_csv = {'path': questionary.text("Path to Eload_previousyear.csv", default="Eload_previousyear.csv").ask()}
-        config['path_Eload_Previous'] = prev_csv['path']
-        copy_to_content(config['path_Eload_Previous'], 'Eload_previousyear.csv')
+        ask_input_file(config, 'path_Eload_Previous', "Previous-year hourly load file (8760 values, kW)",
+                       'Eload_previousyear.csv')
 
     elif config['load_previous_year_type'] == 3:
         prev_monthly_h = {'values': questionary.text("12 monthly hourly averages (comma-separated)", default="1,2,3,4,5,6,7,8,9,10,11,12").ask()}
@@ -681,9 +698,8 @@ Thermal Load Type Options:
     config['Tload_type'] = thermal_config['tload_type']
 
     if config['Tload_type'] == 1:
-        tload_file = {'path': questionary.text("Path to house_load.xlsx file", default="house_load.xlsx").ask()}
-        config['path_house_load'] = tload_file['path']
-        copy_to_content(config['path_house_load'], 'house_load.xlsx')
+        ask_input_file(config, 'path_house_load', "Thermal load file (Excel: hour, heating, cooling)",
+                       'house_load.xlsx')
         print("   Note: File should contain columns for heating load (Hload) and cooling load (Cload)")
         print("   Note: Tload (total thermal load) will be calculated as Hload + Cload for NG pricing")
 
@@ -719,13 +735,10 @@ Irradiance Input Options:
     config['soiling'] = float(irradiance_config['soiling'])
 
     if config['G_type'] == 1:
-        meteo = {'path': questionary.text("Path to METEO.csv file", default="METEO.csv").ask()}
-        config['weather_url'] = meteo['path']
-        copy_to_content(config['weather_url'], 'METEO.csv')
+        ask_input_file(config, 'weather_url', "Weather file (NSRDB format)", 'METEO.csv')
     else:
-        irrad_csv = {'path': questionary.text("Path to Irradiance.csv file", default="Irradiance.csv").ask()}
-        config['path_G'] = irrad_csv['path']
-        copy_to_content(config['path_G'], 'Irradiance.csv')
+        ask_input_file(config, 'path_G', "Hourly plane-of-array irradiance file (W/m², 8760 values)",
+                       'Irradiance.csv')
 
     # ============================================================================
     # SECTION 6B: TEMPERATURE CONFIGURATION
@@ -749,9 +762,7 @@ Temperature Input Options:
     config['T_type'] = temp_config['t_type']
 
     if config['T_type'] == 2:
-        temp_csv = {'path': questionary.text("Path to Temperature.csv", default="Temperature.csv").ask()}
-        config['path_T'] = temp_csv['path']
-        copy_to_content(config['path_T'], 'Temperature.csv')
+        ask_input_file(config, 'path_T', "Hourly temperature file (°C, 8760 values)", 'Temperature.csv')
     elif config['T_type'] == 3:
         temp_monthly = {'values': questionary.text("12 monthly average temperatures (°C, comma-separated)", default="-2,-5,-2,1,3,6,15,22,27,23,16,7").ask()}
         config['Monthly_average_temperature'] = [float(x.strip()) for x in temp_monthly['values'].split(',')]
@@ -781,15 +792,18 @@ Wind Speed Input Options:
     config['WS_type'] = wind_config['ws_type']
 
     if config['WS_type'] == 2:
-        wind_csv = {'path': questionary.text("Path to WSPEED.csv", default="WSPEED.csv").ask()}
-        config['path_WS'] = wind_csv['path']
-        copy_to_content(config['path_WS'], 'WSPEED.csv')
+        ask_input_file(config, 'path_WS', "Hourly wind speed file (m/s, 8760 values)", 'WSPEED.csv')
     elif config['WS_type'] == 3:
         wind_monthly = {'values': questionary.text("12 monthly average wind speeds (m/s, comma-separated)", default="14.1,21,12.2,31,12.2,11.2,12.1,13,21,9.2,12.3,18.1").ask()}
         config['Monthly_average_windspeed'] = [float(x.strip()) for x in wind_monthly['values'].split(',')]
     elif config['WS_type'] == 4:
         wind_annual = {'value': questionary.text("Annual average wind speed (m/s)", default="10").ask()}
         config['Annual_average_windspeed'] = float(wind_annual['value'])
+
+    # Temperature or wind speed from the weather file, when it was not asked above
+    if 'weather_url' not in config and (config['T_type'] == 1 or config['WS_type'] == 1):
+        ask_input_file(config, 'weather_url', "Weather file for temperature / wind speed (NSRDB format)",
+                       'METEO.csv')
 
     # ============================================================================
     # SECTION 7: SYSTEM CONSTRAINTS
@@ -846,6 +860,11 @@ Select which components to include in your hybrid energy system:
     config['Grid'] = 1 if components['grid'] else 0
     config['HP'] = 1 if components['hp'] else 0
     config['EV'] = 1 if components['ev'] else 0
+
+    # The heat pump model uses the air pressure from the weather file
+    if config['HP'] and 'weather_url' not in config:
+        ask_input_file(config, 'weather_url', "Weather file for the air pressure used by the heat pump model",
+                       'METEO.csv')
 
     # Battery type selection
     if config['Bat']:
@@ -1821,6 +1840,14 @@ Rate Structure Options:
         yaml.dump(config, f, default_flow_style=False, sort_keys=False)
 
     print(f"\n✅ Configuration saved → {output_path}")
+
+    from samapy.cli.config_loader import INPUT_FILE_KEYS
+    files = [(k, config[k]) for k in INPUT_FILE_KEYS if k in config]
+    if files:
+        print("\n   Input files:")
+        for key, value in files:
+            where = value if Path(value).is_absolute() else f"{value} (SAMA example data)"
+            print(f"     {key:<20} {where}")
     print(f"\n   Run optimization:  samapy-run\n")
 
     return config

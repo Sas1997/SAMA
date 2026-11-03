@@ -524,17 +524,22 @@ def main():
 
     config = load_config(config_path)
 
-    if args.verbose:
-        print(f"📂 Loading: {config_path.name}  ({len(config)} parameters)")
-        indata = apply_config(config)
-    else:
-        buf = io.StringIO()
-        with contextlib.redirect_stdout(buf):
+    try:
+        if args.verbose:
+            n_keys = len([k for k in config if not str(k).startswith('_')])
+            print(f"📂 Loading: {config_path.name}  ({n_keys} parameters)")
             indata = apply_config(config)
-        # Surface warnings/errors even in quiet mode
-        for line in buf.getvalue().splitlines():
-            if '⚠️' in line or 'failed' in line.lower() or 'error' in line.lower():
-                print(line)
+        else:
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                indata = apply_config(config)
+            # Surface warnings/errors even in quiet mode
+            for line in buf.getvalue().splitlines():
+                if '⚠️' in line or 'failed' in line.lower() or 'error' in line.lower():
+                    print(line)
+    except FileNotFoundError as e:
+        print(f"❌ {e}")
+        sys.exit(1)
 
     # Regenerate Inputs.csv with updated values
     import pandas as pd

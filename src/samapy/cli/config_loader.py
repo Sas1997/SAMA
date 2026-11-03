@@ -4,6 +4,7 @@ SAMAPy CLI ─ config_loader.py
 
 """
 
+import os
 import yaml
 import numpy as np
 from pathlib import Path
@@ -14,13 +15,105 @@ from math import ceil
 # Public helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
+CONFIG_DIR_KEY = '_config_dir'
+
+# Input files named in the configuration: key -> standard file name of SAMA's
+# example data (in the samapy content folder)
+INPUT_FILE_KEYS = {
+    'path_Eload': 'Eload.csv',
+    'path_Eload_daily': 'Eload_daily.csv',
+    'path_Eload_Previous': 'Eload_previousyear.csv',
+    'path_house_load': 'house_load.xlsx',
+    'weather_url': 'METEO.csv',
+    'path_G': 'Irradiance.csv',
+    'path_T': 'Temperature.csv',
+    'path_WS': 'WSPEED.csv',
+}
+
+
+def input_search_dirs(config):
+    """Folders searched for relative input file names, in order."""
+    dirs = []
+    for d in (config.get('input_data_directory'), config.get(CONFIG_DIR_KEY), os.getcwd()):
+        if d and str(d) not in dirs:
+            dirs.append(str(d))
+    return dirs
+
+
+def resolve_input_path(name, search_dirs=()):
+    """
+    Full path of an input file named in the configuration, or None if not found.
+
+    A full path is used as given. A relative name is looked up in each folder
+    of search_dirs in turn (the input data folder chosen in the wizard, the
+    folder of the configuration file, the current folder) and finally in
+    SAMA's example data (the samapy content folder).
+    """
+    from samapy import get_content_path
+    p = Path(str(name).strip().strip('"').strip("'")).expanduser()
+    if p.is_absolute():
+        return str(p) if p.is_file() else None
+    for base in search_dirs:
+        q = Path(base) / p
+        if q.is_file():
+            return str(q.resolve())
+    q = Path(get_content_path(str(p)))
+    return str(q) if q.is_file() else None
+
+
+def _used_input_keys(config, d):
+    """(key, default name) of the input files this configuration reads."""
+    def cfg(k, default):
+        return int(config.get(k, getattr(d, k, default)))
+    used = []
+    if cfg('load_type', 0) == 1:
+        used.append(('path_Eload', 'Eload.csv'))
+    if cfg('load_type', 0) == 10:
+        used.append(('path_Eload_daily', 'Eload_daily.csv'))
+    prev = cfg('load_previous_year_type', 1)
+    if prev == 2:
+        used.append(('path_Eload_Previous', 'Eload_previousyear.csv'))
+    elif prev == 11:
+        used.append(('path_Eload_Previous', 'Eload_daily.csv'))
+    if ('path_house_load' in config or 'Tload_type' in config) and cfg('Tload_type', 1) == 1:
+        used.append(('path_house_load', 'house_load.xlsx'))
+    if 'weather_url' in config:
+        used.append(('weather_url', 'METEO.csv'))
+    for key, type_key in (('path_G', 'G_type'), ('path_T', 'T_type'), ('path_WS', 'WS_type')):
+        if config.get(type_key) == 2:
+            used.append((key, INPUT_FILE_KEYS[key]))
+    return used
+
+
+def _resolve_input_files(config, d):
+    """Replace every input file name read by this configuration with its full path."""
+    dirs = input_search_dirs(config)
+    missing = []
+    for key, default in _used_input_keys(config, d):
+        name = config.get(key) or default
+        path = resolve_input_path(name, dirs)
+        if path is None:
+            missing.append(f"{key}: '{name}'")
+        else:
+            config[key] = path
+            print(f"  → Input file {key}: {path}")
+    if missing:
+        raise FileNotFoundError(
+            "Input file(s) not found: " + "; ".join(missing)
+            + ". Relative names are looked up in: " + ", ".join(dirs)
+            + ", and in SAMA's example data. Give a full path or put the file in one of these folders.")
+
+
 def load_config(path):
     p = Path(path)
     if not p.exists():
         raise FileNotFoundError(f"Config file not found: {p}")
     with open(p, "r") as f:
         cfg = yaml.safe_load(f)
-    return cfg if cfg else {}
+    cfg = cfg if cfg else {}
+    # Relative input file names are looked up next to the configuration file
+    cfg[CONFIG_DIR_KEY] = str(p.resolve().parent)
+    return cfg
 
 
 def save_config(config, path):
@@ -301,7 +394,17 @@ def _recalc_pv_irradiance(d, config):
 
 
 def _recalc_weather(d, config):
-    weather_url = config.get('weather_url')
+    weather_url = config.get('weather_url') or getattr(d, 'weather_url', None)
+    if config.get('weather_url'):
+        d.weather_url = weather_url
+        # Air pressure (used by the heat pump model) from the same weather file
+        try:
+            import pandas as pd
+            data = pd.read_csv(weather_url, header=2)
+            if 'Pressure' in data.columns:
+                d.P = data['Pressure']
+        except Exception as e:
+            print(f"  ⚠️  Pressure from weather file: {e}")
     tilt    = config.get('tilt',    getattr(d, 'tilt',    33))
     azimuth = config.get('azimuth', getattr(d, 'azimuth', 180))
     soiling = config.get('soiling', getattr(d, 'soiling', 5))
@@ -1115,6 +1218,7 @@ _OBJECT_ARRAY_FIELDS = {
 # Keys whose YAML values must NOT be applied raw — derived or unit-converted
 _SKIP_KEYS = {
     'input_directory', 'output_directory', 'optimization_algorithm', 'optimization_mode',
+    'input_data_directory', CONFIG_DIR_KEY,
     # Always recalculated from primary inputs
     'ir', 'System_Tax', 'RE_incentives',
     'LPSP_max', 'RE_min',
@@ -1166,6 +1270,10 @@ def apply_config(config):
     """
     from samapy.core.Input_Data import InData
     d = InData
+
+    # Full paths of the input files (raises FileNotFoundError if one is missing)
+    config = dict(config)
+    _resolve_input_files(config, d)
 
     applied = 0
     issues  = []
