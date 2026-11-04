@@ -1259,7 +1259,7 @@ SAMA is released under the **GNU Affero General Public License v3.0 (AGPL-3.0)**
 
 | Author | Affiliation | ORCID |
 |--------|-------------|-------|
-| Seyyed Ali Sadat | Free Appropriate Sustainability Technology (FAST) Research Group, Western University, Boston, MA, Canada | 0000-0001-9690-4239 |
+| Seyyed Ali Sadat | Free Appropriate Sustainability Technology (FAST) Research Group, Western University, London, Ontario, Canada | 0000-0001-9690-4239 |
 
 ### 16.3 Citing SAMAPy
 
