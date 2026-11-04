@@ -140,7 +140,7 @@ samapy-run -c examples/reference_config.yaml --seed 1 --no-gui --output referenc
 
 A point-and-click GUI for non-technical users. No Python installation required. Currently in alpha.
 
-> [https://github.com/Sas1997/SAMA](https://github.com/Sas1997/SAMA/releases/latest/download/SAMA-Setup.exe)
+> **Download:** [`SAMA-Setup.exe`](https://github.com/Sas1997/SAMA/releases/latest/download/SAMA-Setup.exe), then run the installer and follow the steps.
 
 ---
 
@@ -317,7 +317,7 @@ SAMA is released under the **[GNU Affero General Public License v3.0 (AGPL-3.0)]
 - GitHub: https://github.com/Sas1997/SAMA
 - Issues and bug reports: [Open an issue](https://github.com/Sas1997/SAMA/issues)
 - Contributing, questions and feature requests: see [CONTRIBUTING.md](https://github.com/Sas1997/SAMA/blob/main/CONTRIBUTING.md)
-- For the Windows `.exe` alpha version or reprint requests, contact the developers through the GitHub repository.
+- For reprint requests, contact the developers through the GitHub repository. Problems with the Windows .exe alpha version can be reported as [issues](https://github.com/Sas1997/SAMA/issues).
 
 ---
 
