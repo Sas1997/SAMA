@@ -191,7 +191,7 @@ SAMA can be used in three different ways depending on your background and needs:
 |--------|--------------|---------------|
 | **Method 1:** Raw Python Code | Researchers, developers, and advanced users who want to modify algorithms or parameters directly in the source code | Download from GitHub and open in a Python IDE such as PyCharm |
 | **Method 2:** Python Package (pip) | Users who want to run SAMA as a command-line tool or use it in their own Python scripts without modifying internals | `pip install samapy` (available as the SAMA Py Package) |
-| **Method 3:** Windows .exe Application (Alpha) | Non-technical users who want a point-and-click graphical user interface without installing Python. Note: this version is currently in the alpha development phase. | Available on request from the developers |
+| **Method 3:** Windows .exe Application (Alpha) | Non-technical users who want a point-and-click graphical user interface without installing Python. Note: this version is currently in the alpha development phase. | Download the installer, [`SAMA-Setup.exe`](https://github.com/Sas1997/SAMA/releases/latest/download/SAMA-Setup.exe) |
 
 ---
 
@@ -654,15 +654,14 @@ For a typical run with `MaxIt=200` and `nPop=50`, expect the optimization itself
 
 ## 5. Method 3: Windows .exe Application (Alpha)
 
-A Windows executable (`.exe`) version of SAMA is currently in the alpha development phase and is available on request from the developers. This version provides a graphical user interface (GUI) that does not require Python to be installed on the user's computer. It is intended for non-technical users who prefer a point-and-click experience.
+A Windows executable (`.exe`) version of SAMA is currently in the alpha development phase. This version provides a graphical user interface (GUI) that does not require Python to be installed on the user's computer. It is intended for non-technical users who prefer a point-and-click experience.
 
 Because this version is in the alpha phase, some features may be incomplete or subject to change. Users are encouraged to report any issues to the development team.
 
 To request the Windows `.exe` version, contact the FAST research group at Western University. Contact information is available at the GitHub repository: https://github.com/Sas1997/SAMA
 
 > **Windows .exe Application (Alpha Development Phase)**
-> - The `.exe` version is **not** distributed via PyPI.
-> - It must be obtained directly from the developers.
+> - The `.exe` version is **not** distributed via PyPI; it is attached to the Windows release on GitHub.
 > - No Python installation is required to run the `.exe`.
 > - It uses the same algorithms and produces the same outputs as the Python package.
 > - This version is currently in the alpha development phase. Features may be incomplete.
