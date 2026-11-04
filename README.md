@@ -245,7 +245,7 @@ Key documentation sections:
 
 | Topic | Location |
 |-------|----------|
-| All configuration parameters | [Section 6: Configuration File](https://github.com/Sas1997/SAMA/blob/main/Docs/SAMA_Documentation.md#6-the-configuration-file-sama_config_completeyaml) |
+| All configuration parameters | [Section 6: Configuration File](https://github.com/Sas1997/SAMA/blob/main/Docs/SAMA_Documentation.md#6-the-configuration-file-samapy_config_completeyaml) |
 | Optimization algorithms (detail) | [Section 7](https://github.com/Sas1997/SAMA/blob/main/Docs/SAMA_Documentation.md#7-optimization-algorithms) |
 | Energy management system | [Section 8](https://github.com/Sas1997/SAMA/blob/main/Docs/SAMA_Documentation.md#8-energy-management-system-ems) |
 | Component models | [Section 9](https://github.com/Sas1997/SAMA/blob/main/Docs/SAMA_Documentation.md#9-component-models) |
