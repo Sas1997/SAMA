@@ -21,3 +21,4 @@ Thumbs.db
 .idea/
 samapy_inputs/
 test_samapy_outputs/
+reference_run/
