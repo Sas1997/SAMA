@@ -323,3 +323,26 @@ def test_wizard_does_not_overwrite_an_existing_configuration_by_default(tmp_path
     run_wizard(tmp_path, monkeypatch, {"Save the new configuration as": "second.yaml"})
     assert first.read_text(encoding="utf-8") == "existing: 1\n"
     assert (tmp_path / "second.yaml").is_file()
+
+
+def test_single_objective_weights_are_written_and_asked_with_emissions(tmp_path, monkeypatch):
+    # NPC only (default): the weights are written with their default values, not asked
+    _, cfg = run_wizard(tmp_path, monkeypatch, {})
+    assert cfg["EM"] == 0
+    assert cfg["NPC_weight"] == W.SINGLE_OBJECTIVE_WEIGHTS["NPC_weight"]
+    assert cfg["EM_weight"] == W.SINGLE_OBJECTIVE_WEIGHTS["EM_weight"]
+
+    # NPC + LEM: both weights are asked and reach the backend
+    other = tmp_path / "em"
+    other.mkdir()
+    path, cfg = run_wizard(other, monkeypatch, {"Emission mode": 1, "NPC_weight": "2e-5", "EM_weight": "50"})
+    assert cfg["EM"] == 1 and cfg["NPC_weight"] == 2e-5 and cfg["EM_weight"] == 50.0
+    code = ("import io, contextlib, sys\n"
+            "from samapy.cli.config_loader import load_config, apply_config\n"
+            "with contextlib.redirect_stdout(io.StringIO()):\n"
+            "    d = apply_config(load_config(sys.argv[1]))\n"
+            "print(d.EM, d.NPC_weight, d.EM_weight)")
+    r = subprocess.run([sys.executable, "-c", code, str(path)], cwd=path.parent, capture_output=True,
+                       text=True, encoding="utf-8", errors="replace", timeout=900)
+    assert r.returncode == 0, r.stderr[-3000:]
+    assert r.stdout.split() == ["1", "2e-05", "50.0"]

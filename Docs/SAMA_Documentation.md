@@ -46,6 +46,9 @@
   - [7.4 Grey Wolf Optimizer (GWO)](#74-grey-wolf-optimizer-gwo)
   - [7.5 Choosing an Algorithm](#75-choosing-an-algorithm)
   - [7.6 Multi-Objective Mode](#76-multi-objective-mode)
+    - [7.6.1 Single-Objective Mode and Its Weights](#761-single-objective-mode-and-its-weights)
+    - [7.6.2 Multi-Objective Mode (Pareto Front)](#762-multi-objective-mode-pareto-front)
+    - [7.6.3 Examples: Pareto Front and Weighted-Sum Sweep](#763-examples-pareto-front-and-weighted-sum-sweep)
 - [8. Energy Management System (EMS)](#8-energy-management-system-ems)
   - [8.1 Base Dispatch (EMS.py)](#81-base-dispatch-emspy)
   - [8.2 EV Smart Charging and V2X (EMS_EV.py)](#82-ev-smart-charging-and-v2x-ems_evpy)
@@ -144,7 +147,7 @@ python -m ensurepip --upgrade
 
 ## 1. Overview
 
-SAMA (Solar Alone Multi-Objective Advisor) is an open-source Python platform for the design, sizing, and operation optimization of hybrid renewable energy microgrids. "Multi-Objective" in the name refers to the range of goals SAMA is applied to, such as off-grid system design, lower energy costs and sustainability; SAMA also offers a multi-objective optimization mode that returns the Pareto front between objectives (Section 7.6). It performs location-specific techno-economic assessment using site-dependent electrical and thermal load profiles, meteorological data, component degradation models, and utility-specific billing structures.
+SAMA (Solar Alone Multi-Objective Advisor) is an open-source Python platform for the design, sizing, and operation optimization of hybrid renewable energy microgrids. It has two optimization modes (Section 7.6): a single-objective mode, which minimizes net present cost or a weighted sum of cost and emissions and returns one design, and a multi-objective mode, which computes the Pareto front between two or more of cost, emissions, reliability and renewable fraction. In the 2023 version, multi-objective optimization meant the weighted sum of cost and emissions, with weights fixed in the code; the weights are now configuration parameters, and the Pareto front mode was added in version 1.0.7. It performs location-specific techno-economic assessment using site-dependent electrical and thermal load profiles, meteorological data, component degradation models, and utility-specific billing structures.
 
 Unlike proprietary tools such as HOMER Pro and HOMER Grid, which are now closed-source and license-restricted, SAMA provides **transparent optimization algorithms**, **fully extensible architecture**, and **no cost barriers** for researchers, practitioners, and resource-constrained institutions.
 
@@ -871,15 +874,26 @@ All four algorithms are suitable for this problem. In practice, for the default 
 
 ### 7.6 Multi-Objective Mode
 
-The four algorithms above are single-objective: they minimize the scalar fitness
+A SAMA design is judged on several objectives at once: net present cost (NPC), levelized cost of energy (LCOE), levelized emissions (LEM), reliability (LPSP) and renewable fraction (RE). Multi-objective optimization methods handle such problems in one of two ways [Marler and Arora, 2004]. *A priori* methods combine the objectives into one scalar with preferences fixed before the search, typically as a weighted sum, and return one design. *A posteriori* methods first compute the set of Pareto-optimal designs, for which no objective can be improved without worsening another, and the user then chooses among them. SAMA offers both: the single-objective mode (Section 7.6.1) is an a priori method, and the multi-objective mode (Section 7.6.2) is an a posteriori method. Section 7.6.3 compares them on two examples.
+
+#### 7.6.1 Single-Objective Mode and Its Weights
+
+The four algorithms above minimize the scalar fitness
 
 ```
 fitness = NPC_weight * NPC + EM_weight * EM * LEM + constraint penalties
 ```
 
-where `NPC_weight` (default `1e-5`) and `EM_weight` (default `1e2`) put NPC and LEM on comparable scales and can be set in the configuration file. A weighted sum with fixed weights returns a single design and cannot reach designs on non-convex parts of a trade-off.
+- **`EM = 0` (default):** the fitness is NPC alone (scaled by `NPC_weight`), and no objectives are weighted against each other.
+- **`EM = 1`:** the fitness is a weighted sum of NPC (in dollars) and LEM (in kg/kWh). The ratio `EM_weight / NPC_weight` is the NPC, in dollars, that the optimizer treats as equivalent to 1 kg/kWh of levelized emissions. With the defaults `NPC_weight = 1e-5` and `EM_weight = 1e2`, 1 kg/kWh counts as $10,000,000 of NPC. The defaults were chosen so that both terms have similar magnitudes for typical systems (NPC of $10^5$ to $10^7$, LEM of 0.01 to 1 kg/kWh), not to express a particular value of emissions; a study that uses `EM = 1` should set the weights to the preference it wants to express.
 
-To see the trade-off itself, run the multi-objective mode (`optimization_mode: multi` in the configuration, or `samapy-run --mode multi`). It uses NSGA-II from the pymoo library [Blank and Deb, 2020] to approximate the Pareto front of the objectives listed in `MOO_objectives`:
+**Where the weights are set.** In the 2023 version the weights were fixed in the source code. They are now the configuration parameters `NPC_weight` and `EM_weight`: the wizard writes both to the configuration file and asks for them when emissions are included, every single-objective run prints the function it minimizes with its weights (`Minimizing: ...`), and `samapy-run --verbose` shows them in the configuration summary.
+
+**What a weighted sum can and cannot do.** A weighted sum with fixed weights returns one design per run. Even when it is repeated for many weight vectors, it can only return supported designs, those on the convex hull of the Pareto front: a design in a non-convex part of the front never minimizes any weighted sum [Das and Dennis, 1997]. Evenly spaced weights also do not give evenly spaced designs along the front. The single-objective mode is therefore the right choice when one objective (usually NPC) is optimized under constraints, or when the preference between NPC and LEM is known; to see the trade-off itself, use the multi-objective mode.
+
+#### 7.6.2 Multi-Objective Mode (Pareto Front)
+
+The multi-objective mode (`optimization_mode: multi` in the configuration, or `samapy-run --mode multi`) does not combine the objectives. It uses NSGA-II [Deb et al., 2002] from the pymoo library [Blank and Deb, 2020] to approximate the Pareto front of the objectives listed in `MOO_objectives`, with Pareto dominance and crowding distance instead of weights:
 
 | Name | Quantity | Direction |
 |------|----------|-----------|
@@ -889,7 +903,7 @@ To see the trade-off itself, run the multi-objective mode (`optimization_mode: m
 | `lpsp` | Loss of power supply probability | minimize |
 | `re` | Renewable energy fraction | maximize |
 
-The reliability limit (`LPSP_max`), minimum renewable fraction (`RE_min`), budget and, where configured, the roof area, PV capacity, generation cap and net-metering conditions are treated as constraints rather than penalties. A design on the front satisfies all of them. To explore, for example, cost against reliability, relax `LPSP_max` and add `lpsp` to the objectives.
+Any two or more of these can be chosen. The reliability limit (`LPSP_max`), minimum renewable fraction (`RE_min`), budget and, where configured, the roof area, PV capacity, generation cap and net-metering conditions are passed to NSGA-II as inequality constraints rather than penalties, so every design on the front satisfies all of them. To explore, for example, cost against reliability, relax `LPSP_max` and add `lpsp` to the objectives.
 
 | YAML key | Default | Description |
 |----------|---------|-------------|
@@ -898,19 +912,72 @@ The reliability limit (`LPSP_max`), minimum renewable fraction (`RE_min`), budge
 | `MOO_selection` | `compromise` | Design used for the detailed results: `compromise`, `min_<objective>`, or a list of weights, one per objective |
 | `MOO_n_pop` | `nPop` | NSGA-II population size |
 | `MOO_n_gen` | `MaxIt` | Number of generations |
-| `NPC_weight`, `EM_weight` | `1e-5`, `1e2` | Weights of the single-objective fitness |
+| `seed` | none | Random seed (also `--seed`), for a reproducible front |
+| `NPC_weight`, `EM_weight` | `1e-5`, `1e2` | Weights of the single-objective fitness (not used in this mode) |
 
-Outputs: `pareto_front.csv` lists every Pareto-optimal design (design variables, NPC, LCOE, LEM, LPSP, renewable fraction, capital cost, and which design was selected), and `pareto_front.png` plots the front. The selected design is then passed to the normal results generation. With `compromise`, the selected design minimizes the achievement scalarizing function max_i(f_i') over the front, where f_i' are the objectives normalized between their best and worst values on the front; a list of weights multiplies f_i', so a larger weight favours that objective. Differences smaller than 0.1% of an objective's range on the front, and below each objective's resolution (0.01% of NPC or LCOE, 0.1 percentage point of renewable fraction), are not reported as separate trade-offs.
+**Outputs.** `pareto_front.csv` lists every design on the front: the design variables (numbers of PV modules, wind turbines and battery packs, generator units of `Cdg_r` kW each, and inverter capacity in kW), NPC, LCOE, LEM, LPSP, renewable fraction, capital cost, whether the design is supported, its hull gap, and which design was selected. `pareto_front.png` plots the front, with unsupported designs as open circles. The selected design is then passed to the normal results generation. With `compromise`, the selected design minimizes the achievement scalarizing function max_i(f_i') over the front, where f_i' are the objectives normalized between their best and worst values on the front; a list of weights multiplies f_i', so a larger weight favours that objective. These rules only choose a design from the computed front; they do not change the front.
+
+**Supported and unsupported designs.** For each design on the front, SAMA solves a small linear program for its hull gap: the smallest margin, over all weight vectors, by which its weighted sum exceeds the lowest weighted sum on the front, with the objectives normalized to [0, 1] over the front. A gap of zero or less means the design minimizes some weighted sum (it is supported). A positive gap means that for every choice of weights another design on the front is better by at least that margin, so no weighted-sum optimization, including the single-objective mode, can return the design (it is unsupported). Because the front is an approximation and is not exactly convex even where the true front is, designs less than 1% of the objective ranges above the hull are counted as supported (`hull_tolerance` in the Python API). The run prints the number of supported and unsupported designs.
+
+**Reporting the front.** Designs that differ from a reported design by less than each objective's resolution (0.01% of NPC or LCOE, 0.1 percentage point of renewable fraction, $10^{-5}$ kg/kWh of LEM, $10^{-7}$ of LPSP) are not reported as separate trade-offs: a design is left out only when a reported design is no worse than it by more than the resolution in every objective (additive epsilon-dominance [Laumanns et al., 2002]), and a design within the resolution of the best value in each objective is always reported.
 
 The same mode is available from Python:
 
 ```python
 from samapy.optimizers.multiobjective import MultiObjectiveOptimizer
-result = MultiObjectiveOptimizer(objectives=['npc', 're'], seed=1).optimize()
-result.front_X, result.front_F, result.selected_X
+result = MultiObjectiveOptimizer(objectives=['npc', 'lpsp'], seed=1).optimize()
+result.front_X, result.front_F, result.supported, result.hull_gap, result.selected_X
 ```
 
-Grid emission factors (`E_CO2`, `E_SO2`, `E_NOx`) are zero in the example configuration; set them before using `lem` as an objective.
+Grid emission factors (`E_CO2`, `E_SO2`, `E_NOx`) are zero in the example configuration; set them before using `lem` as an objective for a grid-connected system.
+
+#### 7.6.3 Examples: Pareto Front and Weighted-Sum Sweep
+
+Two example configurations in `examples/` demonstrate the multi-objective mode on the reference house of Section 18 (Boston, MA). Each is run with one command, and `examples/compare_weighted_sum.py` compares its front with a weighted-sum sweep on the same case: it runs the multi-objective mode exactly as `samapy-run` does, then runs the ADE optimizer once for each of 11 evenly spaced weight vectors, minimizing the weighted sum of the same objectives (normalized over the front) under the same constraints. Each weight is at least 1%, so that every run returns a Pareto-optimal design.
+
+```bash
+# Example 1: grid-connected house, NPC against renewable fraction
+samapy-run -c examples/moo_grid_no_export.yaml --no-gui --output moo_grid_no_export_run
+python examples/compare_weighted_sum.py -c examples/moo_grid_no_export.yaml --output moo_grid_no_export_comparison
+
+# Example 2: off-grid system, NPC against LPSP
+samapy-run -c examples/moo_offgrid.yaml --no-gui --output moo_offgrid_run
+python examples/compare_weighted_sum.py -c examples/moo_offgrid.yaml --output moo_offgrid_comparison
+```
+
+Both configurations use NSGA-II with a population of 100 for 200 generations (20,000 evaluations) and `seed: 1`; each weighted-sum run uses ADE with the reference settings (50 x 200, about 10,000 evaluations). The results below are from these settings.
+
+**Example 1: grid-connected house, cost against renewable fraction** (`moo_grid_no_export.yaml`). The reference case (PV, battery, Bosch heat pump and EV under a time-of-use tariff) with three changes: exported electricity is not paid (no net metering, sell price 0), the PV size is not capped, and there is no minimum renewable fraction. In the reference case, with net metering, PV lowers the cost, so the cheapest design also has the highest renewable fraction the PV cap allows, and there is no trade-off to compute. Without payment for exports, renewable energy beyond the house's own use costs money:
+
+| | Pareto front (one NSGA-II run) | Weighted-sum sweep (11 ADE runs) |
+|---|---|---|
+| Evaluations | 20,000 | about 110,000 |
+| Designs returned | 50 | 11 |
+| Unsupported designs | 0 (largest hull gap 0.7% of the ranges) | none possible |
+
+The front runs from the cheapest design, NPC $87,120 with a renewable fraction of 53.3% (10.1 kW of PV), to 90.3% at $122,470 (59.7 kW of PV, close to the upper bound of 60 modules in `VarMax`). Raising the renewable fraction to 78.3% costs $7,897 more (NPC $95,017); the last 12 percentage points to 90.3% cost $27,453 more. The front is convex, so the weighted-sum runs return designs on or next to it (10 of them within 2% of the ranges of a design on the front); the multi-objective mode gives the whole curve from one run with fewer evaluations.
+
+![Example 1: Pareto front and weighted-sum sweep](SAMA%20results%20example%20outputs/moo_example1_grid_pareto_vs_weighted_sum.png)
+
+*Figure: Example 1. Pareto front of NPC and renewable fraction from the multi-objective mode (dots) and the designs returned by the 11 weighted-sum runs (crosses). The line is the convex hull of the front.*
+
+**Example 2: off-grid system, cost against reliability** (`moo_offgrid.yaml`). An off-grid system for the same house, without the heat pump and EV, that can use PV, wind turbines, lithium-ion batteries and a diesel generator, with the LPSP allowed up to 5%:
+
+| | Pareto front (one NSGA-II run) | Weighted-sum sweep (11 ADE runs) |
+|---|---|---|
+| Evaluations | 20,000 | about 110,000 |
+| Designs returned | 81 | 11 |
+| Unsupported designs | 15 (largest hull gap 5.4% of the ranges) | none possible; none returned |
+
+The front runs from NPC $79,384 at an LPSP of 4.99% to $100,538 at an LPSP below $10^{-7}$. It is not convex. Up to an LPSP of about 1.5%, reliability is bought with more PV and battery capacity and a generator of 0.1 unit (0.55 kW with the 5.5 kW unit of the example); at $88,054 the cheapest designs switch to a 0.2-unit (1.1 kW) generator with less PV, and the LPSP drops from 1.47% to 0.93% for $2 more. The front is the lower envelope of these design families, so the end of each family before a switch lies above the convex hull: 12 designs between LPSP 2.07% and 1.47% (NPC $84,618 to $88,052), and 3 designs around LPSP 0.3% to 0.4% before the switch to a 0.3-unit generator. These 15 designs are on the Pareto front, and none can be returned by a weighted sum. One of them is the design that the default `compromise` rule selects for the detailed results (NPC $86,570, LPSP 1.66%): the balanced design of this case is one that the single-objective mode cannot find with any weights. The sweep confirms this: its 11 runs returned designs on the convex parts of the front (11 within 2% of the ranges of a design on the front, none of them unsupported), and between the weights (0.6, 0.4) and (0.5, 0.5) its result jumped from an LPSP of 2.71% to 0.66%, across the whole non-convex stretch. With seeds 2, 3 and 4, the multi-objective mode found the same non-convex stretch (13 to 15 unsupported designs, largest hull gap 5.3% to 5.4%); with the generator excluded (`DG: 0`), the front is convex (largest hull gap 0.4%).
+
+![Example 2: Pareto front and weighted-sum sweep](SAMA%20results%20example%20outputs/moo_example2_offgrid_pareto_vs_weighted_sum.png)
+
+*Figure: Example 2. Pareto front of NPC and LPSP from the multi-objective mode: supported designs (dots), unsupported designs (open circles), designs returned by the 11 weighted-sum runs (crosses), and the convex hull of the front (line).*
+
+The test suite checks the same behavior on a problem whose Pareto front is known and concave (`tests/test_multiobjective.py`): the multi-objective mode returns the interior of the front, every interior design is unsupported, and a weighted sum minimized exactly for 101 weight vectors only ever returns one of the two end points. `tests/test_moo_examples.py` checks the example configurations and, in the slow tests, that Example 2 has a non-convex stretch and Example 1 does not.
+
+**References for this section.** I. Das and J. E. Dennis, "A closer look at drawbacks of minimizing weighted sums of objectives for Pareto set generation in multicriteria optimization problems," *Structural Optimization*, vol. 14, pp. 63-69, 1997, doi:10.1007/BF01197559. R. T. Marler and J. S. Arora, "Survey of multi-objective optimization methods for engineering," *Structural and Multidisciplinary Optimization*, vol. 26, pp. 369-395, 2004, doi:10.1007/s00158-003-0368-6. K. Deb, A. Pratap, S. Agarwal and T. Meyarivan, "A fast and elitist multiobjective genetic algorithm: NSGA-II," *IEEE Transactions on Evolutionary Computation*, vol. 6, no. 2, pp. 182-197, 2002, doi:10.1109/4235.996017. J. Blank and K. Deb, "pymoo: Multi-objective optimization in Python," *IEEE Access*, vol. 8, pp. 89497-89509, 2020, doi:10.1109/ACCESS.2020.2990567. M. Laumanns, L. Thiele, K. Deb and E. Zitzler, "Combining convergence and diversity in evolutionary multiobjective optimization," *Evolutionary Computation*, vol. 10, no. 3, pp. 263-282, 2002, doi:10.1162/106365602760234108.
 
 ---
 
@@ -1197,14 +1264,14 @@ samapy-run
 | `run_samapy_optimized.py` | Same as `samapy-run`, for running from a checkout (Section 3.4.1) |
 | `samapy-config`, `samapy-config.py`, `samapy-config.bat` | Start the configuration wizard from a checkout on Linux/macOS, any system, and Windows |
 | `samapy_config_COMPLETE.yaml` | Default configuration read by `samapy-run` in the repository root; the wizard writes a file with this name in the folder it is run from |
-| **`examples/`** | `reference_config.yaml` (reference case, Section 18), `optimization_case.py` (Python route, Section 3.4.3) and `README.md` (map of all routes) |
+| **`examples/`** | `reference_config.yaml` (reference case, Section 18), `moo_grid_no_export.yaml` and `moo_offgrid.yaml` (multi-objective examples, Section 7.6.3), `compare_weighted_sum.py` (Pareto front against a weighted-sum sweep, Section 7.6.3), `optimization_case.py` (Python route, Section 3.4.3) and `README.md` (map of all routes) |
 | **`tests/`** | pytest suite; `tests/data/example_config.yaml` is its fixed test configuration |
 | **`src/samapy/optimizers/`** | |
 | `swarm.py` | Algorithm module: Particle Swarm Optimization (`Swarm` class) |
 | `AdvancedDifferentialEvolution.py` | Algorithm module: Advanced Differential Evolution (`AdvancedDifferentialEvolution` class) |
 | `ArtificialBeeColony.py` | Algorithm module: Improved Artificial Bee Colony (`ImprovedArtificialBeeColony` class) |
 | `GreyWolfOptimizer.py` | Algorithm module: Grey Wolf Optimizer (`GreyWolfOptimizer` and `ParallelGreyWolfOptimizer` classes) |
-| `multiobjective.py` | Multi-objective mode: NSGA-II from pymoo, Pareto front filtering and design selection (`MultiObjectiveOptimizer`) |
+| `multiobjective.py` | Multi-objective mode: NSGA-II from pymoo, Pareto front filtering, supported and unsupported designs (`hull_gaps`) and design selection (`MultiObjectiveOptimizer`) |
 | `_common.py` | Shared settings, bounds and random-seed helpers used by all optimizers |
 | `pso.py` / `ade.py` / `run_abc.py` / `gwo.py` | Launcher scripts: run one algorithm with the `Input_Data.py` defaults (Section 3.4.2). The algorithm modules keep their class-based names and the launchers their short names, so existing scripts and imports keep working; `run_abc.py` avoids the name of Python's standard `abc` module |
 | **`src/samapy/ems/`** | |

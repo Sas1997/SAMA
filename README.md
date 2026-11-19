@@ -180,7 +180,7 @@ SAMA can be run in two modes:
 fitness = NPC_weight * NPC + EM_weight * EM * LEM + constraint penalties
 ```
 
-With `EM = 0` (default) this is net present cost alone. With `EM = 1` levelized emissions are added with the weight `EM_weight`. `NPC_weight` (default `1e-5`) and `EM_weight` (default `1e2`) only put the two quantities on comparable numerical scales; both can be set in the configuration file. A weighted sum with fixed weights returns one design, and it can only reach designs on the convex part of the cost-emissions trade-off.
+With `EM = 0` (default) this is net present cost alone. With `EM = 1` it is a weighted sum of cost and levelized emissions: `EM_weight / NPC_weight` is the NPC in dollars treated as equivalent to 1 kg/kWh of emissions. The defaults (`1e-5` and `1e2`) only put the two quantities on comparable numerical scales; set them in the configuration file, or in the wizard, which asks for them when emissions are included. Every run prints the function it minimizes with its weights. A weighted sum returns one design per run, and even repeated for many weights it only reaches designs on the convex hull of the trade-off (supported designs).
 
 **Multi-objective mode** (`optimization_mode: multi`, or `samapy-run --mode multi`). NSGA-II from the [pymoo](https://pymoo.org) library searches for the Pareto front: the set of designs for which no objective can be improved without worsening another. Choose two or more objectives in `MOO_objectives` from `npc`, `lcoe`, `lem` (emissions), `lpsp` (unmet demand) and `re` (renewable fraction, maximized). Reliability, minimum renewable fraction, budget and the capacity limits are handled as constraints, so the trade-off is explored within those limits.
 
@@ -192,7 +192,9 @@ MOO_n_pop: 50                   # optional, default nPop
 MOO_n_gen: 200                  # optional, default MaxIt
 ```
 
-The run writes `pareto_front.csv` (every Pareto-optimal design with its NPC, LCOE, LEM, LPSP, renewable fraction and capital cost) and `pareto_front.png`. One design is then selected for the full SAMA results: `compromise` takes the design closest to the ideal point with equal weight on each normalized objective, `min_<objective>` takes the best design for one objective, and a list of weights favours the objectives with larger weights. Grid emission factors (`E_CO2`, `E_SO2`, `E_NOx`) are zero in the example configuration, so set them before using `lem` as an objective.
+The run writes `pareto_front.csv` (every Pareto-optimal design with its NPC, LCOE, LEM, LPSP, renewable fraction and capital cost, and whether some weighted sum of the objectives would select it) and `pareto_front.png`, where unsupported designs, which no weighted sum can return, are shown as open circles. One design is then selected for the full SAMA results: `compromise` takes the design closest to the ideal point with equal weight on each normalized objective, `min_<objective>` takes the best design for one objective, and a list of weights favours the objectives with larger weights. Grid emission factors (`E_CO2`, `E_SO2`, `E_NOx`) are zero in the example configuration, so set them before using `lem` as an objective.
+
+Two example configurations show the mode on the reference house: [`examples/moo_grid_no_export.yaml`](examples/moo_grid_no_export.yaml) (cost against renewable fraction, grid-connected) and [`examples/moo_offgrid.yaml`](examples/moo_offgrid.yaml) (cost against reliability, off-grid, with a non-convex front). [`examples/compare_weighted_sum.py`](examples/compare_weighted_sum.py) compares each front with a weighted-sum sweep; the results are in [Section 7.6.3 of the documentation](Docs/SAMA_Documentation.md#763-examples-pareto-front-and-weighted-sum-sweep).
 
 ---
 

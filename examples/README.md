@@ -1,6 +1,6 @@
 # SAMA examples and run routes
 
-This folder holds the reference case and an example script. The table below shows, for each way of running SAMA, where the inputs come from, which configuration is used, the command, and where the outputs go.
+This folder holds the reference case, two multi-objective examples and example scripts. The table below shows, for each way of running SAMA, where the inputs come from, which configuration is used, the command, and where the outputs go.
 
 ## Reference case
 
@@ -13,6 +13,29 @@ python run_samapy_optimized.py -c examples/reference_config.yaml --seed 1 --no-g
 ```
 
 With `--seed 1` the results should match Section 18 to the cent. Section 18.7 explains how to compare results from other seeds.
+
+## Multi-objective examples
+
+Two configurations show the multi-objective mode (Pareto front with NSGA-II) on the reference house. They are described, with their results, in [Section 7.6.3 of the documentation](../Docs/SAMA_Documentation.md#763-examples-pareto-front-and-weighted-sum-sweep).
+
+| File | Case | Objectives |
+|---|---|---|
+| `moo_grid_no_export.yaml` | The reference case without payment for exported electricity, without the PV cap and without a minimum renewable fraction | NPC and renewable fraction |
+| `moo_offgrid.yaml` | Off-grid system for the reference house (no heat pump or EV) with PV, wind, battery and diesel generator, LPSP allowed up to 5% | NPC and LPSP |
+
+```bash
+samapy-run -c examples/moo_grid_no_export.yaml --no-gui --output moo_grid_no_export_run
+samapy-run -c examples/moo_offgrid.yaml --no-gui --output moo_offgrid_run
+```
+
+Each run writes the Pareto front to `pareto_front.csv` and `pareto_front.png` and the detailed results of the selected design. `compare_weighted_sum.py` runs the same case as a weighted-sum sweep (one single-objective ADE run per weight vector) and compares the designs it returns with the Pareto front, marking the designs on the front that no weighted sum can return:
+
+```bash
+python examples/compare_weighted_sum.py -c examples/moo_grid_no_export.yaml --output moo_grid_no_export_comparison
+python examples/compare_weighted_sum.py -c examples/moo_offgrid.yaml --output moo_offgrid_comparison
+```
+
+It writes `pareto_front_classified.csv`, `weighted_sum_runs.csv` and `pareto_vs_weighted_sum.png`, and takes about 15 minutes for the first case and 5 for the second.
 
 ## Run routes
 

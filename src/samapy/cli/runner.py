@@ -432,6 +432,14 @@ def _patch_optimizer(algo, indata, verbose=False):
         print(f"  ⚠️  {algo.upper()} patch warning: {e}")
 
 
+def _fitness_description(d):
+    """The scalar function minimized in single-objective mode, with its weights."""
+    if int(getattr(d, 'EM', 0)) == 1:
+        return (f"{d.NPC_weight:g} * NPC + {d.EM_weight:g} * LEM + constraint penalties "
+                f"(weighted sum; use --mode multi for the trade-off)")
+    return f"{d.NPC_weight:g} * NPC + constraint penalties (NPC only, EM = 0)"
+
+
 def _feature_summary(d, mode):
     """Lines describing the optional features, for the configuration summary."""
     if mode == 'multi':
@@ -440,7 +448,8 @@ def _feature_summary(d, mode):
                  f"  Selection   : {d.MOO_selection}",
                  f"  MOO pop/gen : {d.MOO_n_pop or d.nPop} / {d.MOO_n_gen or d.MaxIt}"]
     else:
-        lines = ["  Mode        : single-objective"]
+        lines = ["  Mode        : single-objective",
+                 f"  Fitness     : {_fitness_description(d)}"]
     subs = getattr(d, 'PV_subarrays', None)
     lines.append(f"  PV modules  : {getattr(d, 'PV_module_type', 'Mono-facial')}"
                  + (f", {len(subs)} sub-arrays" if subs else ""))
@@ -628,6 +637,7 @@ def main():
         return
 
     print(f"\n🚀 Starting {algo.upper()} optimization...")
+    print(f"   Minimizing: {_fitness_description(indata)}")
 
     try:
         if algo == 'ade':

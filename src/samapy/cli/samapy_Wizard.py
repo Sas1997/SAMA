@@ -252,6 +252,31 @@ multi  = the Pareto front of two or more objectives, found with NSGA-II; one
     config['MOO_n_gen'] = _ask_number("NSGA-II number of generations", config['MaxIt'], int, lo=1)
 
 
+SINGLE_OBJECTIVE_WEIGHTS = {'NPC_weight': 1e-5, 'EM_weight': 1e2}
+
+
+def ask_single_objective_weights(config):
+    """Weights of the single-objective fitness, always written to the file.
+
+    fitness = NPC_weight * NPC + EM_weight * EM * LEM + constraint penalties
+    """
+    config.update(SINGLE_OBJECTIVE_WEIGHTS)
+    if config.get('EM') != 1:
+        print("   Single-objective fitness: NPC only (emissions are not weighted).")
+        return
+    print("""
+   Single-objective fitness = NPC_weight * NPC + EM_weight * LEM + constraint penalties
+   (NPC in $, LEM in kg/kWh). The ratio EM_weight / NPC_weight is the NPC in dollars
+   that one kg/kWh of levelized emissions is worth; the defaults (1e-5 and 1e2) value
+   1 kg/kWh at $10,000,000 of NPC. The single-objective mode returns the one design
+   that is best for these weights. To see the whole cost-emissions trade-off instead,
+   choose the multi-objective mode with the objectives NPC and LEM.""")
+    config['NPC_weight'] = _ask_number("NPC_weight (per $ of NPC)", SINGLE_OBJECTIVE_WEIGHTS['NPC_weight'],
+                                       float, lo=0, lo_open=True)
+    config['EM_weight'] = _ask_number("EM_weight (per kg/kWh of LEM)", SINGLE_OBJECTIVE_WEIGHTS['EM_weight'],
+                                      float, lo=0)
+
+
 PV_GEOMETRY_DEFAULTS = {'bifaciality': 0.7, 'shade_factor': -0.02,
                         'pv_gcr': 0.35, 'pv_height': 1.5, 'pv_pitch': 6.0}
 
@@ -825,6 +850,7 @@ Wind Speed Input Options:
     config['RE_min_rate'] = float(constraints['re_min'])
     config['RE_min'] = config['RE_min_rate'] / 100
     config['EM'] = constraints['em']
+    ask_single_objective_weights(config)
 
     # ============================================================================
     # SECTION 8: COMPONENT SELECTION
